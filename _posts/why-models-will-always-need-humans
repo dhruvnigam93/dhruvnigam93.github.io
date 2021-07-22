@@ -1,0 +1,4 @@
+- spurrious correlations
+- weightage of variables - choosingbetween different models with same metrics but different weightage on variables(prefer a model which is rebust to distributional changes in 1-2 ariables)
+- paradigm changes
+- ommision of features
