@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Quotable Quotes - American Psycho"
-date: 2020-02-01
+date: 2021-07-01
 ---
 
 
