@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "The open source econmy and social capital"
+title: "The open source economy and social capital"
 date: 2020-02-01
 ---
 
