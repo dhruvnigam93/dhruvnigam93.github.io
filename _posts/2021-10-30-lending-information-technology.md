@@ -5,7 +5,7 @@ date: 2021-10-30
 ---
 
 On paper, the objective of credit risk management is deceptively simple.
-“Don’t give money to people who may not be able to pay you back.”
+>>“Don’t give money to people who may not be able to pay you back.”
 Mathematically, it boils down to giving loans only to people who have a low probability of default (the event of them not paying back), or in other words, not giving loans to people who are at high risk of default. 
 
 How high is high though? That is a complex strategic decision that any lending institution and its investors make. Some institutions are very risk-focused and will forgo opportunities to lend money if they feel they don’t understand the risks, others are much more growth-focused and are willing to venture into risky segments like lending to college students. 
