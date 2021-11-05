@@ -15,7 +15,6 @@ Within this chosen segment, say you can give loans to 20 out of every 100 custom
 
 Consequently, assessing risk on a per loan-application basis and determining which 20 borrowers out of the 100 who apply to get a loan, is a critical process for lenders. It is essentially an exercise in predicting the future. Based on the information available about the present, lenders try to predict whether a customer would be able and willing to pay them back if given a loan. Like in any endeavor which involves prediction, errors are concomitant. Specifically, in this context, there are 2 kinds of errors -
 
-
 * False negatives -  reject someone who is low risk
 * False positives - approve a loan to someone who is very risky
 
@@ -26,9 +25,9 @@ The rise of digital payments because of UPI and demonetization, the movement of 
 The formal SME credit cap was always huge in India. The current hypothesis is that given the advancements in technology, particularly pertaining to access and processing of information, we will be able to drastically reduce it. Whether the hypothesis translates to reality is anyone's guess, but it is highly likely that with the amount of capital and talent pursuing this very objective, there will be a lot of exciting things happening in this space over the next few years.
 
 
-[1] The market prices in a certain probability of default for each government which are implied by the price it pays to insure the debt to said government. payshttps://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ctryprem.html
+[1] The market prices in a certain probability of default for each government which are implied by the price it pays to insure the debt to said government. https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ctryprem.html
 
-[2] Traditionally credit worthy customers are served well via current institutions. THe reason is twofold. First, as incumbents, these institutions already have relationships and trust of these customers. Second, because of their relatively mature set up, these institutions can themselves raise money cheaper than new entrants, enabling them to lend at lower rates, attracting customers to them.
+[2] Traditionally credit worthy customers are served well via current institutions. The reason is two fold. First, as incumbents, these institutions already have relationships and trust of these customers. Second, because of their relatively mature set up, these institutions can themselves raise money cheaper than new entrants, enabling them to lend at lower rates, attracting customers.
 
 [3] The reasons why this trade off is short term is because in the long term, the costs of taking high risks materialise when risky customers start to default and start to affect the long term profit. However, in the short term, when the risk has not materialised and everyone is still paying back on time, an illusion of high profit is created.
 
