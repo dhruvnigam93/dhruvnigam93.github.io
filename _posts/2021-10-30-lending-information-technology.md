@@ -15,6 +15,7 @@ Within this chosen segment, say you can give loans to 20 out of every 100 custom
 
 Consequently, assessing risk on a per loan-application basis and determining which 20 borrowers out of the 100 who apply to get a loan, is a critical process for lenders. It is essentially an exercise in predicting the future. Based on the information available about the present, lenders try to predict whether a customer would be able and willing to pay them back if given a loan. Like in any endeavor which involves prediction, errors are concomitant. Specifically, in this context, there are 2 kinds of errors -
 
+
 * False negatives -  reject someone who is low risk
 * False positives - approve a loan to someone who is very risky
 
@@ -33,4 +34,4 @@ The formal SME credit cap was always huge in India. The current hypothesis is th
 
 [4] Assuming that the information itself is predictive on its own. Adding irrelevant information to the prediction process can actually lead to worse decisions.
 
-
+Thanks to Ishan Anand, Sahul Nath and Parth Nigam for their feedback to make this article better. 
