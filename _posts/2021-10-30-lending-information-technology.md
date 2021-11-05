@@ -34,4 +34,4 @@ The formal SME credit cap was always huge in India. The current hypothesis is th
 
 [4] Assuming that the information itself is predictive on its own. Adding irrelevant information to the prediction process can actually lead to worse decisions.
 
-Thanks to Ishan Anand, Sahul Nath and Parth Nigam for their feedback to make this article better. 
+Thanks to Ishan Anand, Sahul Nath and Parth Nigam for their feedback.
