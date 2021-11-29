@@ -1,3 +1,5 @@
 name: Dhruv Nigam
 markdown: kramdown
 permalink: /blog/:year/:month/:day/:title
+# Google Analytics
+google_analytics: G-QZVFE4BVQ8
