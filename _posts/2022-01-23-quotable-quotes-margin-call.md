@@ -20,8 +20,8 @@ don't all kill each other trying to get
 something to eat. But it's not wrong and
 it's certainly not any different today
 than it's ever been. Ever. 1637, 1797,
-1819, `37, `57,`84, 1901, `07, 1929, `37,
-`73, and 1987... God damn did that
+1819, 37, 57,84, 1901, 07, 1929, 37,
+73, and 1987... God damn did that
 motherfucker fuck me up good, 92, 97,
 2000, and whatever this is gonna be
 called. They're just the same thing over
