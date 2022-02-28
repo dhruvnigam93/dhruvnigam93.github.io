@@ -1,3 +1,8 @@
+---
+layout: post
+title: "Get yourself fired: An Employee's guide to automation"
+date: 2021-10-30
+---
 
 Information workers(people who get paid to sit in front of computers all day) start with information as raw material. They get information through emails, interactions with other people, or through other digital information sources. The output they generate is, in a majority of the cases, one or more of the below 
 
