@@ -19,8 +19,8 @@ I saw people walk into the station, buy a ticket(if they felt like it), and with
 
 I would take the train with my parents every Saturday from Seawoods to Vashi to shop at BigBazaar for groceries before a ceremonious lunch at McDonald's - which I looked forward to the whole week. At school, I heard that kids took the train all by themselves without their parents. I also overheard that they frequently *changed lines*. I had no idea what *changing lines* meant but for some reason, it was for me the ultimate act of valor, something I would never even think to attempt. It was crushing that kids my age were capable of such feats. I was jealous and curious. It was the early days of the internet and I was able to obtain this image at 56kbps through my modem. 
 
-![Mumbai-train-map-59c405050d327a00119f3586.jpeg](..%2Fassets%2Fimages%2FMumbai-train-map-59c405050d327a00119f3586.jpeg)
-<center> *This might haven been the most downloaded image at some point of time. I have personally looked at it enough to memorize the paper folds at Panvel and Belapur* </center>
+![Mumbai-train-map-59c405050d327a00119f3586.jpeg](/assets/images/Mumbai-train-map-59c405050d327a00119f3586.jpeg)
+<center>This might haven been the most downloaded image at some point of time. I have personally looked at it enough to memorize the paper folds at Panvel and Belapur</center>
 
 This image intimidated me into submission. I made peace with shuttling between Seawoods and Vashi, which did not need a change of line, under the protection of my parents.
 
