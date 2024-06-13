@@ -3,13 +3,14 @@ layout: post
 title: "Foundation FOMO"
 date: 2024-06-11
 ---
-All undergrads at Ashoka University, a liberal arts university in India, must take 9 foundational courses before getting
-into
-their major. These are Introduction to Critical Thinking, Great Books, Literature and the World, Indian Civilizations,
-Environmental Studies, Mind and Behaviour, Economy, Politics and Society, Mathematical Thinking and Principles of
-Science.
-From their website -
 
+All undergrads at Ashoka, a liberal arts university in India, must take 9 foundational courses before getting
+into
+their major. These are - _Introduction to Critical Thinking_, _Great Books, Literature and the World, Indian
+Civilizations,
+Environmental Studies, Mind and Behaviour, Economy, Politics and Society, Mathematical Thinking and Principles of
+Science._
+From their website -
 > These courses are not formal gateways into the Major programmes, but distinctive courses that introduce students to
 > the foundations of thought and various styles of thinking, and also to inter- and transdisciplinary approaches.
 
@@ -22,39 +23,45 @@ The liberal arts program at Princeton[2] has a similar stated intention.
 > world’s most complex issues.
 
 
-I was jealous coming across this. My education since I was 16 has been about increasing depth in mathematics. Consequently,
-it
-has been the dominant framework I use when trying to understand the world. When I don't understand something I try
-to figure out what the data generative process is, what are the random variables involved, what are equations that
-explain this?
-Sometimes it works, but when it doesn't, I am left with a feeling of inadequacy. Given my training, I can reason
+When I came across this, a pang of jealousy stung me. My education since I was 16 has been about increasing depth in
+mathematics. Consequently,
+mathematics
+has been the dominant framework I use to understand the world. Faced with something new, I try
+to figure out what the _data generative process_ is, what _random variables_ are involved, and what equations can
+explain this.
+Sometimes this works, but when it doesn't, I am left with a feeling of inadequacy. For instance, I can reason
 why very large
-over-parameterized Neural Networks obtain great generalization performance. I am, however, unable to understand why people
-are willing to die for religion, why the RBI does not decrease interest rates when inflation is stable, or why
+over-parameterized Neural Networks obtain great generalization performance. I am, however, unable to understand why
+people
+are willing to die for their religion, why the RBI does not decrease interest rates when inflation is stable, or why
 communism is hated so much.
 
-This has gotten worse as I have gotten older. I have doubled down on my narrow view of the world by choosing work that rewards it
+This has gotten worse as I have gotten older. I have doubled down on my narrow view of the world by choosing work that
+rewards it
 and
-by hanging around with people who think similarly. I have worked myself into a bubble. Fortunately, though, there was
-always a part of me that was instinctively aware of this even if I could not articulate it. It is this instinct that
+by hanging around with people who think similarly. I have worked myself into a bubble.
+
+Fortunately, though, part of me was always instinctively aware of my ignorance even if I could not articulate it. It was this instinct
+that
 drew me
 to minor in Humanities while majoring in Electrical Engineering. It is the reason I am drawn to books and podcasts[3]
-that might fill in the gaps in my education and help me understand the world better.
+that might help me understand the world better. Coming across the idea of a liberal arts education articulated and
+formalised this instinct. It concretely listed down areas worthy of study that I missed out on.
 
-Coming across the idea of a liberal arts education articulated and formalised this instinct. It concretely listed down areas worthy of study that I had missed out on. 
-
-I caught myself wondering
+Intellectually starved, I found the liberal arts curriculum mouthwatering and caught myself wondering
 what would have
-happened had I gone through such a program - if I was deprived of an education that would have helped me understand the
-world better. I could not bask in my victimhood for long as I quickly reminded myself that even if I had gone
-through such a program, I would have only seen it as an obstacle to getting good grades to get a good job to prove
-I was smart. At the time, understanding the world better was not a priority.
+happened had I gone through such a program instead - if I had been deprived of an education that could have bettered my
+understanding of the world. However, I could not bask in my victimhood for long. I was quickly reminded that even
+if I had gone
+through such a program, I would have only seen it as an obstacle to getting good grades - to get a good job - to prove
+I was smart. Understanding the world was not a priority at the time.
 
-I continue the fight against my own ignorance by reading and listening to people who can help me marginally bridge the
-gaps in my education. I feel good having armed myself with the reading list of Ashoka's foundation courses that I am
-sharing below for fellow lost souls. What I could not get in the classroom, I might be able to squeeze out of my Kindle.
+Older and arguably wiser, I continue the fight against my ignorance by reading and listening to people who can help me marginally
+bridge the
+gaps in my education. I feel good having armed myself with the reading list of Ashoka's foundation courses which I am
+sharing below for fellow lost souls. What I could not get in the classroom, I might squeeze out of my Kindle.
 
-| Foundation                                       | Department                 | Professor Name                            | Reading List                                                                                                                                                                                                                                                                                                                | Summary                                                                                                                                                        |
+| Foundation                                       | Department                 | Professor Name                            | Reading List                                                                                                                                                                                                                                                                                                                | Course Summary                                                                                                                                                 |
 |--------------------------------------------------|----------------------------|-------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Economics, Politics and Society                  | Political Science          | M.A.A Khan                                | Analects of Confucius, Bhagavad Gita, Quran, modern interpretations by Sun Yat Sen, B R Ambedkar, R Khomeini                                                                                                                                                                                                                | Explores foundational texts and their interpretations to understand societal values and political ideologies.                                                  |
 | Economics, Politics and Society                  | Sociology                  | Ravindran Sriramachandran                 | No specific texts prescribed                                                                                                                                                                                                                                                                                                | Engages with a diverse range of sources, focusing on personal narratives and societal impacts through various mediums.                                         |
@@ -109,7 +116,10 @@ sharing below for fellow lost souls. What I could not get in the classroom, I mi
 | Principles of Science                            | Physics                    | Bikram Phookun                            | No specific texts prescribed                                                                                                                                                                                                                                                                                                | Explores the universe from an astronomical perspective, discussing the nature of space and time and the existence of extraterrestrial bodies.                  |
 | Principles of Science                            | Chemistry                  | Vidya Avasare                             | No specific texts prescribed                                                                                                                                                                                                                                                                                                | Discusses the evolution of the scientific method and its application in modern chemistry, covering topics from organic chemistry to sustainability.            |
 
-### References
+**Table based on the course descriptions as of 2024-06-11
+
+
+## References and notes
 
 [1] https://www.ashoka.edu.in/programme/foundation-courses/
 
@@ -117,5 +127,5 @@ sharing below for fellow lost souls. What I could not get in the classroom, I mi
 
 [3] Fantastic podcast to broaden your horizons - https://seenunseen.in/
 
-```
 
+_**Thanks to Nitesh for introducing me to the idea of liberal arts.**_
