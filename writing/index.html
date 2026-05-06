@@ -1,0 +1,117 @@
+---
+layout: default
+title: Writing
+---
+<h1>Writing</h1>
+
+<div class="writing-list">
+
+	<div class="writing-entry">
+		<span class="writing-date">19 Feb 2026</span>
+		<a class="writing-title" href="https://dhruvnigam93.substack.com/p/strange-memory-usage">Strange memory usage</a>
+		<span class="writing-byline">Memory profiling forward/backward passes in PyTorch — ML Field Notes</span>
+	</div>
+
+	<div class="writing-entry">
+		<span class="writing-date">22 Jan 2026</span>
+		<a class="writing-title" href="https://medium.com/dream11-tech-blog/lumos-inside-dream11s-leap-from-50-ml-models-to-one-foundation-model-f104e1a8a8e1">Lumos: Inside Dream11's Leap from 50+ ML Models to One Foundation Model</a>
+		<span class="writing-byline">Building a foundation model to replace 50+ specialized ML models — Medium / Dream11 Tech Blog</span>
+	</div>
+
+	<div class="writing-entry">
+		<span class="writing-date">20 Jan 2026</span>
+		<a class="writing-title" href="https://dhruvnigam93.substack.com/p/post-training-with-rl">Post training with RL</a>
+		<span class="writing-byline">How RL adjusts inference path distributions in post-training — ML Field Notes</span>
+	</div>
+
+	<div class="writing-entry">
+		<span class="writing-date">13 Dec 2025</span>
+		<a class="writing-title" href="https://dhruvnigam93.substack.com/p/thinks-and-think-nots">Thinks and think-nots</a>
+		<span class="writing-byline">Why LLMs risk letting developers bypass critical thinking — ML Trenches</span>
+	</div>
+
+	<div class="writing-entry">
+		<span class="writing-date">17 Nov 2025</span>
+		<a class="writing-title" href="https://dhruvnigam93.substack.com/p/llms-the-gift-that-keeps-on-giving">LLMs: The gift that keeps on giving</a>
+		<span class="writing-byline">Emergent capabilities and test-time scaling — ML Trenches</span>
+	</div>
+
+	<div class="writing-entry">
+		<span class="writing-date">12 Jul 2025</span>
+		<a class="writing-title" href="https://dhruvnigam93.substack.com/p/the-ai-engineers-path">The AI Engineer's path</a>
+		<span class="writing-byline">Evolution from PhD-required to democratized AI development — ML Trenches</span>
+	</div>
+
+	{% for post in site.posts %}
+	{% assign post_year = post.date | date: "%Y" | plus: 0 %}
+	{% if post_year >= 2025 %}
+	<div class="writing-entry">
+		<span class="writing-date">{{ post.date | date: "%d %b %Y" }}</span>
+		<a class="writing-title" href="{{ post.url }}">{{ post.title }}</a>
+	</div>
+	{% endif %}
+	{% endfor %}
+
+	<div class="writing-entry">
+		<span class="writing-date">30 Oct 2024</span>
+		<a class="writing-title" href="https://dhruvnigam93.substack.com/p/uncertainty-and-all-his-friends">Uncertainty and all his friends</a>
+		<span class="writing-byline">Aleatoric vs epistemic uncertainty in ML — ML Trenches</span>
+	</div>
+
+	{% for post in site.posts %}
+	{% assign post_year = post.date | date: "%Y" | plus: 0 %}
+	{% if post_year == 2024 %}
+	<div class="writing-entry">
+		<span class="writing-date">{{ post.date | date: "%d %b %Y" }}</span>
+		<a class="writing-title" href="{{ post.url }}">{{ post.title }}</a>
+	</div>
+	{% endif %}
+	{% endfor %}
+
+	{% for post in site.posts %}
+	{% assign post_year = post.date | date: "%Y" | plus: 0 %}
+	{% if post_year == 2023 %}
+	<div class="writing-entry">
+		<span class="writing-date">{{ post.date | date: "%d %b %Y" }}</span>
+		<a class="writing-title" href="{{ post.url }}">{{ post.title }}</a>
+	</div>
+	{% endif %}
+	{% endfor %}
+
+	<div class="writing-entry">
+		<span class="writing-date">08 Jun 2022</span>
+		<a class="writing-title" href="https://protium.co.in/is-automation-killing-jobs-in-the-credit-underwriting/">Automation in credit underwriting: Indian MSME perspective</a>
+		<span class="writing-byline">Automation's impact on Indian MSME credit — Protium</span>
+	</div>
+
+	{% for post in site.posts %}
+	{% assign post_year = post.date | date: "%Y" | plus: 0 %}
+	{% if post_year <= 2022 %}
+	<div class="writing-entry">
+		<span class="writing-date">{{ post.date | date: "%d %b %Y" }}</span>
+		<a class="writing-title" href="{{ post.url }}">{{ post.title }}</a>
+	</div>
+	{% endif %}
+	{% endfor %}
+
+</div>
+
+<h2>Publications</h2>
+
+<div class="publications-list">
+	<div class="pub-entry">
+		<span class="pub-title">PromptShap: Prompt Engineering with Game Theory</span>
+		<span class="pub-venue">Nigam, 2026 — Under review</span>
+		<a href="https://drive.google.com/file/d/1fDPbTqaJWxmQTJhd1qVNa9gFvO1tVRBJ/view">Paper</a>
+	</div>
+	<div class="pub-entry">
+		<span class="pub-title">LUMOS: Large User MOdels — Scaling User Behavior Prediction with Foundation Models</span>
+		<span class="pub-venue">Nigam et al., 2025</span>
+		<a href="https://arxiv.org/abs/2501.12984">arXiv</a>
+	</div>
+	<div class="pub-entry">
+		<span class="pub-title">ForeCal: Random Forest-based Calibration for DNNs</span>
+		<span class="pub-venue">Nigam, 2024 — CODS-COMAD 2024</span>
+		<a href="https://dl.acm.org/doi/10.1145/3632410.3632461">ACM DL</a>
+	</div>
+</div>
