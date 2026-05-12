@@ -1,4 +1,6 @@
 name: Dhruv Nigam
+exclude:
+  - CLAUDE.md
 markdown: kramdown
 permalink: /blog/:year/:month/:day/:title
 # Google Analytics
