@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "FAISS & Capacity Math"
+  slug: faiss-capacity-math
+  date: 2026-08-18
+  description: "Interactive defense kit for ML system design interviews — index size, latency, QPS, and ranker cost from first principles."
+
 - title: "How this works"
   slug: how-this-works
   date: 2026-08-18

@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<title>FAISS & Capacity Math — Interview Defense Kit</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f7f7f8;
+    --surface2: #eef0f4;
+    --border: #e0e2e8;
+    --text: #1a1a1a;
+    --text2: #6b7280;
+    --accent: #4361ee;
+    --accent2: #2a9d8f;
+    --warn: #dc2626;
+    --good: #16a34a;
+    --orange: #d97706;
+    --purple: #9333ea;
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #232736;
+      --border: #2e3347;
+      --text: #e4e7ef;
+      --text2: #9ba0b4;
+      --accent: #6c8cff;
+      --accent2: #4ecdc4;
+      --warn: #ff6b6b;
+      --good: #51cf66;
+      --orange: #ffa94d;
+      --purple: #cc5de8;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.6; padding: 0 0 80px; font-size: 18px;
+  }
+  .back {
+    display: inline-block; margin: max(12px, env(safe-area-inset-top)) 16px 0;
+    color: var(--text2); text-decoration: none; font-size: 0.9rem;
+  }
+  .back:active { opacity: 0.6; }
+  .hero {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 32px 20px 24px; text-align: center;
+  }
+  .hero h1 { font-size: 1.8rem; margin-bottom: 6px; }
+  .hero .meta { color: var(--text2); font-size: 0.85rem; margin-bottom: 8px; }
+  .hero p { color: var(--text2); font-size: 0.95rem; max-width: 600px; margin: 0 auto; }
+  .container {
+    max-width: 800px; margin: 0 auto;
+    padding: 0 max(16px, env(safe-area-inset-left));
+  }
+
+  .section {
+    margin-top: 32px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .section-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    cursor: pointer; display: flex; align-items: center; gap: 10px;
+    user-select: none; min-height: 48px;
+  }
+  .section-header:hover { background: var(--surface2); }
+  .section-header .num {
+    background: var(--accent); color: #fff; width: 28px; height: 28px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; font-weight: 700; flex-shrink: 0;
+  }
+  .section-header h2 { font-size: 1.1rem; flex: 1; }
+  .section-header .arrow { transition: transform 0.2s; font-size: 1.2rem; color: var(--text2); }
+  .section-header.open .arrow { transform: rotate(90deg); }
+  .section-body { padding: 20px; display: none; }
+  .section-body.open { display: block; }
+
+  h3 { font-size: 1rem; color: var(--accent); margin: 20px 0 10px; }
+  h3:first-child { margin-top: 0; }
+  p, li { font-size: 0.92rem; color: var(--text); }
+  ul { padding-left: 20px; margin: 8px 0; }
+  li { margin: 4px 0; }
+  code {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em;
+  }
+
+  .formula-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent); border-radius: 8px;
+    padding: 14px 16px; margin: 12px 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85rem; line-height: 1.7; overflow-x: auto;
+  }
+  .formula-box .label {
+    color: var(--text2); font-size: 0.78rem; display: block;
+    margin-bottom: 4px; font-family: -apple-system, sans-serif;
+  }
+  .formula-box .result { color: var(--good); font-weight: 600; }
+  .formula-box .warn { color: var(--warn); }
+  .formula-box .highlight { color: var(--orange); }
+
+  .calc-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; margin: 16px 0;
+  }
+  .calc-box h4 {
+    font-size: 0.95rem; color: var(--accent2); margin-bottom: 14px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .calc-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin-bottom: 14px;
+  }
+  @media (max-width: 500px) { .calc-grid { grid-template-columns: 1fr; } }
+  .calc-field label {
+    display: block; font-size: 0.75rem; color: var(--text2);
+    margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .calc-field input, .calc-field select {
+    width: 100%; padding: 10px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); font-size: 0.9rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    min-height: 44px;
+  }
+  .calc-field input:focus, .calc-field select:focus {
+    outline: none; border-color: var(--accent);
+  }
+  .calc-result {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px; font-size: 0.88rem;
+    line-height: 1.8;
+  }
+  .calc-result .line { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
+  .calc-result .val { font-family: ui-monospace, monospace; font-weight: 600; }
+  .calc-result .val.good { color: var(--good); }
+  .calc-result .val.warn { color: var(--warn); }
+  .calc-result .val.ok { color: var(--orange); }
+
+  .comparison-table {
+    width: 100%; border-collapse: collapse; margin: 12px 0;
+    font-size: 0.82rem; overflow-x: auto; display: block;
+  }
+  .comparison-table th {
+    background: var(--surface2); padding: 8px 10px;
+    text-align: left; border: 1px solid var(--border);
+    color: var(--accent); font-weight: 600; white-space: nowrap;
+  }
+  .comparison-table td {
+    padding: 8px 10px; border: 1px solid var(--border);
+    font-family: ui-monospace, monospace; font-size: 0.8rem;
+    white-space: nowrap;
+  }
+  .comparison-table tr:hover td { background: var(--surface2); }
+
+  .insight {
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+    border-radius: 8px; padding: 12px 14px; margin: 12px 0;
+    font-size: 0.88rem;
+  }
+  .insight::before { content: "💡 "; }
+  .insight.danger {
+    background: color-mix(in srgb, var(--warn) 6%, transparent);
+    border-color: color-mix(in srgb, var(--warn) 20%, transparent);
+  }
+  .insight.danger::before { content: "⚠️ "; }
+
+  .tabs { display: flex; gap: 4px; margin: 12px 0 0; flex-wrap: wrap; }
+  .tab {
+    padding: 8px 16px; border-radius: 6px; font-size: 0.82rem;
+    cursor: pointer; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text2); transition: all 0.15s;
+    min-height: 44px; display: flex; align-items: center;
+  }
+  .tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tab-content { display: none; margin-top: 12px; }
+  .tab-content.active { display: block; }
+
+  .pipeline-viz {
+    display: flex; align-items: center; gap: 0;
+    overflow-x: auto; padding: 16px 0; font-size: 0.82rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  .pipeline-stage {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 14px; text-align: center;
+    min-width: 90px; flex-shrink: 0;
+  }
+  .pipeline-stage .name { font-weight: 600; color: var(--accent); font-size: 0.82rem; }
+  .pipeline-stage .detail { color: var(--text2); font-size: 0.72rem; margin-top: 2px; }
+  .pipeline-stage .time { color: var(--good); font-family: monospace; font-weight: 700; margin-top: 4px; font-size: 0.82rem; }
+  .pipeline-arrow { color: var(--text2); font-size: 1.2rem; padding: 0 4px; flex-shrink: 0; }
+
+  .quiz-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin: 16px 0;
+  }
+  .quiz-box .q { font-weight: 600; margin-bottom: 10px; font-size: 0.92rem; }
+  .quiz-box .choices { display: flex; flex-direction: column; gap: 6px; }
+  .quiz-box .choice {
+    padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px;
+    cursor: pointer; font-size: 0.88rem; transition: all 0.15s;
+    min-height: 44px; display: flex; align-items: center;
+  }
+  .quiz-box .choice:hover { border-color: var(--accent); }
+  .quiz-box .choice.correct { border-color: var(--good); background: color-mix(in srgb, var(--good) 10%, transparent); }
+  .quiz-box .choice.wrong { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); }
+  .quiz-box .explanation { margin-top: 10px; font-size: 0.85rem; color: var(--text2); display: none; }
+
+  footer {
+    max-width: 800px; margin: 3em auto 0;
+    padding: 1.2em max(16px, env(safe-area-inset-left)) 0;
+    border-top: 1px solid var(--border);
+    color: var(--text2); font-size: 0.85rem;
+  }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<a class="back" href="/explainers/">&larr; all explainers</a>
+
+<div class="hero">
+  <h1>FAISS & Capacity Math</h1>
+  <p class="meta">Added 2026-08-18</p>
+  <p>Interactive defense kit for ML system design interviews. Reason about index size, latency, QPS, and ranker cost from first principles.</p>
+</div>
+
+<div class="container">
+
+<!-- SECTION 1: THE ONE FORMULA -->
+<div class="section" id="s1">
+  <div class="section-header open" onclick="toggle(this)">
+    <span class="num">1</span>
+    <h2>The One Formula You Keep Forgetting</h2>
+    <span class="arrow">›</span>
+  </div>
+  <div class="section-body open">
+    <p>Every capacity question in an interview reduces to one of three computations. Memorize the template, plug in numbers live.</p>
+
+    <div class="formula-box">
+      <span class="label">Memory (how big is it?)</span>
+      N items × D dimensions × bytes_per_element = <span class="result">raw bytes</span>
+    </div>
+
+    <div class="formula-box">
+      <span class="label">Latency (how long to scan?)</span>
+      bytes_to_scan ÷ memory_bandwidth = <span class="result">seconds</span>
+    </div>
+
+    <div class="formula-box">
+      <span class="label">QPS (how many requests?)</span>
+      DAU × sessions/day × fetches/session ÷ 86,400 × peak_factor = <span class="result">peak RPS</span>
+    </div>
+
+    <div class="insight">
+      These three are the atomic building blocks. Every "how would you scale this" question is just these composed together. The interview error is knowing the concepts but not being able to produce the number live.
+    </div>
+
+    <h3>Bandwidth Numbers to Memorize</h3>
+    <table class="comparison-table">
+      <tr><th>Medium</th><th>Bandwidth</th><th>Use When</th></tr>
+      <tr><td>DDR4 RAM</td><td>~50 GB/s</td><td>CPU-based ANN scan</td></tr>
+      <tr><td>DDR5 RAM</td><td>~80-100 GB/s</td><td>Newer servers</td></tr>
+      <tr><td>GPU HBM2e (A100)</td><td>~2 TB/s</td><td>GPU-based brute force</td></tr>
+      <tr><td>GPU HBM3 (H100)</td><td>~3.35 TB/s</td><td>Latest GPU inference</td></tr>
+      <tr><td>NVMe SSD</td><td>~5-7 GB/s</td><td>Disk-based index (DiskANN)</td></tr>
+      <tr><td>Network (25GbE)</td><td>~3 GB/s</td><td>Cross-shard scatter</td></tr>
+    </table>
+
+    <div class="insight">
+      In an interview, say: "RAM bandwidth is roughly 50 GB/s, so scanning 200MB takes about 4ms." That's the derivation that was missing today.
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 2: FAISS INDEX TYPES -->
+<div class="section" id="s2">
+  <div class="section-header" onclick="toggle(this)">
+    <span class="num">2</span>
+    <h2>FAISS Index Types — What Actually Happens Per Query</h2>
+    <span class="arrow">›</span>
+  </div>
+  <div class="section-body">
+    <p>The interview error: name-dropping "FAISS" while describing brute-force cost. Here's what each index <em>actually</em> computes.</p>
+
+    <div class="tabs" id="index-tabs">
+      <div class="tab active" onclick="switchTab('index-tabs','idx-flat')">Flat (Brute)</div>
+      <div class="tab" onclick="switchTab('index-tabs','idx-ivf')">IVF</div>
+      <div class="tab" onclick="switchTab('index-tabs','idx-pq')">PQ</div>
+      <div class="tab" onclick="switchTab('index-tabs','idx-ivfpq')">IVF+PQ</div>
+    </div>
+
+    <div class="tab-content active" id="idx-flat">
+      <h3>IndexFlatL2 / IndexFlatIP</h3>
+      <p><strong>What it does:</strong> Computes exact distance from query to every single vector. No approximation.</p>
+      <div class="formula-box">
+        <span class="label">Per-query cost</span>
+        N × D multiplications + N × D additions = <span class="warn">O(N × D)</span>
+        <br>1B × 128 = <span class="warn">128 billion ops</span> = DON'T USE THIS AT SCALE
+      </div>
+      <div class="formula-box">
+        <span class="label">Memory</span>
+        N × D × 4 bytes (FP32)
+        <br>1B × 128 × 4 = <span class="warn">512 GB</span>
+      </div>
+      <p><strong>When to use:</strong> Baselines, small datasets (&lt;1M), re-scoring top-K from another index, or on GPU where bandwidth compensates (A100 scans ~500M vectors/sec for D=128).</p>
+      <div class="insight danger">This is what you quoted in the interview: "n × d computations." Correct for Flat. Wrong claim if you said FAISS — FAISS's value IS the non-brute-force indexes below.</div>
+    </div>
+
+    <div class="tab-content" id="idx-ivf">
+      <h3>IndexIVFFlat</h3>
+      <p><strong>What it does:</strong> K-means clusters the dataset into <code>nlist</code> cells. At query time, finds the closest <code>nprobe</code> centroids, then brute-force scans only vectors in those cells.</p>
+      <div class="formula-box">
+        <span class="label">Step 1: Find closest centroids</span>
+        nlist × D = cheap (nlist is ~10K-100K, D is 128)
+        <br>e.g., 32K × 128 = <span class="result">4M ops — microseconds</span>
+      </div>
+      <div class="formula-box">
+        <span class="label">Step 2: Scan vectors in probed cells</span>
+        (N / nlist) × nprobe × D = vectors_scanned × D
+        <br>Rule: nlist ≈ √N → each cell has √N vectors
+        <br>1B vectors, nlist=32K → ~31K vectors/cell
+        <br>nprobe=32 → scan 32 × 31K = <span class="highlight">~1M vectors</span>
+        <br>1M × 128 × 4 bytes = <span class="result">512 MB → ~10ms at 50 GB/s</span>
+      </div>
+      <div class="formula-box">
+        <span class="label">Memory = same as Flat (vectors stored as-is)</span>
+        512 GB + centroid overhead (negligible)
+      </div>
+      <div class="insight">
+        <strong>The rule:</strong> nlist ≈ √N. For 1B vectors → nlist ≈ 32K. For 100M → nlist ≈ 10K.<br>
+        nprobe controls the recall/latency trade-off. nprobe=1 is fast but low recall. nprobe=√nlist is a reasonable default.
+      </div>
+      <table class="comparison-table">
+        <tr><th>N</th><th>nlist (≈√N)</th><th>vectors/cell</th><th>nprobe=32 scans</th></tr>
+        <tr><td>10M</td><td>3,162</td><td>3,162</td><td>101K vectors</td></tr>
+        <tr><td>100M</td><td>10,000</td><td>10,000</td><td>320K vectors</td></tr>
+        <tr><td>1B</td><td>31,623</td><td>31,623</td><td>~1M vectors</td></tr>
+        <tr><td>10B</td><td>100,000</td><td>100,000</td><td>3.2M vectors</td></tr>
+      </table>
+    </div>
+
+    <div class="tab-content" id="idx-pq">
+      <h3>IndexPQ (Product Quantization)</h3>
+      <p><strong>What it does:</strong> Splits each D-dim vector into <code>m</code> sub-vectors of <code>D/m</code> dimensions. Each sub-vector is quantized to the nearest centroid from a learned codebook of 256 entries. The full vector becomes <code>m</code> bytes.</p>
+      <div class="formula-box">
+        <span class="label">Compression ratio</span>
+        Original: D × 4 bytes (FP32) → Compressed: m bytes
+        <br>D=128, m=32 → 512 bytes → <span class="result">32 bytes = 16× compression</span>
+        <br>D=128, m=16 → 512 bytes → <span class="result">16 bytes = 32× compression</span>
+        <br>D=128, m=8  → 512 bytes → <span class="result">8 bytes = 64× compression</span>
+      </div>
+      <div class="formula-box">
+        <span class="label">Memory for 1B vectors</span>
+        Raw: 512 GB
+        <br>PQ m=32: 1B × 32 = <span class="result">32 GB</span>
+        <br>PQ m=16: 1B × 16 = <span class="result">16 GB</span> ← fits one machine
+        <br>PQ m=8:  1B × 8  = <span class="result">8 GB</span>  ← fits GPU VRAM
+      </div>
+      <div class="formula-box">
+        <span class="label">Distance computation</span>
+        Pre-compute distance table: D × 256 ops (once per query)
+        <br>Per-vector: m lookups + m additions → <span class="result">O(m) not O(D)</span>
+        <br>Speedup: D/m × (since lookup replaces multiply)
+      </div>
+      <p><strong>Recall cost:</strong> m=32 → ~95%+ recall@100. m=8 → ~80-85%. OPQ (rotation before PQ) adds ~2-5% recall for free.</p>
+    </div>
+
+    <div class="tab-content" id="idx-ivfpq">
+      <h3>IndexIVFPQ — The Production Index</h3>
+      <p><strong>What it does:</strong> IVF clustering + PQ compression. The workhorse for billion-scale. This is what you should default to in interviews.</p>
+      <div class="formula-box">
+        <span class="label">Per-query cost</span>
+        1. Centroid search: nlist × D (microseconds)
+        <br>2. Scan probed cells: (N/nlist) × nprobe vectors
+        <br>3. Each vector is PQ-compressed → m table lookups, not D mults
+        <br><br>
+        1B, nlist=32K, nprobe=64, m=32:
+        <br>Scan: 64 × 31K = 2M vectors × 32 bytes = <span class="result">64 MB → ~1.3ms</span>
+      </div>
+      <div class="formula-box">
+        <span class="label">Memory</span>
+        1B × m bytes + centroid overhead
+        <br>m=32: <span class="result">~32 GB</span> — single machine, RAM
+        <br>m=16: <span class="result">~16 GB</span> — fits in GPU VRAM
+      </div>
+      <div class="insight">
+        <strong>Interview default:</strong> "For 1B vectors at 128 dimensions, I'd use IVF32K,PQ32. That's ~32GB, fits one machine, queries in ~1-3ms at nprobe=64 with ~95% recall@100. If I need to cut memory further, PQ16 halves it to 16GB at ~90% recall."
+      </div>
+      <h3>The Full Menu (what to say when asked "what else?")</h3>
+      <table class="comparison-table">
+        <tr><th>Index</th><th>Memory (1B×128d)</th><th>Latency</th><th>Recall@100</th><th>Use Case</th></tr>
+        <tr><td>Flat</td><td>512 GB</td><td>~seconds</td><td>100%</td><td>Re-scoring top-K</td></tr>
+        <tr><td>IVFFlat</td><td>512 GB</td><td>~10ms</td><td>~98%</td><td>Exact vectors fit in cluster</td></tr>
+        <tr><td>IVFPQ32</td><td>32 GB</td><td>~1-3ms</td><td>~95%</td><td>Production default</td></tr>
+        <tr><td>IVFPQ16</td><td>16 GB</td><td>~0.5-1.5ms</td><td>~90%</td><td>Tight memory budget</td></tr>
+        <tr><td>HNSW</td><td>~580 GB*</td><td>~0.5ms</td><td>~99%</td><td>Latency-critical, RAM-rich</td></tr>
+        <tr><td>HNSW+PQ</td><td>~50 GB*</td><td>~1ms</td><td>~93%</td><td>HNSW with PQ compression</td></tr>
+      </table>
+      <p style="font-size:0.78rem; color:var(--text2);">*HNSW adds ~500 bytes/vector for graph edges (M=32)</p>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 3: INTERACTIVE CALCULATOR — INDEX -->
+<div class="section" id="s3">
+  <div class="section-header" onclick="toggle(this)">
+    <span class="num">3</span>
+    <h2>Interactive Calculator: Index Size & Latency</h2>
+    <span class="arrow">›</span>
+  </div>
+  <div class="section-body">
+    <p>Plug in your interview numbers. Practice deriving these out loud — the point is fluency, not a calculator.</p>
+    <div class="calc-box">
+      <h4>Index Size & Query Latency</h4>
+      <div class="calc-grid">
+        <div class="calc-field">
+          <label>Total vectors (N)</label>
+          <input type="text" id="idx-n" value="1000000000" oninput="calcIndex()">
+        </div>
+        <div class="calc-field">
+          <label>Dimensions (D)</label>
+          <input type="number" id="idx-d" value="128" oninput="calcIndex()">
+        </div>
+        <div class="calc-field">
+          <label>Index type</label>
+          <select id="idx-type" onchange="calcIndex()">
+            <option value="flat">Flat (brute force)</option>
+            <option value="ivf">IVF Flat</option>
+            <option value="ivfpq" selected>IVF + PQ</option>
+            <option value="hnsw">HNSW</option>
+          </select>
+        </div>
+        <div class="calc-field">
+          <label>PQ sub-quantizers (m)</label>
+          <input type="number" id="idx-m" value="32" oninput="calcIndex()">
+        </div>
+        <div class="calc-field">
+          <label>nprobe (IVF only)</label>
+          <input type="number" id="idx-nprobe" value="64" oninput="calcIndex()">
+        </div>
+        <div class="calc-field">
+          <label>RAM bandwidth (GB/s)</label>
+          <input type="number" id="idx-bw" value="50" oninput="calcIndex()">
+        </div>
+      </div>
+      <div class="calc-result" id="idx-result"></div>
+    </div>
+    <div class="insight">
+      <strong>Practice script:</strong> "1 billion 128-dim vectors, FP32. Raw: 1B × 128 × 4 = 512GB. With IVFPQ32: 1B × 32 bytes = 32GB, fits one box. nlist = √1B ≈ 32K, nprobe = 64, scanning 64 × 31K = 2M vectors × 32 bytes = 64MB. At 50 GB/s memory bandwidth, that's about 1.3ms." Say it out loud until it flows.
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 4: QPS FROM DAU -->
+<div class="section" id="s4">
+  <div class="section-header" onclick="toggle(this)">
+    <span class="num">4</span>
+    <h2>QPS From DAU — The Derivation</h2>
+    <span class="arrow">›</span>
+  </div>
+  <div class="section-body">
+    <p>The template that works for any system.</p>
+    <div class="formula-box">
+      <span class="label">The template</span>
+      peak_RPS = DAU × sessions_per_day × requests_per_session ÷ 86,400 × peak_factor
+      <br><br>
+      <span class="label">Short-video feed example</span>
+      500M DAU × 5 sessions/day × 3 feed-fetches/session ÷ 86,400 × 2.5
+      <br>= 7.5B ÷ 86,400 × 2.5
+      <br>= 86,805 × 2.5
+      <br>≈ <span class="result">~217K peak RPS</span>
+    </div>
+    <div class="calc-box">
+      <h4>QPS Calculator</h4>
+      <div class="calc-grid">
+        <div class="calc-field">
+          <label>DAU</label>
+          <input type="text" id="qps-dau" value="500000000" oninput="calcQPS()">
+        </div>
+        <div class="calc-field">
+          <label>Sessions/day</label>
+          <input type="number" id="qps-sessions" value="5" oninput="calcQPS()">
+        </div>
+        <div class="calc-field">
+          <label>Requests/session</label>
+          <input type="number" id="qps-reqs" value="3" oninput="calcQPS()">
+        </div>
+        <div class="calc-field">
+          <label>Peak factor (2-3x typical)</label>
+          <input type="number" id="qps-peak" value="2.5" step="0.5" oninput="calcQPS()">
+        </div>
+      </div>
+      <div class="calc-result" id="qps-result"></div>
+    </div>
+    <h3>What "Requests Per Session" Means by System</h3>
+    <table class="comparison-table">
+      <tr><th>System</th><th>Sessions/day</th><th>Req/session</th><th>Notes</th></tr>
+      <tr><td>Short-video feed</td><td>5</td><td>3</td><td>Initial load + 2 scroll-refetches</td></tr>
+      <tr><td>Search</td><td>3</td><td>5</td><td>5 queries per search session</td></tr>
+      <tr><td>Chat/messaging</td><td>10-20</td><td>1-2</td><td>Many short sessions</td></tr>
+      <tr><td>E-commerce</td><td>2</td><td>10</td><td>Browse-heavy, lots of page loads</td></tr>
+      <tr><td>LLM API gateway</td><td>N/A</td><td>N/A</td><td>Use: teams × avg_req/team/hour</td></tr>
+    </table>
+    <div class="insight">
+      <strong>Common factors to keep in pocket:</strong><br>
+      86,400 seconds in a day (just say "about 100K" for order-of-magnitude). Peak factor: 2-3× for global apps, 3-5× for event-driven (sports, news). 500M DAU ÷ 100K seconds ≈ 5K average RPS before any multipliers.
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 5: RANKER CAPACITY -->
+<div class="section" id="s5">
+  <div class="section-header" onclick="toggle(this)">
+    <span class="num">5</span>
+    <h2>Ranker Capacity Math — The Missing Piece</h2>
+    <span class="arrow">›</span>
+  </div>
+  <div class="section-body">
+    <p>The ranker is the expensive part — it runs a neural net on every candidate.</p>
+    <h3>Ranker Cost Per Request</h3>
+    <div class="formula-box">
+      <span class="label">The math</span>
+      Per request: score K candidates through a model
+      <br>Model inference: ~0.1-1ms per candidate (CPU) or ~0.01-0.1ms (GPU, batched)
+      <br><br>
+      <span class="label">Example: 100 candidates, CPU ranker</span>
+      100 × 0.5ms = <span class="highlight">50ms per request</span>
+      At 200K RPS → need 200K × 0.05s = <span class="result">10,000 CPU cores</span>
+      <br><br>
+      <span class="label">Example: 100 candidates, GPU ranker (batched)</span>
+      Batch all 100 → one forward pass ~1-3ms
+      At 200K RPS → 200K × 0.002s = <span class="result">400 GPU-equivalents</span>
+    </div>
+    <h3>The Full Latency Budget</h3>
+    <div class="pipeline-viz">
+      <div class="pipeline-stage">
+        <div class="name">Network</div>
+        <div class="detail">client→server</div>
+        <div class="time">~20ms</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-stage">
+        <div class="name">User lookup</div>
+        <div class="detail">feature store</div>
+        <div class="time">~5ms</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-stage">
+        <div class="name">Retrieval</div>
+        <div class="detail">ANN query</div>
+        <div class="time">~5ms</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-stage">
+        <div class="name">Ranker</div>
+        <div class="detail">score 100</div>
+        <div class="time">~30ms</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-stage">
+        <div class="name">Biz rules</div>
+        <div class="detail">filter/boost</div>
+        <div class="time">~5ms</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-stage">
+        <div class="name">Network</div>
+        <div class="detail">server→client</div>
+        <div class="time">~20ms</div>
+      </div>
+    </div>
+    <div class="formula-box">
+      <span class="label">Total</span>
+      20 + 5 + 5 + 30 + 5 + 20 = <span class="result">~85ms</span> (well under 200ms SLA)
+      <br>Buffer: ~115ms for tail latency, retries, feature store misses
+    </div>
+    <div class="calc-box">
+      <h4>Ranker Fleet Size</h4>
+      <div class="calc-grid">
+        <div class="calc-field">
+          <label>Peak RPS</label>
+          <input type="text" id="rank-rps" value="200000" oninput="calcRanker()">
+        </div>
+        <div class="calc-field">
+          <label>Candidates per request</label>
+          <input type="number" id="rank-k" value="100" oninput="calcRanker()">
+        </div>
+        <div class="calc-field">
+          <label>Inference per candidate (ms)</label>
+          <input type="number" id="rank-lat" value="0.5" step="0.1" oninput="calcRanker()">
+        </div>
+        <div class="calc-field">
+          <label>Compute type</label>
+          <select id="rank-compute" onchange="calcRanker()">
+            <option value="cpu">CPU (per-item inference)</option>
+            <option value="gpu" selected>GPU (batch all K)</option>
+          </select>
+        </div>
+      </div>
+      <div class="calc-result" id="rank-result"></div>
+    </div>
+    <h3>Cost Estimation</h3>
+    <table class="comparison-table">
+      <tr><th>Resource</th><th>On-demand $/hr</th><th>Spot $/hr</th><th>Use for</th></tr>
+      <tr><td>c6i.8xlarge (32 vCPU)</td><td>$1.36</td><td>$0.41</td><td>CPU ranker</td></tr>
+      <tr><td>g5.xlarge (1× A10G)</td><td>$1.01</td><td>$0.30</td><td>GPU ranker</td></tr>
+      <tr><td>r6i.4xlarge (128GB RAM)</td><td>$1.01</td><td>$0.30</td><td>ANN index serving</td></tr>
+      <tr><td>p4d.24xlarge (8× A100)</td><td>$32.77</td><td>$9.83</td><td>Model training</td></tr>
+    </table>
+    <div class="calc-box">
+      <h4>Monthly Cost Estimate</h4>
+      <div class="calc-grid">
+        <div class="calc-field">
+          <label>Index replicas needed</label>
+          <input type="number" id="cost-idx" value="3" oninput="calcCost()">
+        </div>
+        <div class="calc-field">
+          <label>Index instance $/hr</label>
+          <input type="number" id="cost-idx-rate" value="1.01" step="0.01" oninput="calcCost()">
+        </div>
+        <div class="calc-field">
+          <label>Ranker instances needed</label>
+          <input type="number" id="cost-rank" value="400" oninput="calcCost()">
+        </div>
+        <div class="calc-field">
+          <label>Ranker instance $/hr</label>
+          <input type="number" id="cost-rank-rate" value="1.01" step="0.01" oninput="calcCost()">
+        </div>
+      </div>
+      <div class="calc-result" id="cost-result"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 6: SHARDING STRATEGIES -->
+<div class="section" id="s6">
+  <div class="section-header" onclick="toggle(this)">
+    <span class="num">6</span>
+    <h2>Sharding — When and How to Split the Index</h2>
+    <span class="arrow">›</span>
+  </div>
+  <div class="section-body">
+    <p>Here's the full decision framework.</p>
+    <h3>Why Shard?</h3>
+    <ul>
+      <li><strong>Memory:</strong> Index doesn't fit on one machine (IVFFlat at 1B×128d = 512GB)</li>
+      <li><strong>QPS:</strong> Single machine can't handle the request rate</li>
+      <li><strong>Latency:</strong> Scanning a huge index on one machine exceeds SLA</li>
+    </ul>
+    <h3>Two Strategies</h3>
+    <div class="tabs" id="shard-tabs">
+      <div class="tab active" onclick="switchTab('shard-tabs','shard-data')">Data-parallel (shards)</div>
+      <div class="tab" onclick="switchTab('shard-tabs','shard-replica')">Replicas</div>
+    </div>
+    <div class="tab-content active" id="shard-data">
+      <p><strong>Split the data across machines.</strong> Each shard holds N/S vectors. Query hits ALL shards in parallel, each returns top-K, merge at the aggregator.</p>
+      <div class="formula-box">
+        <span class="label">Per-shard scan (IVFPQ, 1B vectors, 10 shards)</span>
+        100M per shard, nlist ≈ √100M ≈ 10K
+        <br>nprobe=64: 64 × 10K = 640K vectors × 32B = 20MB
+        <br>Latency: 20MB ÷ 50GB/s ≈ <span class="result">0.4ms</span>
+        <br><br>
+        <span class="label">But: scatter-gather overhead</span>
+        10 RPCs (fan-out) + merge = ~2-5ms network overhead
+        <br>Total: <span class="result">~3-6ms</span> per query
+      </div>
+      <p><strong>When:</strong> Index doesn't fit on one machine, or per-machine scan exceeds SLA.</p>
+      <div class="insight danger">More shards = more fan-out RPCs = higher tail latency. Don't shard for fun. If IVFPQ32 fits in 32GB on one box, replicate, don't shard.</div>
+    </div>
+    <div class="tab-content" id="shard-replica">
+      <p><strong>Full copy of the index on multiple machines.</strong> Load balancer distributes queries. Each machine handles 1/R of the QPS.</p>
+      <div class="formula-box">
+        <span class="label">Replicas for QPS</span>
+        Single machine throughput: ~1000-5000 QPS (IVFPQ, multi-threaded)
+        <br><br>
+        200K peak RPS ÷ 3000 QPS/machine = <span class="result">~67 replicas</span>
+        <br>Each replica = 32 GB (IVFPQ32) → total RAM: <span class="highlight">~2.1 TB</span>
+      </div>
+      <p><strong>When:</strong> Index fits on one machine but QPS requires horizontal scale.</p>
+    </div>
+    <div class="insight">
+      <strong>Interview line:</strong> "The index is 32GB with IVFPQ, so it fits on one machine. My bottleneck isn't memory — it's QPS. I need ~67 replicas at 3K QPS each to handle 200K peak RPS. That's 67 × r6i.4xlarge at ~$1/hr = ~$49K/month for the retrieval tier."
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 7: QUICK-FIRE DRILLS -->
+<div class="section" id="s7">
+  <div class="section-header" onclick="toggle(this)">
+    <span class="num">7</span>
+    <h2>Quick-Fire Drills</h2>
+    <span class="arrow">›</span>
+  </div>
+  <div class="section-body">
+    <p>Practice these until the answers are reflexive. Tap to check yourself.</p>
+    <div class="quiz-box">
+      <div class="q">1. 1B vectors × 128 dims × FP32. Raw index size?</div>
+      <div class="choices">
+        <div class="choice" onclick="checkQuiz(this, false)">128 GB</div>
+        <div class="choice" onclick="checkQuiz(this, true)">512 GB</div>
+        <div class="choice" onclick="checkQuiz(this, false)">1 TB</div>
+        <div class="choice" onclick="checkQuiz(this, false)">64 GB</div>
+      </div>
+      <div class="explanation">1B × 128 × 4 bytes = 512 GB. The 4 is FP32 = 4 bytes per float.</div>
+    </div>
+    <div class="quiz-box">
+      <div class="q">2. Same index with PQ, m=16 sub-quantizers. New size?</div>
+      <div class="choices">
+        <div class="choice" onclick="checkQuiz(this, false)">64 GB</div>
+        <div class="choice" onclick="checkQuiz(this, false)">32 GB</div>
+        <div class="choice" onclick="checkQuiz(this, true)">16 GB</div>
+        <div class="choice" onclick="checkQuiz(this, false)">8 GB</div>
+      </div>
+      <div class="explanation">PQ replaces each vector with m bytes. 1B × 16 bytes = 16 GB. Compression: 512/16 = 32×.</div>
+    </div>
+    <div class="quiz-box">
+      <div class="q">3. nlist for 1B vectors using the √N rule?</div>
+      <div class="choices">
+        <div class="choice" onclick="checkQuiz(this, false)">1,000</div>
+        <div class="choice" onclick="checkQuiz(this, false)">10,000</div>
+        <div class="choice" onclick="checkQuiz(this, true)">~31,623</div>
+        <div class="choice" onclick="checkQuiz(this, false)">100,000</div>
+      </div>
+      <div class="explanation">√(1,000,000,000) = 31,622.77... ≈ 32K. In practice, round to a power of 2: 32,768.</div>
+    </div>
+    <div class="quiz-box">
+      <div class="q">4. Scanning 200MB of vectors from RAM. How long?</div>
+      <div class="choices">
+        <div class="choice" onclick="checkQuiz(this, false)">20ms</div>
+        <div class="choice" onclick="checkQuiz(this, true)">~4ms</div>
+        <div class="choice" onclick="checkQuiz(this, false)">0.4ms</div>
+        <div class="choice" onclick="checkQuiz(this, false)">40ms</div>
+      </div>
+      <div class="explanation">200MB ÷ 50 GB/s = 0.004s = 4ms. The formula: bytes ÷ bandwidth = seconds.</div>
+    </div>
+    <div class="quiz-box">
+      <div class="q">5. 500M DAU, 5 sessions/day, 3 requests/session, peak factor 2.5. Peak RPS?</div>
+      <div class="choices">
+        <div class="choice" onclick="checkQuiz(this, false)">~87K</div>
+        <div class="choice" onclick="checkQuiz(this, true)">~217K</div>
+        <div class="choice" onclick="checkQuiz(this, false)">~500K</div>
+        <div class="choice" onclick="checkQuiz(this, false)">~50K</div>
+      </div>
+      <div class="explanation">500M × 5 × 3 = 7.5B requests/day ÷ 86,400 = 86,805 avg RPS × 2.5 peak = ~217K.</div>
+    </div>
+    <div class="quiz-box">
+      <div class="q">6. Ranker scores 100 candidates in 2ms (GPU batched). Fleet size for 200K RPS?</div>
+      <div class="choices">
+        <div class="choice" onclick="checkQuiz(this, true)">400 GPUs</div>
+        <div class="choice" onclick="checkQuiz(this, false)">200 GPUs</div>
+        <div class="choice" onclick="checkQuiz(this, false)">2,000 GPUs</div>
+        <div class="choice" onclick="checkQuiz(this, false)">40 GPUs</div>
+      </div>
+      <div class="explanation">Each GPU handles 1/0.002s = 500 RPS. 200,000 ÷ 500 = 400 GPUs. At $1/hr each ≈ $290K/month.</div>
+    </div>
+    <div class="quiz-box">
+      <div class="q">7. Training label: user watched >50% of a 5-second video. Cheapest creator exploit?</div>
+      <div class="choices">
+        <div class="choice" onclick="checkQuiz(this, false)">Suspenseful openings that drop off</div>
+        <div class="choice" onclick="checkQuiz(this, true)">Upload 3-second videos — autoplay crosses 50% before user can scroll</div>
+        <div class="choice" onclick="checkQuiz(this, false)">Clickbait thumbnails</div>
+        <div class="choice" onclick="checkQuiz(this, false)">Engagement pods (fake likes)</div>
+      </div>
+      <div class="explanation">The cheapest exploit is ultrashort videos. Autoplay means the user "watches" >50% before even deciding to scroll. Fix: minimum-seconds floor + length-conditional thresholds.</div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 8: CHEAT SHEET -->
+<div class="section" id="s8">
+  <div class="section-header" onclick="toggle(this)">
+    <span class="num">8</span>
+    <h2>Interview Cheat Sheet — Say These Lines</h2>
+    <span class="arrow">›</span>
+  </div>
+  <div class="section-body">
+    <p>Scripted lines for when you're asked about capacity. Practice saying them out loud, modifying the numbers for the specific problem.</p>
+    <h3>Opening (first 5 minutes — ASK, don't assert)</h3>
+    <div class="formula-box" style="border-left-color: var(--good);">
+      "Before I design anything — what scale are we talking about? DAU, item corpus size, latency SLA, and is there a cost envelope I should respect?"
+    </div>
+    <h3>When asked "how does this scale?"</h3>
+    <div class="formula-box" style="border-left-color: var(--accent2);">
+      "Let me work through the numbers. [DAU] × [sessions] × [fetches] ÷ 86,400 × [peak factor] gives me [X]K peak RPS. That's the load my retrieval and ranking tiers need to handle."
+    </div>
+    <h3>When asked about the index</h3>
+    <div class="formula-box" style="border-left-color: var(--orange);">
+      "At [N] vectors and [D] dimensions, raw FP32 is [N×D×4] bytes. I'd use IVFPQ with [m] sub-quantizers — that compresses to [N×m] bytes, which [fits/doesn't fit] on one machine. Query latency: nlist ≈ √N ≈ [X]K, at nprobe=[Y] I'm scanning [Y × N/nlist] vectors × [m] bytes = [Z] MB. At 50 GB/s memory bandwidth, that's about [Z/50000]ms."
+    </div>
+    <h3>When asked about cost</h3>
+    <div class="formula-box" style="border-left-color: var(--purple);">
+      "Retrieval tier: [R] replicas at ~$1/hr = $[R×730]/month. Ranker: [G] GPU instances at ~$1/hr = $[G×730]/month. The ranker dominates — it's where I'd optimize first: smaller model, distillation, or reducing candidates from 100 to 50 if recall allows."
+    </div>
+    <h3>When asked "what breaks at 10×?"</h3>
+    <div class="formula-box" style="border-left-color: var(--warn);">
+      "10× DAU means 10× RPS. Retrieval: 10× replicas, which is cost but not architecture change. Ranker: 10× GPU fleet — that's where I'd push back and ask if we can reduce candidates or use a cheaper model for most traffic. The index itself doesn't change; it's the serving fleet that scales linearly with QPS."
+    </div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<footer>
+  Personal explainer &middot; unlisted &middot; <a href="/explainers/">back to index</a>
+</footer>
+
+<script>
+(function() {
+  function toggle(header) {
+    header.classList.toggle('open');
+    var body = header.nextElementSibling;
+    if (body) body.classList.toggle('open');
+  }
+  window.toggle = toggle;
+
+  function switchTab(groupId, contentId) {
+    var group = document.getElementById(groupId);
+    if (!group) return;
+    group.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+    if (event && event.target) event.target.classList.add('active');
+    var sibling = group.nextElementSibling;
+    while (sibling && sibling.classList.contains('tab-content')) {
+      sibling.classList.remove('active');
+      if (sibling.id === contentId) sibling.classList.add('active');
+      sibling = sibling.nextElementSibling;
+    }
+  }
+  window.switchTab = switchTab;
+
+  function parseNum(s) {
+    return parseFloat(String(s).replace(/,/g, '')) || 0;
+  }
+
+  function fmt(n) {
+    if (n >= 1e12) return (n/1e12).toFixed(1) + 'T';
+    if (n >= 1e9) return (n/1e9).toFixed(1) + 'B';
+    if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+    return n.toFixed(n < 10 ? 2 : 0);
+  }
+
+  function fmtBytes(b) {
+    if (b >= 1e12) return (b/1e12).toFixed(1) + ' TB';
+    if (b >= 1e9) return (b/1e9).toFixed(1) + ' GB';
+    if (b >= 1e6) return (b/1e6).toFixed(1) + ' MB';
+    if (b >= 1e3) return (b/1e3).toFixed(1) + ' KB';
+    return b.toFixed(0) + ' B';
+  }
+
+  function calcIndex() {
+    var N = parseNum(document.getElementById('idx-n').value);
+    var D = parseInt(document.getElementById('idx-d').value) || 128;
+    var type = document.getElementById('idx-type').value;
+    var m = parseInt(document.getElementById('idx-m').value) || 32;
+    var nprobe = parseInt(document.getElementById('idx-nprobe').value) || 64;
+    var bw = parseFloat(document.getElementById('idx-bw').value) || 50;
+
+    var rawBytes = N * D * 4;
+    var indexBytes, scanBytes, scanMs, nlist, vecsPerCell, vecsScanned;
+    var lines = [];
+
+    lines.push('<div class="line"><span>Raw size (FP32):</span><span class="val">' + fmtBytes(rawBytes) + '</span></div>');
+    lines.push('<div class="line"><span>Derivation:</span><span class="val" style="color:var(--text2)">' + fmt(N) + ' × ' + D + ' × 4B</span></div>');
+
+    if (type === 'flat') {
+      indexBytes = rawBytes;
+      scanBytes = rawBytes;
+      scanMs = (scanBytes / (bw * 1e9)) * 1000;
+      lines.push('<div class="line"><span>Index size:</span><span class="val warn">' + fmtBytes(indexBytes) + '</span></div>');
+      lines.push('<div class="line"><span>Per-query scan:</span><span class="val warn">' + fmtBytes(scanBytes) + ' = ' + scanMs.toFixed(1) + 'ms</span></div>');
+      lines.push('<div class="line"><span>Verdict:</span><span class="val warn">Too slow for &gt;1M vectors</span></div>');
+    } else if (type === 'ivf') {
+      indexBytes = rawBytes;
+      nlist = Math.round(Math.sqrt(N));
+      vecsPerCell = Math.round(N / nlist);
+      vecsScanned = vecsPerCell * nprobe;
+      scanBytes = vecsScanned * D * 4;
+      scanMs = (scanBytes / (bw * 1e9)) * 1000;
+      lines.push('<div class="line"><span>Index size:</span><span class="val ' + (indexBytes > 100e9 ? 'warn' : 'good') + '">' + fmtBytes(indexBytes) + '</span></div>');
+      lines.push('<div class="line"><span>nlist (≈√N):</span><span class="val">' + fmt(nlist) + '</span></div>');
+      lines.push('<div class="line"><span>Vectors/cell:</span><span class="val">' + fmt(vecsPerCell) + '</span></div>');
+      lines.push('<div class="line"><span>Vectors scanned (nprobe=' + nprobe + '):</span><span class="val">' + fmt(vecsScanned) + '</span></div>');
+      lines.push('<div class="line"><span>Bytes scanned:</span><span class="val">' + fmtBytes(scanBytes) + '</span></div>');
+      lines.push('<div class="line"><span>Latency (at ' + bw + ' GB/s):</span><span class="val ' + (scanMs > 10 ? 'warn' : scanMs > 5 ? 'ok' : 'good') + '">' + scanMs.toFixed(1) + 'ms</span></div>');
+    } else if (type === 'ivfpq') {
+      indexBytes = N * m;
+      nlist = Math.round(Math.sqrt(N));
+      vecsPerCell = Math.round(N / nlist);
+      vecsScanned = vecsPerCell * nprobe;
+      scanBytes = vecsScanned * m;
+      scanMs = (scanBytes / (bw * 1e9)) * 1000;
+      var compression = rawBytes / indexBytes;
+      lines.push('<div class="line"><span>Index size (PQ m=' + m + '):</span><span class="val good">' + fmtBytes(indexBytes) + '</span></div>');
+      lines.push('<div class="line"><span>Compression:</span><span class="val">' + compression.toFixed(0) + '×</span></div>');
+      lines.push('<div class="line"><span>nlist (≈√N):</span><span class="val">' + fmt(nlist) + '</span></div>');
+      lines.push('<div class="line"><span>Vectors/cell:</span><span class="val">' + fmt(vecsPerCell) + '</span></div>');
+      lines.push('<div class="line"><span>Vectors scanned (nprobe=' + nprobe + '):</span><span class="val">' + fmt(vecsScanned) + '</span></div>');
+      lines.push('<div class="line"><span>Bytes scanned:</span><span class="val">' + fmtBytes(scanBytes) + '</span></div>');
+      lines.push('<div class="line"><span>Latency (at ' + bw + ' GB/s):</span><span class="val ' + (scanMs > 10 ? 'warn' : scanMs > 5 ? 'ok' : 'good') + '">' + scanMs.toFixed(1) + 'ms</span></div>');
+      lines.push('<div class="line"><span>Fits single machine?</span><span class="val ' + (indexBytes < 100e9 ? 'good' : 'warn') + '">' + (indexBytes < 100e9 ? 'Yes' : 'No — shard it') + '</span></div>');
+    } else if (type === 'hnsw') {
+      var graphOverhead = N * 500;
+      indexBytes = rawBytes + graphOverhead;
+      lines.push('<div class="line"><span>Vector storage:</span><span class="val">' + fmtBytes(rawBytes) + '</span></div>');
+      lines.push('<div class="line"><span>Graph edges (~500B/vec, M=32):</span><span class="val">' + fmtBytes(graphOverhead) + '</span></div>');
+      lines.push('<div class="line"><span>Total:</span><span class="val ' + (indexBytes > 200e9 ? 'warn' : 'good') + '">' + fmtBytes(indexBytes) + '</span></div>');
+      lines.push('<div class="line"><span>Typical query latency:</span><span class="val good">~0.5ms</span></div>');
+      lines.push('<div class="line"><span>Recall@100:</span><span class="val good">~99%</span></div>');
+      lines.push('<div class="line"><span>Trade-off:</span><span class="val ok">Highest recall + lowest latency, but highest memory</span></div>');
+    }
+    document.getElementById('idx-result').innerHTML = lines.join('');
+  }
+  window.calcIndex = calcIndex;
+
+  function calcQPS() {
+    var dau = parseNum(document.getElementById('qps-dau').value);
+    var sessions = parseFloat(document.getElementById('qps-sessions').value) || 5;
+    var reqs = parseFloat(document.getElementById('qps-reqs').value) || 3;
+    var peak = parseFloat(document.getElementById('qps-peak').value) || 2.5;
+
+    var totalDaily = dau * sessions * reqs;
+    var avgRPS = totalDaily / 86400;
+    var peakRPS = avgRPS * peak;
+
+    var lines = [
+      '<div class="line"><span>Total daily requests:</span><span class="val">' + fmt(totalDaily) + '</span></div>',
+      '<div class="line"><span>Derivation:</span><span class="val" style="color:var(--text2)">' + fmt(dau) + ' × ' + sessions + ' × ' + reqs + '</span></div>',
+      '<div class="line"><span>Average RPS:</span><span class="val">' + fmt(avgRPS) + '</span></div>',
+      '<div class="line"><span>Derivation:</span><span class="val" style="color:var(--text2)">÷ 86,400</span></div>',
+      '<div class="line"><span>Peak RPS (×' + peak + '):</span><span class="val good">' + fmt(peakRPS) + '</span></div>'
+    ];
+    document.getElementById('qps-result').innerHTML = lines.join('');
+  }
+  window.calcQPS = calcQPS;
+
+  function calcRanker() {
+    var rps = parseNum(document.getElementById('rank-rps').value);
+    var K = parseInt(document.getElementById('rank-k').value) || 100;
+    var latMs = parseFloat(document.getElementById('rank-lat').value) || 0.5;
+    var compute = document.getElementById('rank-compute').value;
+
+    var perReqMs, throughputPerUnit, unitsNeeded, unitName;
+    if (compute === 'cpu') {
+      perReqMs = K * latMs;
+      throughputPerUnit = 1000 / perReqMs;
+      unitName = 'CPU cores';
+      unitsNeeded = Math.ceil(rps / throughputPerUnit);
+    } else {
+      perReqMs = latMs * K * 0.02;
+      if (perReqMs < 1) perReqMs = 1;
+      throughputPerUnit = 1000 / perReqMs;
+      unitName = 'GPU instances';
+      unitsNeeded = Math.ceil(rps / throughputPerUnit);
+    }
+    var monthlyCost = unitsNeeded * 1.01 * 730;
+
+    var lines = [
+      '<div class="line"><span>Per-request latency:</span><span class="val">' + perReqMs.toFixed(1) + 'ms</span></div>',
+      '<div class="line"><span>Throughput per ' + compute.toUpperCase() + ':</span><span class="val">' + fmt(throughputPerUnit) + ' RPS</span></div>',
+      '<div class="line"><span>' + unitName + ' needed:</span><span class="val good">' + fmt(unitsNeeded) + '</span></div>',
+      '<div class="line"><span>Estimated monthly cost (~$1/hr):</span><span class="val ok">$' + fmt(monthlyCost) + '/mo</span></div>'
+    ];
+    document.getElementById('rank-result').innerHTML = lines.join('');
+  }
+  window.calcRanker = calcRanker;
+
+  function calcCost() {
+    var idxN = parseInt(document.getElementById('cost-idx').value) || 0;
+    var idxR = parseFloat(document.getElementById('cost-idx-rate').value) || 0;
+    var rankN = parseInt(document.getElementById('cost-rank').value) || 0;
+    var rankR = parseFloat(document.getElementById('cost-rank-rate').value) || 0;
+
+    var idxMonthly = idxN * idxR * 730;
+    var rankMonthly = rankN * rankR * 730;
+    var total = idxMonthly + rankMonthly;
+    var rpsVal = parseNum(document.getElementById('rank-rps').value || '200000');
+    var costPer1K = total / (rpsVal * 86400 * 30 / 1000);
+
+    var lines = [
+      '<div class="line"><span>Retrieval tier (' + idxN + ' instances):</span><span class="val">$' + fmt(idxMonthly) + '/mo</span></div>',
+      '<div class="line"><span>Ranker tier (' + rankN + ' instances):</span><span class="val">$' + fmt(rankMonthly) + '/mo</span></div>',
+      '<div class="line"><span>Total serving cost:</span><span class="val ' + (total > 500000 ? 'warn' : 'good') + '">$' + fmt(total) + '/mo</span></div>',
+      '<div class="line"><span>Cost per 1K requests:</span><span class="val">$' + costPer1K.toFixed(4) + '</span></div>'
+    ];
+    document.getElementById('cost-result').innerHTML = lines.join('');
+  }
+  window.calcCost = calcCost;
+
+  function checkQuiz(el, correct) {
+    var box = el.closest('.quiz-box');
+    if (!box || box.dataset.answered) return;
+    box.dataset.answered = 'true';
+    el.classList.add(correct ? 'correct' : 'wrong');
+    if (!correct) {
+      box.querySelectorAll('.choice').forEach(function(c) {
+        var onclick = c.getAttribute('onclick') || '';
+        if (onclick.indexOf('true') !== -1) c.classList.add('correct');
+      });
+    }
+    var expl = box.querySelector('.explanation');
+    if (expl) expl.style.display = 'block';
+  }
+  window.checkQuiz = checkQuiz;
+
+  calcIndex();
+  calcQPS();
+  calcRanker();
+  calcCost();
+})();
+</script>
+</body>
+</html>
