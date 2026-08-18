@@ -1,0 +1,13 @@
+# Index of personal explainers. Auto-maintained by the `publish-explainer` skill.
+# Newest entries render first (the index sorts by date descending).
+#
+# Each entry:
+#   - title: "Human-readable topic"
+#     slug: kebab-case-filename   # matches explainers/<slug>.html, no extension
+#     date: YYYY-MM-DD            # date added
+#     description: "one-line summary (optional)"
+
+- title: "How this works"
+  slug: how-this-works
+  date: 2026-08-18
+  description: "What this page is, and how new explainers land here."

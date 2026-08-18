@@ -187,6 +187,40 @@ ul li {
     font-weight: bold;
 }
 
+/* Explainers index */
+.explainers-intro {
+    color: #999 !important;
+    font-size: 1.1em !important;
+    margin-top: 0.2em;
+}
+.explainers-list {
+    margin-top: 20px;
+}
+.explainer-entry {
+    margin-bottom: 1.5em;
+}
+.explainer-date {
+    display: block;
+    font-family: 'Helvetica', 'Arial', 'Sans-Serif';
+    font-size: 0.85em;
+    color: #999;
+    margin-bottom: 2px;
+}
+.explainer-title {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #333;
+}
+.explainer-title:hover {
+    color: #666;
+}
+.explainer-desc {
+    display: block;
+    font-size: 0.9em;
+    color: #999;
+    margin-top: 2px;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
     body {

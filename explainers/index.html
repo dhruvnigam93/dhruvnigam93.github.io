@@ -1,0 +1,20 @@
+---
+layout: default
+title: explainers
+noindex: true
+---
+<h1>explainers</h1>
+<p class="explainers-intro">Interactive notes &amp; explainers — personal, unlisted.</p>
+
+<div class="explainers-list">
+{% assign items = site.data.explainers | sort: 'date' | reverse %}
+{% for e in items %}
+    <div class="explainer-entry">
+        <span class="explainer-date">{{ e.date }}</span>
+        <a class="explainer-title" href="/explainers/{{ e.slug }}.html">{{ e.title }}</a>
+        {% if e.description %}<span class="explainer-desc">{{ e.description }}</span>{% endif %}
+    </div>
+{% else %}
+    <p>Nothing here yet.</p>
+{% endfor %}
+</div>
