@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "Voice Agent — Numbers Triangulator"
+  slug: voice-agent-numbers-triangulator
+  date: 2026-08-19
+  description: "Interactive defense kit for the real-time voice agent story — latency budget, scale triangulation, cost math, and the spoken answers that survive follow-ups."
+
 - title: "FAISS & Capacity Math"
   slug: faiss-capacity-math
   date: 2026-08-18
