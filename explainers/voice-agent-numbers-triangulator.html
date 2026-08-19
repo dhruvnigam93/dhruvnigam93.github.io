@@ -77,6 +77,13 @@
     border: 1px solid var(--border); border-radius: 8px; min-height: 46px;
   }
   .field input:focus { outline: 2px solid var(--s1); outline-offset: -1px; border-color: transparent; }
+  .presets { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 0.85rem; color: var(--muted); flex-wrap: wrap; }
+  .preset-btn {
+    font: inherit; font-weight: 600; color: var(--accent); background: transparent;
+    border: 1px solid var(--border); border-radius: 999px; padding: 10px 18px;
+    min-height: 44px; cursor: pointer; touch-action: manipulation;
+  }
+  .preset-btn:active { transform: scale(0.96); }
   .field .hint { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
 
   .tiles { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
@@ -166,26 +173,27 @@
   <a class="back" href="/explainers/">&larr; all explainers</a>
   <h1>Voice Agent — Numbers Triangulator</h1>
   <p class="meta">Added 2026-08-19</p>
-  <p class="sub">Plug in your real production numbers. Every panel recomputes live and tells you whether the story triangulates — because an interviewer <em>will</em> do this math while you talk. Pre-filled with the Aug 19 grill answers, so it opens showing exactly where the numbers fought each other.</p>
+  <p class="sub">Plug in your real production numbers. Every panel recomputes live and tells you whether the story triangulates — because an interviewer <em>will</em> do this math while you talk. Latency is pre-filled with the calibrated first-principles breakdown (p50/p90 presets); scale and cost carry the Aug 19 grill answers.</p>
 
   <!-- ═══════════════ LATENCY ═══════════════ -->
   <div class="card" id="lat-card">
     <h2>1 · Latency budget — the components must sum to what you measured</h2>
-    <p class="explain">Your end-to-end latency is a chain: user stops speaking → audio reaches the agent (uplink + cross-region backbone) → VAD waits out the silence window → Gemini generates first audio → it travels back. In the grill, the components summed to ~1.7s but the measured p90 was 2.0s — and the missing 300ms was exactly the India↔US traversal left out of the budget. The budget below must sum, within tolerance, to the p90 — or you know a component is wrong.</p>
-    <span class="formula">end-to-end = uplink + backbone→US + VAD processing + silence window + Gemini TTFB + return path</span>
+    <p class="explain">Latency = user stops speaking → user hears first audio. Client in India; LiveKit SFU, agent, and Gemini all in us-east-1. The allocation method: <strong>pin what's physics</strong> — India↔us-east one-way is ~100–120ms (RTT ~200–240ms over SEA-ME-WE + transatlantic routes), speed-of-light-bound and low-variance, so uplink + downlink + jitter ≈ 0.39s at p90. <strong>Pin what's config</strong> — endpointing is deliberately ~0.33s. <strong>The model TTFT is the free variable</strong> — everything you can't pin is Gemini: 2000 − 390 − 330 ≈ 1250ms, exactly right for flash-class S2S under real ingress jitter. Then <strong>validate, don't assume</strong>: read RealtimeModelMetrics.ttft (activityEnd sent → first audio byte). If it reads ~0.8s instead, the missing ~450ms is an inflated client jitter buffer on a poor Indian ISP — a network fix, not a model fix.</p>
+    <span class="formula">end-to-end = endpointing + uplink/SFU + agent→model + model TTFT + encode/return + downlink/jitter</span>
+    <div class="presets"><span>Load presets:</span><button type="button" class="preset-btn" id="preset_p50">p50 (~1.2s)</button><button type="button" class="preset-btn" id="preset_p90">p90 (2.0s)</button></div>
     <div class="inputs">
-      <div class="field"><label>Uplink: phone → LiveKit edge (ms)</label><input type="number" id="l_up" value="50"><div class="hint">the real "50ms SLA" scope</div></div>
-      <div class="field"><label>Backbone: edge → us-east-1 (ms)</label><input type="number" id="l_bb" value="100"><div class="hint">one-way; physics floor ≈ 90ms</div></div>
-      <div class="field"><label>BVC + VAD processing (ms)</label><input type="number" id="l_proc" value="20"></div>
-      <div class="field"><label>Silence window (ms)</label><input type="number" id="l_win" value="200"><div class="hint">your endpointing wait</div></div>
-      <div class="field"><label>Gemini TTFB (ms)</label><input type="number" id="l_ttfb" value="1200"><div class="hint">end-of-turn → first audio byte</div></div>
-      <div class="field"><label>Return path (ms)</label><input type="number" id="l_ret" value="150"><div class="hint">backbone back + downlink</div></div>
-      <div class="field"><label>Measured p90 (ms)</label><input type="number" id="l_p90" value="2000"><div class="hint">from dual-channel offline VAD</div></div>
+      <div class="field"><label>Endpointing: VAD silence + turn detector (ms)</label><input type="number" id="l_ep" value="330"><div class="hint">config · p50 300 / p90 330</div></div>
+      <div class="field"><label>Uplink India→us-east + SFU jitter (ms)</label><input type="number" id="l_up" value="160"><div class="hint">geography · p50 130 / p90 160</div></div>
+      <div class="field"><label>Agent → Gemini in-region WS (ms)</label><input type="number" id="l_ws" value="15"><div class="hint">in-region · p50 10 / p90 15</div></div>
+      <div class="field"><label>Gemini Live TTFT (ms)</label><input type="number" id="l_ttfb" value="1250"><div class="hint">the residual · p50 600 / p90 1250</div></div>
+      <div class="field"><label>Gemini → agent + Opus encode (ms)</label><input type="number" id="l_enc" value="25"><div class="hint">in-region · p50 15 / p90 25</div></div>
+      <div class="field"><label>Downlink + client jitter + decode (ms)</label><input type="number" id="l_dn" value="230"><div class="hint">geography · p50 160 / p90 230</div></div>
+      <div class="field"><label>Measured end-to-end (ms)</label><input type="number" id="l_p90" value="2000"><div class="hint">p50 1220 / p90 2000 · dual-channel offline VAD</div></div>
       <div class="field"><label>Resume claim (ms)</label><input type="number" id="l_claim" value="2000"><div class="hint">"sub-2s"</div></div>
     </div>
 
     <div class="chart-block">
-      <div class="chart-title">Budget waterfall — segments sum left to right; ticks mark measured p90 and the resume claim</div>
+      <div class="chart-title">Budget waterfall — segments sum left to right; ticks mark the measured end-to-end and the resume claim</div>
       <div class="bar-zone" id="l_zone">
         <div class="wf" id="l_wf"></div>
         <div class="marker m-above" id="l_mk_p90"><span class="m-label"></span></div>
@@ -198,8 +206,8 @@
 
     <div class="tiles">
       <div class="tile"><div class="t-label">Components sum to</div><div class="t-value" id="l_sum">—</div><div class="t-sub">your explainable budget</div></div>
-      <div class="tile"><div class="t-label">Unaccounted vs p90</div><div class="t-value" id="l_gap">—</div><div class="t-sub">measured − budget</div></div>
-      <div class="tile"><div class="t-label">Silence window share</div><div class="t-value" id="l_winshare">—</div><div class="t-sub">the lever you control</div></div>
+      <div class="tile"><div class="t-label">Unaccounted vs measured</div><div class="t-value" id="l_gap">—</div><div class="t-sub">measured − budget</div></div>
+      <div class="tile"><div class="t-label">Implied model TTFT</div><div class="t-value" id="l_resid">—</div><div class="t-sub">measured − pinned stages (the residual)</div></div>
     </div>
     <div class="verdicts" id="l_verdicts"></div>
   </div>
@@ -278,13 +286,13 @@
     <p class="explain">The spoken versions that survive follow-ups, distilled from the Aug 19 grill. Rule that fell out of the session: <strong>the hedges predicted the cracks</strong> — every number said with "I think" later collapsed, every number said plainly held. State it once, correctly, or say "I'd want to check." Never revise a number mid-sentence.</p>
 
     <div class="qa"><div class="q">"Walk me through the system."</div>
-      <div class="a">Phone connects over <strong>WebRTC to a LiveKit edge</strong>; audio rides their backbone to our <strong>agent server in us-east-1</strong>; the agent holds a <strong>WebSocket to Gemini's native speech-to-speech model</strong> (16kHz PCM in, 24kHz out). At the agent: background-voice cancellation, Silero VAD with a 200ms silence window for endpointing. On end-of-turn, audio goes to Gemini; response audio streams back the same path. Tools run at the agent — async, never blocking.</div></div>
+      <div class="a">Phone connects over <strong>WebRTC</strong>; the <strong>LiveKit SFU, our agent server, and Gemini all sit in us-east-1</strong>; the agent holds a <strong>WebSocket to Gemini's native speech-to-speech model</strong> (16kHz PCM in, 24kHz out). At the agent: background-voice cancellation and endpointing — <strong>Silero VAD silence gating plus a turn-detector model, ~300ms combined</strong>. On end-of-turn, audio goes to Gemini; response audio streams back the same path. Tools run at the agent — async, never blocking.</div></div>
 
     <div class="qa"><div class="q">"Gemini does the speech-to-speech. So what's actually yours?"</div>
       <div class="a">Everything except the model weights: the <strong>agent framework and serving path</strong>, the two-hop WebRTC/WebSocket architecture, endpointing, and the context system — a <strong>live match feed aggregated into Redis</strong> behind a score tool, a <strong>curated search index</strong> of credible cricket sources, and a <strong>gossip knowledge base</strong> scraped from Twitter with real-time retrieval. Plus memory management and the <strong>entire eval framework</strong>. Before S2S models matured we ran an LLM+TTS cascade — SSML control, Roman/Devanagari script handling, pronunciation dictionaries — so we also know exactly what the S2S model replaced.</div></div>
 
     <div class="qa"><div class="q">"Break down your sub-2s latency."</div>
-      <div class="a">From end of user speech: uplink to the LiveKit edge (~50ms) + backbone to us-east-1 (~100ms) + VAD processing (~20ms) + <strong>200ms silence window</strong> + <strong>Gemini TTFB ~1.2s</strong> + return path (~150ms) ≈ 1.7s; <strong>measured p90 was 2.0s</strong>, measured post-hoc from dual-channel recordings with an offline VAD. Two caveats I'll volunteer: that measurement <strong>excludes the client network legs</strong>, and LiveKit's 50ms figure is <strong>client-to-edge, not client-to-agent</strong> — the cross-region traversal is real and lives in the gap between 1.7 and 2.0.</div></div>
+      <div class="a">Define it first: <strong>user stops speaking → user hears first audio</strong>; client in India, everything else in us-east-1. Pin what's physics — India↔us-east one-way is ~100–120ms — so <strong>uplink + SFU jitter ~160ms</strong> and <strong>downlink + client jitter + decode ~230ms</strong> at p90. Pin what's config: <strong>endpointing ~330ms</strong> (Silero VAD + turn detector). In-region hops ~40ms. The residual is the model: <strong>Gemini Live TTFT ~1.25s p90</strong> (~600ms p50). Total ≈ <strong>2.0s p90, ~1.2s p50</strong>. And we validated the residual against <strong>RealtimeModelMetrics.ttft</strong> rather than assuming — if TTFT had read ~0.8s, the missing ~450ms would have been client jitter buffers on poor ISPs: a network fix, completely different from a model-thinking-level fix.</div></div>
 
     <div class="qa"><div class="q">"Why is the agent in Virginia when your users are in Mumbai?"</div>
       <div class="a">We deployed in India first and latency got <em>worse</em> by 2–4 seconds. The client→agent leg is <strong>WebRTC over UDP — loss-tolerant, no head-of-line blocking</strong> — it survives a long hop. The agent→model leg is a <strong>WebSocket over TCP</strong> — retransmits and head-of-line blocking make cross-region deadly. So you co-locate the agent with the <em>model</em>, not the user. We worked this out months before LiveKit published it as best practice.</div></div>
@@ -293,7 +301,7 @@
       <div class="a">All tool calls are <strong>async by design decision</strong> — a blocking tool call means two model inferences and a guaranteed budget breach. Gemini emits a natural filler ("let me check the TV") plus the function call simultaneously; the agent runs the tool — Redis &lt;50ms, search ~100ms, RAG ~50ms — and returns the result for a second inference. About <strong>10% of turns</strong> hit a tool. Honest caveat, said before they ask: sub-2s is time-to-first-audio; time-to-the-actual-answer on a tool turn is longer.</div></div>
 
     <div class="qa"><div class="q">"How does end-of-turn detection work?"</div>
-      <div class="a"><strong>Silero VAD with a 200ms silence window — plain VAD, not semantic</strong> — tuned through internal testing as the false-start/latency trade-off. We never instrumented false-start rate in production; that's a real gap. Today I'd A/B a transcript-based turn-detector model or Gemini's native activity detection against it. (Never claim "semantic endpointing" — it broke in the grill and it will break in an interview.)</div></div>
+      <div class="a"><strong>Silero VAD silence gating plus a turn-detector model — ~300ms combined endpointing budget</strong> (p50 300 / p90 330), set in config as the false-start/latency trade-off: silence gating decides <em>when</em> to cut, the turn detector vetoes cuts mid-thought. We never instrumented false-start rate in production — that's a real gap. Know this config cold: the grill broke it in both directions (first "semantic," then "just 200ms of silence"). One config number, said once, plainly.</div></div>
 
     <div class="qa"><div class="q">"Your data feed is ahead of the broadcast. Does the agent spoil the match?"</div>
       <div class="a">Feed lag was 1–2s for tier-one matches; broadcast lag 10+ seconds — so yes, <strong>the agent knows the future and we never fully solved that</strong>. We contained it by making the agent <strong>strictly reactive</strong> — proactivity was deliberately disabled — and we saw no spoiler complaints or eval failures. The real fix is syncing agent world-state to the player position via a playhead heartbeat from the client; that's what I'd build next.</div></div>
@@ -322,12 +330,12 @@
   var num = function (id) { var el = $(id); return el ? (parseFloat(el.value) || 0) : 0; };
 
   var LAT_SEGS = [
-    { key:'l_up',   name:'Uplink to edge',      slot:1 },
-    { key:'l_bb',   name:'Backbone → us-east-1',slot:2 },
-    { key:'l_proc', name:'BVC + VAD',           slot:3 },
-    { key:'l_win',  name:'Silence window',      slot:4 },
-    { key:'l_ttfb', name:'Gemini TTFB',         slot:5 },
-    { key:'l_ret',  name:'Return path',         slot:6 },
+    { key:'l_ep',   name:'Endpointing',          slot:1 },
+    { key:'l_up',   name:'Uplink + SFU jitter',  slot:2 },
+    { key:'l_ws',   name:'Agent → Gemini',       slot:3 },
+    { key:'l_ttfb', name:'Gemini TTFT',          slot:4 },
+    { key:'l_enc',  name:'Encode + return',      slot:5 },
+    { key:'l_dn',   name:'Downlink + jitter',    slot:6 },
   ];
   var COST_SEGS = [
     { name:'LiveKit',        slot:1 },
@@ -415,38 +423,41 @@
       el.dataset.tip = LAT_SEGS[i].name + ': ' + fmtMs(v) + ' (' + (sum ? (v/sum*100).toFixed(1) : 0) + '% of budget)';
       el.querySelector('.seg-label').textContent = pct > 16 ? LAT_SEGS[i].name + ' · ' + fmtMs(v) : '';
     });
-    placeMarker($('l_mk_p90'), p90/scaleMax*100, 'measured p90 ' + fmtMs(p90));
+    placeMarker($('l_mk_p90'), p90/scaleMax*100, 'measured ' + fmtMs(p90));
     placeMarker($('l_mk_claim'), claim/scaleMax*100, 'resume claim ' + fmtMs(claim));
 
     if ($('l_tbl')) $('l_tbl').innerHTML = '<tr><th>Component</th><th>ms</th><th>share</th></tr>' +
       LAT_SEGS.map(function (s,i) { return '<tr><td>' + s.name + '</td><td>' + fmtInt(vals[i]) + '</td><td>' + (sum ? (vals[i]/sum*100).toFixed(1) : 0) + '%</td></tr>'; }).join('') +
       '<tr><td>Total budget</td><td>' + fmtInt(sum) + '</td><td>100%</td></tr>';
 
+    var ttfb = num('l_ttfb');
+    var pinned = sum - ttfb;
     var gap = p90 - sum;
+    var impliedTTFT = p90 - pinned;
     if ($('l_sum')) $('l_sum').textContent = fmtMs(sum);
     if ($('l_gap')) $('l_gap').textContent = (gap >= 0 ? '+' : '−') + fmtMs(Math.abs(gap));
-    if ($('l_winshare')) $('l_winshare').textContent = sum ? (num('l_win')/sum*100).toFixed(1) + '%' : '—';
+    if ($('l_resid')) $('l_resid').textContent = fmtMs(impliedTTFT);
 
     var lv = '';
-    var bb = num('l_bb');
-    if (bb > 0 && bb < 80) {
-      lv += verdict('critical', 'Backbone beats physics',
-        fmtMs(bb) + ' one-way Mumbai↔Virginia is faster than light in fiber (~90ms floor). This is the "50ms SLA" trap — that SLA is client-to-edge, not client-to-agent. Fix this number.');
+    var upv = num('l_up'), dnv = num('l_dn');
+    if ((upv > 0 && upv < 100) || (dnv > 0 && dnv < 100)) {
+      lv += verdict('critical', 'Cross-region leg beats physics',
+        'India↔us-east one-way is ~100–120ms — speed-of-light-bound over SEA-ME-WE + transatlantic routes, low variance. An uplink or downlink below 100ms is impossible; the vendor "50ms" number is client-to-edge, not cross-region. The geography terms are the most deterministic part of the budget — fix them first.');
     }
     if (Math.abs(gap) <= 100) {
-      lv += verdict('good', 'Budget explains the measurement',
-        'Components sum to ' + fmtMs(sum) + ', measured p90 is ' + fmtMs(p90) + ' — within tolerance. You can now walk an interviewer through every millisecond.');
+      lv += verdict('good', 'Budget closes — the residual confirms the model term',
+        'Pinned stages (geography + config + in-region) = ' + fmtMs(pinned) + '; measured ' + fmtMs(p90) + ' − pinned = implied TTFT ' + fmtMs(impliedTTFT) + ' ≈ your entered ' + fmtMs(ttfb) + '. Validate against RealtimeModelMetrics.ttft (activityEnd sent → first audio byte) rather than assuming.');
     } else if (gap > 100) {
-      lv += verdict('serious', fmtMs(gap) + ' unaccounted',
-        'Your components sum to ' + fmtMs(sum) + ' but you measured ' + fmtMs(p90) + '. An interviewer will ask where the missing ' + fmtMs(gap) + ' lives — in the grill, it was the cross-region legs left out of the budget. Find it before they do.');
+      lv += verdict('serious', fmtMs(gap) + ' unaccounted — read the TTFT metric, don\'t guess',
+        'Implied model TTFT (measured − pinned) is ' + fmtMs(impliedTTFT) + ' but you entered ' + fmtMs(ttfb) + '. If RealtimeModelMetrics.ttft confirms ~' + fmtMs(ttfb) + ', the missing ' + fmtMs(gap) + ' is hiding in an inflated client jitter buffer on a poor Indian ISP — a network fix. If it reads ~' + fmtMs(impliedTTFT) + ', it\'s the model (thinking level) — a completely different fix.');
     } else {
-      lv += verdict('warn', 'Budget exceeds measurement',
-        'Components sum to ' + fmtMs(sum) + ' — more than the measured ' + fmtMs(p90) + '. Something is double-counted or overlapping (components that run concurrently don\'t add).');
+      lv += verdict('warn', 'Budget exceeds measurement by ' + fmtMs(Math.abs(gap)),
+        'Components sum to ' + fmtMs(sum) + ' — more than the measured ' + fmtMs(p90) + '. Something is double-counted or overlapping (stages that run concurrently don\'t add).');
     }
     if (p90 <= claim) {
-      lv += verdict('good', 'Resume claim survives', 'Measured p90 ' + fmtMs(p90) + ' ≤ claimed ' + fmtMs(claim) + '. Also know the caveat: the dual-channel measurement excludes the client network legs.');
+      lv += verdict('good', 'Resume claim survives', 'Measured ' + fmtMs(p90) + ' ≤ claimed ' + fmtMs(claim) + '. Know the definition cold: user stops speaking → user hears first audio, p90.');
     } else {
-      lv += verdict('critical', 'Resume claim broken by your own data', 'You measured p90 ' + fmtMs(p90) + ' but claim ' + fmtMs(claim) + '. Change the claim or qualify the percentile.');
+      lv += verdict('critical', 'Resume claim broken by your own data', 'You measured ' + fmtMs(p90) + ' but claim ' + fmtMs(claim) + '. Change the claim or qualify the percentile.');
     }
     if ($('l_verdicts')) $('l_verdicts').innerHTML = lv;
 
@@ -543,6 +554,19 @@
     if ($('c_caphr')) $('c_caphr').textContent = fmtUSD(perMin * cap * 60);
     if ($('c_caphr_sub')) $('c_caphr_sub').textContent = fmtCompact(cap) + ' sessions × 60 min — why you gated instead of buying throughput';
   }
+
+  var PRESETS = {
+    p50: { l_ep:300, l_up:130, l_ws:10, l_ttfb:600, l_enc:15, l_dn:160, l_p90:1220 },
+    p90: { l_ep:330, l_up:160, l_ws:15, l_ttfb:1250, l_enc:25, l_dn:230, l_p90:2000 }
+  };
+  ['p50','p90'].forEach(function (p) {
+    var btn = $('preset_' + p);
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      Object.keys(PRESETS[p]).forEach(function (k) { var el = $(k); if (el) el.value = PRESETS[p][k]; });
+      recompute();
+    });
+  });
 
   Array.prototype.forEach.call(document.querySelectorAll('input'), function (i) { i.addEventListener('input', recompute); });
   if (window.matchMedia) {
