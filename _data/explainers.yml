@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "Voice Agent — Staff-Level Answers"
+  slug: voice-agent-staff-answers
+  date: 2026-08-19
+  description: "The ideal, defensible version of every voice-agent grill answer — architecture, latency, scale, turn detection, and the full retrieval spine — with verified Postgres-BM25 and LiveKit turn-detector facts."
+
 - title: "Voice Agent — Numbers Triangulator"
   slug: voice-agent-numbers-triangulator
   date: 2026-08-19

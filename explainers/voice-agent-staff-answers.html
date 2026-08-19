@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>Voice Agent — Staff-Level Answers</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --good: #067d5b;
+            --bad: #b4232c;
+            --warn: #9a6a00;
+            --radius: 14px;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                --good: #4bd6a6;
+                --bad: #ff7b84;
+                --warn: #e5b567;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: max(20px, env(safe-area-inset-top)) 20px 80px;
+        }
+        .back {
+            display: inline-block;
+            margin: 8px 0 20px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.3rem; margin: 2em 0 0.4em; scroll-margin-top: 16px; }
+        h3 { font-size: 1.05rem; margin: 1.4em 0 0.3em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.2em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        strong { font-weight: 700; }
+        code {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.82em;
+        }
+        pre {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            overflow-x: auto;
+            font-size: 0.82em;
+        }
+        pre code { background: none; border: none; padding: 0; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+        }
+        .card.fix { border-left: 4px solid var(--bad); }
+        .card.tip { border-left: 4px solid var(--good); }
+        .lede { color: var(--muted); font-size: 1rem; }
+        .pill {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            padding: 2px 9px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            color: var(--muted);
+            vertical-align: middle;
+        }
+        .verify { color: var(--warn); font-weight: 700; }
+        .ask { color: var(--muted); font-style: italic; }
+        .ideal { }
+        .trap { color: var(--bad); }
+        details {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 0 18px;
+            margin: 12px 0;
+            background: var(--card);
+        }
+        summary {
+            cursor: pointer;
+            padding: 16px 0;
+            font-weight: 600;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after {
+            content: "+";
+            color: var(--muted);
+            font-size: 1.4rem;
+            line-height: 1;
+            flex: 0 0 auto;
+        }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        details > *:first-of-type:not(summary) { margin-top: 14px; }
+        .qmeta { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
+        .controls { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0 4px; }
+        button {
+            font: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--accent);
+            background: transparent;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 10px 18px;
+            min-height: 44px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        button:active { transform: scale(0.96); }
+        /* Latency waterfall */
+        .wf { margin: 10px 0; }
+        .wf-row { display: flex; align-items: center; gap: 10px; margin: 7px 0; font-size: 0.82rem; }
+        .wf-label { flex: 0 0 44%; color: var(--muted); }
+        .wf-barwrap { flex: 1 1 auto; background: var(--line); border-radius: 6px; overflow: hidden; height: 20px; }
+        .wf-bar { height: 100%; background: var(--accent); border-radius: 6px; }
+        .wf-val { flex: 0 0 58px; text-align: right; font-variant-numeric: tabular-nums; }
+        .toc a { display: block; padding: 5px 0; text-decoration: none; }
+        table { border-collapse: collapse; width: 100%; font-size: 0.82rem; margin: 0.5em 0; }
+        th, td { border: 1px solid var(--line); padding: 7px 9px; text-align: left; vertical-align: top; }
+        th { background: var(--card); }
+        footer {
+            margin-top: 3em;
+            padding-top: 1.2em;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>Voice Agent — Staff-Level Answers</h1>
+        <p class="meta">Added 2026-08-19 · consolidated from two resume grill sessions</p>
+
+        <p class="lede">The ideal, defensible version of every answer the voice-agent (S2S cricket companion) grill kept exposing — both the AM architecture/latency/scale session and the PM retrieval session. Each entry: <span class="ask">what they'll ask</span> → the answer you should be able to <strong>say out loud</strong> → <span class="trap">the trap</span> that broke you. <span class="verify">Amber = verify against real dashboards before quoting.</span></p>
+
+        <div class="card fix">
+            <strong>Two facts that got you cut — fixed first, because they're highest-value:</strong>
+            <ol style="margin:8px 0 0; padding-left:20px;">
+                <li><strong>"BM25 on a Postgres table"</strong> — native Postgres FTS is <em>not</em> BM25. Needs an extension. <a href="#pg">Card ↓</a></li>
+                <li><strong>"Fine-tuned Qwen, audio-native turn detector"</strong> — self-contradictory; the Qwen one is the <em>transcript</em> model. <a href="#livekit">Card ↓</a></li>
+            </ol>
+        </div>
+
+        <div class="controls">
+            <button id="openAll">Expand all</button>
+            <button id="closeAll">Collapse all</button>
+        </div>
+
+        <nav class="toc card">
+            <strong style="font-size:0.8rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Jump to</strong>
+            <a href="#pitch">0 · The 30-second opener</a>
+            <a href="#arch">1 · Architecture &amp; region placement</a>
+            <a href="#latency">2 · Latency budget (with the India↔US legs)</a>
+            <a href="#turn">3 · Turn detection &amp; endpointing</a>
+            <a href="#numbers">4 · The numbers triangle</a>
+            <a href="#retrieval">5 · Retrieval — the three paths</a>
+            <a href="#bm25">6 · Retrieval — BM25 in Postgres</a>
+            <a href="#query">7 · Retrieval — the query &amp; expansion</a>
+            <a href="#reval">8 · Retrieval — eval &amp; the vector ablation</a>
+            <a href="#stats">9 · The coverage gap (historical stats)</a>
+            <a href="#faith">10 · Faithfulness vs factual accuracy</a>
+            <a href="#async">11 · Async tool-calls &amp; hiding latency</a>
+            <a href="#bugs">12 · War stories (personal bugs)</a>
+            <a href="#spoiler">13 · The spoiler / sync problem</a>
+            <a href="#eval">14 · The eval framework</a>
+            <a href="#pg">★ Reference: Postgres BM25</a>
+            <a href="#livekit">★ Reference: LiveKit turn detector</a>
+            <a href="#delivery">★ Delivery rules</a>
+        </nav>
+
+        <!-- ========================= 0 PITCH ========================= -->
+        <h2 id="pitch">0 · The 30-second opener</h2>
+        <p>Lead with honest I-vs-we and land the scope. This is the frame everything else hangs on.</p>
+        <div class="card tip">
+            <p>"I built the real-time voice agent for Dream11's live cricket streams — a speech-to-speech companion users talk to while watching a match. <strong>Speech-to-speech is Gemini Live</strong>; my work was the <strong>agent layer</strong> around it: the LiveKit transport, the retrieval and tool-calling that grounds it in live match state and player chatter, the latency engineering to hold felt-latency under ~2s across an India-to-US hop, and the eval harness. It ran through IPL 2026 — <span class="verify">~1M users exposed, ~1.5M conversation-minutes, concurrency capped at 10K by Gemini's session quota.</span>"</p>
+        </div>
+        <p class="qmeta">Why it works: names the model as someone else's, claims the systems work as yours, states scale once. Never imply you trained the S2S model.</p>
+
+        <!-- ========================= 1 ARCH ========================= -->
+        <h2 id="arch">1 · Architecture &amp; region placement</h2>
+        <details open>
+            <summary>Walk me through the topology</summary>
+            <p class="ask">"Draw the path from the user's mouth to the answer."</p>
+            <p><strong>Two hops, deliberately asymmetric:</strong></p>
+            <ul>
+                <li><strong>User device → agent server</strong>: WebRTC (UDP) over LiveKit. User in India, agent in <code>us-east-1</code>.</li>
+                <li><strong>Agent server → Gemini Live</strong>: a stateful WebSocket (TCP), agent co-located with the model, both in us-east-1.</li>
+            </ul>
+            <p><strong>The design decision (your strongest moment — lead with it):</strong> the agent lives next to the <em>model</em>, not next to the <em>user</em>. The client→agent leg is WebRTC/UDP — loss-tolerant, no head-of-line blocking, it survives a long transcontinental hop. The agent→Gemini leg is WebSocket/TCP — retransmits + HOL blocking make a cross-region hop deadly. So you put the fragile TCP leg inside one region and let the resilient UDP leg absorb the distance.</p>
+            <p class="qmeta">This predated LiveKit publishing the same best practice. Say that.</p>
+        </details>
+
+        <!-- ========================= 2 LATENCY ========================= -->
+        <h2 id="latency">2 · Latency budget (with the India↔US legs)</h2>
+        <details>
+            <summary>Give me the end-to-end budget — and where's the ocean?</summary>
+            <p class="ask">"Your budget last time omitted the India↔US traversal entirely."</p>
+            <p>Build it as a waterfall, and <strong>never omit the network legs</strong>. Tap to reveal each component:</p>
+            <div class="wf" id="wf"></div>
+            <div class="controls"><button id="wfReveal">Reveal budget</button></div>
+            <p class="qmeta"><span class="verify">Numbers to confirm from Grafana.</span> Two honesty caveats you must volunteer: (1) the component sum (~1.8s) and the measured p90 (~2.0s) differ because the sum excludes real client-network jitter; (2) "sub-2s" is <em>time-to-filler</em>, not time-to-answer (see §11).</p>
+            <div class="card">
+                <strong>The trap:</strong> <span class="trap">quoting LiveKit's "50ms SLA" as if it's client-to-agent. It's client-to-<em>edge</em>.</span> The edge→us-east-1 backbone leg is separate and is where most of your one-way latency lives.
+            </div>
+        </details>
+
+        <!-- ========================= 3 TURN ========================= -->
+        <h2 id="turn">3 · Turn detection &amp; endpointing</h2>
+        <details>
+            <summary>What makes the end-of-turn decision — and is it "semantic"?</summary>
+            <p class="ask">"You called it 'semantic' twice and couldn't name the model correctly either time."</p>
+            <p><strong>First, decide who even owns endpointing</strong> — this is the real architecture question and you must pin it before an interview:</p>
+            <ul>
+                <li><strong>Option A — Gemini Live's native VAD/turn-taking.</strong> A realtime S2S model does its own server-side endpointing. If you relied on this, say so plainly: "Gemini Live handled turn-taking natively; we tuned its sensitivity."</li>
+                <li><strong>Option B — your own VAD + turn detector before committing audio.</strong> Silero VAD for speech/no-speech, then a turn detector for end-of-utterance probability, then commit to Gemini.</li>
+            </ul>
+            <p>If Option B, the <strong>precise, correct</strong> statement (see the <a href="#livekit">reference card</a>): at IPL 2026 LiveKit's turn detector was the <strong>transcript-based <code>MultilingualModel</code> — a Qwen2.5-0.5B-Instruct</strong> running on the STT stream (~50–160ms/turn, CPU). LiveKit's <em>audio-native</em> detector (<code>v1</code>/<code>v1-mini</code>) shipped ~June 2026 — <em>after</em> IPL. So don't call your IPL system audio-native.</p>
+            <div class="card tip">
+                <p><strong>The line to say:</strong> "VAD gives speech/no-speech. On top, a turn detector predicts end-of-utterance probability so we don't barge in on a mid-sentence pause — that's the 'semantic' part, using context not just silence energy. At IPL that was the transcript-based model; the audio-native one came later. <strong>Honest gap: I never measured a field false-start rate</strong> — I tuned the silence window (~300ms) by manual testing, ~15–20 trials per setting across devices. If I redid it: log dual-channel audio, compute a real false-start / cut-off rate, and A/B the audio-native detector."</p>
+            </div>
+            <div class="card">
+                <strong>The trap:</strong> <span class="trap">"semantic endpointing using Silero"</span> (Silero is a plain acoustic VAD — nothing semantic) and <span class="trap">"fine-tuned Qwen, audio-native"</span> (the Qwen model is the <em>transcript</em> one). Both are precision cracks of the same shape as calling DeBERTa-v3 "BERT v3."
+            </div>
+        </details>
+
+        <!-- ========================= 4 NUMBERS ========================= -->
+        <h2 id="numbers">4 · The numbers triangle</h2>
+        <details>
+            <summary>10K concurrent and 1.5M minutes — reconcile them</summary>
+            <p class="ask">"These can't all be true. What is 1.5M actually measuring?"</p>
+            <p>State a <strong>mutually consistent</strong> set, once, and don't revise mid-answer:</p>
+            <table>
+                <tr><th>Quantity</th><th>Value <span class="verify">(verify)</span></th></tr>
+                <tr><td>Users exposed</td><td>~1M (of 5–6M DAU, exposure-gated)</td></tr>
+                <tr><td>Avg calls/day</td><td>~15K (peak 40–50K on big match days)</td></tr>
+                <tr><td>Avg call length</td><td>1–2 min (tail 7–10 min)</td></tr>
+                <tr><td>Total minutes</td><td>~1.5M over ~65 days of IPL</td></tr>
+                <tr><td>Peak concurrency</td><td>capped at 10K — a Gemini per-account session quota, brushed 4–5 times</td></tr>
+            </table>
+            <p><strong>The sanity check to say out loud:</strong> 15K calls/day × ~1.5 min × ~65 days ≈ 1.5M minutes. ✔</p>
+            <div class="card">
+                <strong>The trap:</strong> <span class="trap">10K is a quota ceiling, not a sustained load.</span> Last time this collapsed through three downward revisions. The move: know the four numbers cold, present the arithmetic <em>proactively</em>, and be clear 10K was a cap you engineered <em>under</em>, not a load you sustained. There's a <a href="/explainers/voice-agent-numbers-triangulator.html">numbers triangulator</a> for drilling this.
+            </div>
+        </details>
+
+        <!-- ========================= 5 RETRIEVAL PATHS ========================= -->
+        <h2 id="retrieval">5 · Retrieval — the three paths</h2>
+        <details open>
+            <summary>How does the agent know things about the match?</summary>
+            <p>Three distinct information paths, chosen by the model via tool calls:</p>
+            <ol>
+                <li><strong>Live match state</strong> — a Redis key (<code>match_id</code> → current-state JSON: score, wickets, over, highlights). ~50ms. Fast, structured, always current.</li>
+                <li><strong>Player/team chatter</strong> — a sub-agent (Gemini Flash) that queries a document DB of Reddit/Twitter chatter (~150–200 tracked entities, refreshed every 6h). This is the "what's everyone saying" path.</li>
+                <li><strong>Open facts</strong> — the same sub-agent does grounded Google search over a curated allowlist of reliable stat/news domains.</li>
+            </ol>
+            <p class="qmeta">Naming the three cleanly is the frame. The gaps live in <em>which</em> path serves a given question (§9) and whether the retrieved fact survives into the spoken answer (§10).</p>
+        </details>
+
+        <!-- ========================= 6 BM25 ========================= -->
+        <h2 id="bm25">6 · Retrieval — BM25 in Postgres</h2>
+        <details>
+            <summary>What actually computes the BM25 score?</summary>
+            <p class="ask">"You said 'BM25 on a Postgres table.' Native Postgres FTS is not BM25."</p>
+            <p>The correct, non-fatal phrasing (full detail in the <a href="#pg">reference card</a>):</p>
+            <div class="card tip">
+                <p>"We used the <strong><code>pg_search</code> (ParadeDB)</strong> extension — it embeds Tantivy into Postgres for true BM25, so we got IDF, TF saturation (<code>k1</code>), and length normalization (<code>b</code>). Native <code>ts_rank</code> gives none of those — it only has local term frequency and blunt length bitmasks, so it's vulnerable to keyword stuffing. And I'll be honest about scale: after the entity + 7-day filter we're often down to ~20 candidate docs, so BM25 is doing little today — it's future-proofing. At today's size, an exact match sorted by recency would be almost as good."</p>
+            </div>
+            <div class="card">
+                <strong>The trap:</strong> <span class="trap">"I think your Postgres version already supports BM25"</span> — it doesn't, and that sentence proves you don't know how either algorithm works. Also don't oversell a 10K-doc corpus that filters to 20; own that the metadata filter is doing the retrieval, not BM25.
+            </div>
+        </details>
+
+        <!-- ========================= 7 QUERY ========================= -->
+        <h2 id="query">7 · Retrieval — the query &amp; expansion</h2>
+        <details>
+            <summary>In an audio pipeline, where does the query text come from?</summary>
+            <p class="ask">"BM25 is lexical — its quality is 100% the query string. Who writes it?"</p>
+            <ol>
+                <li><strong>Gemini Live emits text alongside audio.</strong> It produces both modalities and can return the user-input transcript too — no added latency. So you <em>do</em> have the running transcript. (This corrects the earlier "no transcript" claim.)</li>
+                <li>On a tool call, the primary model emits a short query line ("Bumrah economy this season").</li>
+                <li>The <strong>Flash sub-agent</strong> gets the full conversation context + that line, does entity recognition + query expansion, and builds the structured filter (entities, 7-day window) plus the expanded lexical query that hits BM25.</li>
+            </ol>
+            <div class="card">
+                <strong>The trap:</strong> <span class="trap">speculative expansion that "anticipates what else is interesting"</span> pads the query with terms the user didn't say — great for recall, corrosive for BM25 precision. You're covered <em>only</em> because your ablation (§8) showed expansion net-helped. Say "expansion, bounded by the ablation," not "expansion, because more context is better."
+            </div>
+        </details>
+
+        <!-- ========================= 8 RETRIEVAL EVAL ========================= -->
+        <h2 id="reval">8 · Retrieval — eval &amp; the vector ablation</h2>
+        <details>
+            <summary>How do you know it retrieves the right thing?</summary>
+            <p class="ask">"Not the end-to-end LLM judge — the retrieval layer specifically."</p>
+            <p><strong>This was your strongest thread of either session. It's the template for how every answer should sound:</strong></p>
+            <ul>
+                <li>Built a <strong>synthetic known-item set</strong> (~250 conversations), each with a target doc ID the query should surface.</li>
+                <li><strong>recall@10 ≈ 80%</strong> <span class="verify">(confirm; and confirm whether that's BM25-alone or the hybrid — state the delta).</span></li>
+                <li>Tried <strong>dense / hybrid retrieval — it did <em>not</em> beat BM25 + expansion.</strong></li>
+                <li><strong>Failure mechanism</strong> (this is the money sentence): dense retrieval pulled <em>semantically adjacent, wrong-entity</em> docs — Kohli-retirement chatter scoring high on a Rohit query — which crowded out the correct doc in the top-10. On a jargon-heavy, well-summarized corpus, lexical matching + interpretability won.</li>
+            </ul>
+            <p class="qmeta">Keep the interpretability argument: with BM25 you can reason about <em>why</em> a doc ranked; dense similarity is opaque. That's a legitimate staff-level reason to not add complexity.</p>
+        </details>
+
+        <!-- ========================= 9 STATS GAP ========================= -->
+        <h2 id="stats">9 · The coverage gap (historical stats)</h2>
+        <details>
+            <summary>"Bumrah's economy this season vs last" — which path serves it?</summary>
+            <p class="ask">"It's not live state, not gossip. It falls through the cracks."</p>
+            <p><strong>Own it as a deliberate scoping call, then give the mitigation:</strong></p>
+            <div class="card tip">
+                <p>"Precise historical stats were a deliberate scope cut — real-time stat computation is a hard problem we didn't own. We routed those to grounded Google search over a <strong>custom allowlist of reliable stat domains</strong>. That handles coarse comparisons — 'this IPL vs last IPL' — because a source page covers it. It <em>fails</em> on computed rolling stats — 'average over his last 5 matches' — and it can return a confident wrong number, which is why factual claims get verified post-hoc (§10)."</p>
+            </div>
+            <div class="card">
+                <strong>The trap:</strong> <span class="trap">not volunteering the gap.</span> You only surfaced it when pushed. Name your own coverage holes before the interviewer finds them — it reads as senior, not weak.
+            </div>
+        </details>
+
+        <!-- ========================= 10 FAITHFULNESS ========================= -->
+        <h2 id="faith">10 · Faithfulness vs factual accuracy</h2>
+        <details>
+            <summary>How do you know the spoken answer used what you retrieved?</summary>
+            <p class="ask">"...vs the model ignoring your tool result and hallucinating from memory?"</p>
+            <p><strong>Mechanism (good — keep it):</strong> the tool returns structured JSON (facts + trend summary + a few example posts); the tool definition carries <strong>persona-specific few-shot examples</strong> of how to fold a result into speech. And the honest caveat: "there's no hard guarantee it uses the tool over its parametric memory — you iterate the tool definition + system prompt until you observe it does."</p>
+            <div class="card fix">
+                <p><strong>The distinction you missed — say it explicitly:</strong> your post-session judge measures <em>factual correctness</em> (extract claims → verify via search), which is <strong>not</strong> the same as <em>faithfulness to retrieval</em> (did the spoken answer actually reflect the retrieved context). Two consequences to own:</p>
+                <ul style="margin:6px 0 0;">
+                    <li>A correct-but-ungrounded answer (model got lucky from memory) passes your check.</li>
+                    <li><strong>Gossip claims are unverifiable by a search judge</strong> — so the exact corpus you built (chatter) has <em>no</em> faithfulness check at all.</li>
+                </ul>
+                <p style="margin:8px 0 0;">Honest close: "A true faithfulness metric — compare the spoken claim against the retrieved passage — is a gap I'd fix with an entailment/grounding judge over the retrieved context."</p>
+            </div>
+        </details>
+
+        <!-- ========================= 11 ASYNC ========================= -->
+        <h2 id="async">11 · Async tool-calls &amp; hiding latency</h2>
+        <details>
+            <summary>How do tool calls not blow the latency budget?</summary>
+            <p><strong>Async, non-blocking, with verbal filler:</strong> when the model wants a tool, it emits a filler utterance ("let me check the TV") <em>and</em> the function call together. The agent runs the tool while the filler plays; the result feeds a second inference.</p>
+            <ul>
+                <li>Tool latencies <span class="verify">(verify)</span>: Redis live-state ~50ms; the RAG sub-agent ~<strong>1s</strong> (two Flash calls ≈ 800ms + DB ~100ms + provider-side grounding).</li>
+                <li>~10% of turns hit a tool.</li>
+                <li>The honest reframe: <strong>"sub-2s" = time-to-filler, not time-to-answer.</strong> Time-to-answer = TTFB + tool + second inference.</li>
+            </ul>
+            <div class="card">
+                <strong>The trap:</strong> <span class="trap">quoting the RAG path at "500–600ms."</span> Two Flash inferences alone are ~800ms; with the DB and grounding it's ~1s. State ~1s first — don't get walked there by arithmetic. The ~1–1.5s filler barely covers a 1s RAG path, so precision here matters for the UX story.
+            </div>
+        </details>
+
+        <!-- ========================= 12 BUGS ========================= -->
+        <h2 id="bugs">12 · War stories (personal bugs)</h2>
+        <details>
+            <summary>The single hardest bug you personally debugged</summary>
+            <p class="ask">"Not a design decision — a bug. Symptom → trace → fix. Your hands."</p>
+            <p><strong>This was your biggest exposure — three asks, zero bugs, last time. You now have two. Rehearse both cold:</strong></p>
+            <h3>Story 1 — the silent retrieval failure</h3>
+            <p><strong>Symptom:</strong> retrieval returned nothing for the first days post-deploy, but nothing was flagged. <strong>Trace:</strong> the Postgres doc DB wasn't reachable from the LiveKit-hosted agent; tool calls failed non-blocking and Google results papered over it, so transcripts looked fine. Caught it manually — inserted test docs, saw they were never retrieved. <strong>Root cause + insight:</strong> graceful degradation <em>masked</em> a hard failure. <strong>Fix:</strong> added tool-failure observability + an eval that checks whether turns that <em>should</em> have triggered a tool actually did.</p>
+            <h3>Story 2 — the tool result that interrupted the user</h3>
+            <p><strong>Symptom:</strong> async tool results, when they landed, cut the user off mid-sentence — abrupt and rude. <strong>Fix:</strong> gate delivery on LiveKit's speaking-state — if the user is talking, hold the result and fold it into the agent's next turn; only speak immediately on silence.</p>
+            <div class="card">
+                <strong>Still missing:</strong> a genuinely code-level bug (a race, an ordering/concurrency bug, a data-structure bug) in your own code. Story 1 is ops, Story 2 is interaction logic. <span class="trap">Find one more from the async/query path and rehearse it</span> — that's the remaining staff-level hole.
+            </div>
+        </details>
+
+        <!-- ========================= 13 SPOILER ========================= -->
+        <h2 id="spoiler">13 · The spoiler / sync problem</h2>
+        <details>
+            <summary>Your feed is ahead of the user's stream — spoilers?</summary>
+            <p><strong>Honest framing (unmeasured, unsolved, mitigated):</strong> the vendor data feed lags ~1–2s; the broadcast the user watches lags ~10–60s. So the agent literally knows the future — a wicket the user hasn't seen. <strong>Mitigation:</strong> reactive-only design — proactivity disabled, so the agent never volunteers an event ahead of the user. <strong>The real fix</strong> (say this, it shows you understand it): sync agent world-state to the user's playback position via a client playhead heartbeat, and gate any event by the user's stream timestamp.</p>
+            <div class="card">
+                <strong>The trap:</strong> <span class="trap">"I think by then they're still in sync"</span> — that's a hand-wave. The delta was never measured. Own that: "unmeasured, mitigated by reactive-only; here's how I'd measure and fix it."
+            </div>
+        </details>
+
+        <!-- ========================= 14 EVAL ========================= -->
+        <h2 id="eval">14 · The eval framework</h2>
+        <details>
+            <summary>How did you evaluate the whole thing?</summary>
+            <p><strong>Your other strong answer — use this register everywhere:</strong> post-hoc over transcripts, offline + a daily online watch.</p>
+            <ul>
+                <li><strong>Tool-call correctness</strong> — a Gemini-Flash judge scores should-have-called vs did-call.</li>
+                <li><strong>Repetition index</strong> — a 4/5-gram repeat metric that drove system-prompt fixes for catchphrase spam.</li>
+                <li><strong>Factual verification</strong> — claims extracted and checked via search (with the faithfulness caveat in §10).</li>
+                <li><strong>Policy/abuse checks.</strong></li>
+                <li><strong>True turn latency</strong> — offline dual-channel VAD analysis to measure real end-of-turn timing (still excludes client network legs — know this caveat).</li>
+                <li>Traces in Langfuse.</li>
+            </ul>
+        </details>
+
+        <!-- ========================= REFERENCE: PG ========================= -->
+        <h2 id="pg">★ Reference: BM25 in Postgres <span class="pill">verified 2026</span></h2>
+        <div class="card">
+            <p><strong>Native Postgres FTS is NOT BM25.</strong> <code>tsvector</code> / <code>ts_rank</code> / <code>ts_rank_cd</code> lack all three BM25 pillars:</p>
+            <ul>
+                <li><strong>No IDF</strong> — no corpus-wide term rarity; scores only on the current doc's term counts.</li>
+                <li><strong>No TF saturation (<code>k1</code>)</strong> — repeat-term value doesn't flatten, so keyword stuffing wins.</li>
+                <li><strong>Crude length norm (no <code>b</code>)</strong> — blunt integer bitmasks instead of average-doc-length normalization.</li>
+            </ul>
+            <p><strong>True BM25 inside Postgres — the real extensions:</strong></p>
+            <table>
+                <tr><th>Extension</th><th>What it is</th></tr>
+                <tr><td><code>pg_search</code> (ParadeDB)</td><td><strong>The production answer.</strong> Embeds Tantivy (Rust Lucene) via pgrx. Full BM25 + faceting, Elasticsearch-like.</td></tr>
+                <tr><td><code>vchord_bm25</code> (VectorChord / TensorChord)</td><td>Ultra-light, Block-Max WAND, native custom index. Optimized for speed &amp; low footprint.</td></tr>
+                <tr><td>ZomboDB</td><td>Legacy. Real BM25 but by shadow-syncing to an external Elasticsearch/OpenSearch cluster — you're running a JVM search cluster underneath.</td></tr>
+            </table>
+            <p class="qmeta">Sober take for a ~20-doc filtered candidate set: BM25 is mathematical theater — IDF earns its keep when ranking the top-10 out of 100k+ matches, not 20. An exact match + recency sort is honest at that scale.</p>
+        </div>
+
+        <!-- ========================= REFERENCE: LIVEKIT ========================= -->
+        <h2 id="livekit">★ Reference: LiveKit turn detector <span class="pill">verified 2026</span></h2>
+        <div class="card">
+            <p>LiveKit ships <strong>two different</strong> turn detectors. Conflating them is the crack.</p>
+            <table>
+                <tr><th></th><th>Text (<code>MultilingualModel</code>)</th><th>Audio (<code>v1</code> / <code>v1-mini</code>)</th></tr>
+                <tr><td>Input</td><td>STT <strong>transcript</strong> + context</td><td>Raw <strong>audio</strong> waveform, no transcript</td></tr>
+                <tr><td>Base</td><td><strong>Qwen2.5-0.5B-Instruct</strong>, 0.5B, 396MB, CPU, ~50–160ms/turn</td><td>Architecture <strong>undisclosed</strong></td></tr>
+                <tr><td>Status</td><td>Deprecated (removal in SDK 2.0)</td><td>Current default, shipped <strong>~June 2026</strong></td></tr>
+                <tr><td>Multilingual</td><td>~13 langs (incl. Hindi)</td><td>14 langs, per-lang thresholds</td></tr>
+            </table>
+            <p><strong>Both sit on top of a VAD</strong> (e.g. Silero). VAD = speech/no-speech energy + silence timeout. The turn detector adds an end-of-utterance <em>probability</em> from context/prosody, so mid-sentence pauses don't trigger a barge-in.</p>
+            <p><strong>The self-contradiction to never repeat:</strong> "fine-tuned Qwen, audio-native" — the Qwen model <em>is</em> the transcript model; the audio-native one's base is undisclosed. And it shipped <em>after</em> IPL 2026, so your IPL system was the transcript model (or Gemini Live's native turn-taking). Audio-native peers for reference: Pipecat/Daily "Smart Turn" (v2 = Wav2Vec2 ~95M; v3 = Whisper-Tiny encoder ~8M).</p>
+        </div>
+
+        <!-- ========================= DELIVERY ========================= -->
+        <h2 id="delivery">★ Delivery rules (the meta-patterns)</h2>
+        <div class="card tip">
+            <ol style="margin:0; padding-left:20px;">
+                <li><strong>State a number once, correctly.</strong> Both sessions, numbers drifted upward under arithmetic (latency 600ms→1s; docs 10K→20). Pre-compute the latency budget and the numbers triangle so you never revise mid-sentence.</li>
+                <li><strong>Flag uncertainty out loud.</strong> You state guesses ("your PG version supports BM25", "fine-tuned Qwen") with the same confidence as facts. Say "I'd have to check the base model" — an interviewer can't tell your knowledge from your invention otherwise.</li>
+                <li><strong>Volunteer your own gaps.</strong> Coverage holes and unmeasured metrics read as senior when <em>you</em> name them, weak when the interviewer digs them out.</li>
+                <li><strong>Lead with mechanism, not outcome.</strong> Your best moments (region placement, the dense-crowds-top-10 ablation) were mechanism-first. Make every answer sound like those.</li>
+                <li><strong>Kill the tics.</strong> No "right?" tail; don't garble the stack names (Silero, Langfuse) — rehearse saying them aloud.</li>
+            </ol>
+        </div>
+
+        <footer>
+            Personal explainer · unlisted · <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+
+    <script>
+        (function () {
+            // Expand / collapse all
+            var all = function (open) {
+                document.querySelectorAll('details').forEach(function (d) { d.open = open; });
+            };
+            var oa = document.getElementById('openAll');
+            var ca = document.getElementById('closeAll');
+            if (oa) oa.addEventListener('click', function () { all(true); });
+            if (ca) ca.addEventListener('click', function () { all(false); });
+
+            // Latency waterfall (component budget, ms)
+            var legs = [
+                { label: 'Uplink → LiveKit edge', ms: 50 },
+                { label: 'Edge → us-east-1 backbone', ms: 100 },
+                { label: 'VAD + turn window', ms: 300 },
+                { label: 'Gemini TTFB', ms: 1200 },
+                { label: 'Return path', ms: 175 }
+            ];
+            var total = legs.reduce(function (a, b) { return a + b.ms; }, 0);
+            var max = Math.max.apply(null, legs.map(function (l) { return l.ms; }));
+            var wf = document.getElementById('wf');
+            var wfReveal = document.getElementById('wfReveal');
+            var built = false;
+            function build() {
+                if (!wf || built) return;
+                built = true;
+                legs.forEach(function (l) {
+                    var row = document.createElement('div'); row.className = 'wf-row';
+                    var lab = document.createElement('div'); lab.className = 'wf-label'; lab.textContent = l.label;
+                    var bw = document.createElement('div'); bw.className = 'wf-barwrap';
+                    var bar = document.createElement('div'); bar.className = 'wf-bar'; bar.style.width = '0%';
+                    var val = document.createElement('div'); val.className = 'wf-val'; val.textContent = l.ms + 'ms';
+                    bw.appendChild(bar); row.appendChild(lab); row.appendChild(bw); row.appendChild(val);
+                    wf.appendChild(row);
+                    requestAnimationFrame(function () {
+                        bar.style.transition = 'width .6s ease';
+                        bar.style.width = Math.round(l.ms / max * 100) + '%';
+                    });
+                });
+                var sum = document.createElement('div'); sum.className = 'wf-row';
+                sum.style.fontWeight = '700'; sum.style.marginTop = '10px';
+                sum.innerHTML = '<div class="wf-label">Component sum</div><div class="wf-barwrap" style="background:transparent"></div><div class="wf-val">~' + (total / 1000).toFixed(1) + 's</div>';
+                wf.appendChild(sum);
+                var meas = document.createElement('div'); meas.className = 'wf-row';
+                meas.style.color = 'var(--warn)';
+                meas.innerHTML = '<div class="wf-label">Measured p90 (offline VAD)</div><div class="wf-barwrap" style="background:transparent"></div><div class="wf-val">~2.0s</div>';
+                wf.appendChild(meas);
+                if (wfReveal) wfReveal.textContent = 'Budget shown ✔';
+            }
+            if (wfReveal) wfReveal.addEventListener('click', build);
+        })();
+    </script>
+</body>
+</html>
