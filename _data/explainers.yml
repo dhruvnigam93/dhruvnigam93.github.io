@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "Binary Search, Reframed"
+  slug: binary-search-reframed
+  date: 2026-08-23
+  description: "Interactive: binary search as finding where a monotonic predicate flips. Step through peak / min-rotated / target / rotated, then break the loop-shape triad and watch the infinite loops."
+
 - title: "LLM Training Flashcards"
   slug: llm-training-flashcards
   date: 2026-08-23

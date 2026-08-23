@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>Binary Search, Reframed</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --radius: 14px;
+            /* viz palette */
+            --tru: #b45309;   --tru-bg: #fef3c7;  --tru-bar: #f59e0b;
+            --fls: #64748b;   --fls-bg: #f1f5f9;  --fls-bar: #cbd5e1;
+            --pL: #0d9488;    --pR: #db2777;      --pM: #7c3aed;
+            --ok: #059669;    --bad: #dc2626;
+            --win: rgba(37,99,235,0.08);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                --tru: #fbbf24;  --tru-bg: #362a0d;  --tru-bar: #f59e0b;
+                --fls: #94a3b8;  --fls-bg: #1b1f27;  --fls-bar: #3a424e;
+                --pL: #2dd4bf;   --pR: #f472b6;      --pM: #a78bfa;
+                --ok: #34d399;   --bad: #f87171;
+                --win: rgba(110,168,254,0.12);
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap { max-width: 760px; margin: 0 auto; padding: max(20px, env(safe-area-inset-top)) 20px 80px; }
+        .back { display: inline-block; margin: 8px 0 20px; color: var(--muted); text-decoration: none; font-size: 0.95rem; }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.3rem; margin: 2.2em 0 0.5em; }
+        h3 { font-size: 1.05rem; margin: 1.2em 0 0.3em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        .lead { font-size: 1.08rem; }
+        code {
+            background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+            padding: 1px 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85em;
+        }
+        pre {
+            background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+            padding: 14px 16px; overflow-x: auto; font-size: 0.82em; line-height: 1.5;
+        }
+        pre code { background: none; border: none; padding: 0; }
+        .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin: 1em 0; }
+        .callout { border-left: 4px solid var(--accent); }
+        table { border-collapse: collapse; width: 100%; font-size: 0.9rem; margin: 0.6em 0; display: block; overflow-x: auto; }
+        th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+        th { background: var(--card); }
+        .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+        button {
+            font: inherit; font-weight: 600; color: #fff; background: var(--accent); border: none;
+            border-radius: 999px; padding: 11px 18px; min-height: 48px; min-width: 48px; cursor: pointer; touch-action: manipulation;
+        }
+        button:active { transform: scale(0.96); }
+        button:disabled { opacity: 0.45; cursor: default; }
+        .ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+
+        /* ---- visualizer ---- */
+        .viz { padding: 14px 14px 18px; }
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+        .chip {
+            font-size: 0.82rem; font-weight: 600; padding: 8px 12px; min-height: 40px; border-radius: 999px;
+            border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer;
+        }
+        .chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .predlabel { font-size: 0.82rem; color: var(--muted); font-family: ui-monospace, Menlo, monospace; margin: 2px 0 12px; min-height: 1.2em; }
+        .predlabel b { color: var(--tru); }
+        .cells { display: flex; flex-wrap: wrap; gap: 7px; margin: 6px 0 4px; }
+        .cell {
+            width: 48px; min-height: 66px; border: 1.5px solid var(--line); border-radius: 10px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: relative; background: var(--bg); transition: opacity .25s, box-shadow .2s, background .25s; padding-top: 6px;
+        }
+        .cell.inwin { background: var(--win); }
+        .cell.out { opacity: 0.3; }
+        .cell.mid { box-shadow: 0 0 0 2.5px var(--pM); border-color: var(--pM); }
+        .cell.ans { box-shadow: 0 0 0 2.5px var(--ok); border-color: var(--ok); background: var(--tru-bg); }
+        .pbar { position: absolute; top: 0; left: 0; right: 0; height: 6px; border-radius: 9px 9px 0 0; }
+        .pbar.t { background: var(--tru-bar); }
+        .pbar.f { background: var(--fls-bar); }
+        .val { font-family: ui-monospace, Menlo, monospace; font-weight: 700; font-size: 1rem; }
+        .idx { font-family: ui-monospace, Menlo, monospace; font-size: 0.6rem; color: var(--muted); }
+        .ptrs { display: flex; gap: 3px; height: 18px; margin-top: 3px; }
+        .ptr { font-family: ui-monospace, Menlo, monospace; font-size: 0.62rem; font-weight: 700; color: #fff; border-radius: 4px; padding: 0 4px; line-height: 16px; }
+        .ptr.L { background: var(--pL); } .ptr.R { background: var(--pR); } .ptr.M { background: var(--pM); }
+        .status { font-size: 0.9rem; margin: 12px 0 6px; min-height: 3.2em; }
+        .metrics { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 0.78rem; color: var(--muted); font-family: ui-monospace, Menlo, monospace; margin-bottom: 12px; }
+        .metrics b { color: var(--fg); }
+        .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+        .controls button { padding: 11px 16px; font-size: 0.9rem; }
+        .editrow { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 0.82rem; color: var(--muted); margin-bottom: 12px; }
+        .editrow label { display: flex; align-items: center; gap: 6px; }
+        .editrow input {
+            font: inherit; font-size: 0.85rem; font-family: ui-monospace, Menlo, monospace; color: var(--fg);
+            background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-height: 40px;
+        }
+        #arrIn { width: 190px; }
+        #tgtIn { width: 70px; }
+        .legend { display: flex; flex-wrap: wrap; gap: 10px 14px; font-size: 0.72rem; color: var(--muted); margin: 4px 0 0; }
+        .legend span { display: inline-flex; align-items: center; gap: 5px; }
+        .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+        .codepanel { margin-top: 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; overflow-x: auto; }
+        .cline { font-family: ui-monospace, Menlo, monospace; font-size: 0.78rem; line-height: 1.7; white-space: pre; padding: 0 6px; border-left: 3px solid transparent; color: var(--muted); border-radius: 4px; }
+        .cline.active { background: var(--win); border-left-color: var(--accent); color: var(--fg); font-weight: 600; }
+
+        /* mini flip strip */
+        .strip { display: flex; gap: 5px; margin: 10px 0 2px; flex-wrap: wrap; }
+        .sbox { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: ui-monospace, Menlo, monospace; font-weight: 700; font-size: 0.8rem; }
+        .sbox.f { background: var(--fls-bg); color: var(--fls); border: 1px solid var(--line); }
+        .sbox.t { background: var(--tru-bg); color: var(--tru); border: 1px solid var(--tru-bar); }
+        .flipmark { font-size: 0.72rem; color: var(--muted); font-family: ui-monospace, Menlo, monospace; }
+
+        /* principles */
+        .grid { display: grid; gap: 12px; grid-template-columns: 1fr; margin: 1em 0; }
+        @media (min-width: 620px) { .grid { grid-template-columns: 1fr 1fr; } }
+        .pr { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+        .pr .n { font-family: ui-monospace, Menlo, monospace; font-weight: 700; color: var(--accent); font-size: 0.8rem; }
+        .pr h3 { margin: 4px 0 6px; font-size: 1rem; }
+        .pr p { font-size: 0.88rem; margin: 0.3em 0; color: var(--fg); }
+
+        /* mixer */
+        .mixrow { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 0.85rem; margin-bottom: 10px; }
+        .mixrow select {
+            font: inherit; font-size: 0.85rem; font-family: ui-monospace, Menlo, monospace; color: var(--fg);
+            background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; min-height: 44px;
+        }
+        .verdict { margin-top: 10px; padding: 12px 14px; border-radius: var(--radius); font-size: 0.9rem; display: none; }
+        .verdict.show { display: block; }
+        .verdict.good { background: var(--tru-bg); border: 1px solid var(--ok); }
+        .verdict.bad { background: var(--fls-bg); border: 1px solid var(--bad); }
+        .verdict .tag { font-weight: 700; }
+        .verdict.good .tag { color: var(--ok); } .verdict.bad .tag { color: var(--bad); }
+
+        /* recipe checklist */
+        .recipe { list-style: none; padding: 0; margin: 1em 0; counter-reset: r; }
+        .recipe li {
+            background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px 12px 46px;
+            margin: 8px 0; position: relative; cursor: pointer; font-size: 0.92rem; transition: opacity .2s;
+        }
+        .recipe li::before {
+            counter-increment: r; content: counter(r); position: absolute; left: 12px; top: 11px;
+            width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line);
+            display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: var(--muted); font-family: ui-monospace, Menlo, monospace;
+        }
+        .recipe li.done { opacity: 0.55; }
+        .recipe li.done::before { content: "\2713"; background: var(--ok); border-color: var(--ok); color: #fff; }
+        .recipe li b { color: var(--accent); }
+
+        footer { margin-top: 3em; padding-top: 1.2em; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>Binary Search, Reframed</h1>
+        <p class="meta">Added 2026-08-23</p>
+
+        <p class="lead">You keep writing <code>if mid == 0</code> guards and getting infinite loops. The fix isn&rsquo;t memorizing a template &mdash; it&rsquo;s one reframe that makes the template <em>fall out</em>, corner cases already handled.</p>
+
+        <div class="card callout">
+            <p style="margin-top:0"><b>The reframe:</b> binary search doesn&rsquo;t &ldquo;find a value in a sorted array.&rdquo; It finds where a boolean test <span class="mono">P(i)</span> flips from <b>False</b> to <b>True</b>.</p>
+            <div class="strip" aria-hidden="true">
+                <div class="sbox f">F</div><div class="sbox f">F</div><div class="sbox f">F</div>
+                <div class="sbox t">T</div><div class="sbox t">T</div><div class="sbox t">T</div>
+            </div>
+            <p class="flipmark">&uarr; it flips exactly once. Find the first <b class="mono" style="color:var(--tru)">T</b>. That&rsquo;s the whole game.</p>
+        </div>
+
+        <p>Every binary search is this &mdash; even the ones that don&rsquo;t look like it:</p>
+        <table>
+            <tr><th>Problem</th><th>Hidden predicate <span class="mono">P(i)</span></th><th>You want</th></tr>
+            <tr><td>#704 standard search</td><td class="mono">nums[i] &ge; target</td><td>first True</td></tr>
+            <tr><td>#162 Find Peak</td><td class="mono">nums[i] &gt; nums[i+1]</td><td>first True = a peak</td></tr>
+            <tr><td>#153 Find Min (rotated)</td><td class="mono">nums[i] &le; nums[last]</td><td>first True = the min</td></tr>
+            <tr><td>binary-search-on-answer</td><td class="mono">feasible(x)</td><td>first True = min feasible x</td></tr>
+        </table>
+        <p>Once you see <em>which region still contains the flip</em>, you discard the other half. You never classify a single element &mdash; that&rsquo;s why <code>mid-1</code> and the <code>mid==0</code> guard disappear.</p>
+
+        <h2>See it: the predicate lens</h2>
+        <p>Step through the search. Watch the <b style="color:var(--pM)">window shrink</b> &mdash; the answer is <em>always</em> inside it (that&rsquo;s the invariant), so the last cell standing is the answer, no special-casing. Dimmed cells are discarded: the answer provably can&rsquo;t be there.</p>
+
+        <section class="viz card">
+            <div class="chips" id="chips"></div>
+            <div class="predlabel" id="predLabel"></div>
+            <div class="cells" id="cells"></div>
+            <div class="legend">
+                <span><span class="sw" style="background:var(--pL)"></span>left</span>
+                <span><span class="sw" style="background:var(--pM)"></span>mid</span>
+                <span><span class="sw" style="background:var(--pR)"></span>right</span>
+                <span><span class="sw" style="background:var(--tru-bar)"></span>P = True</span>
+                <span><span class="sw" style="background:var(--fls-bar)"></span>P = False</span>
+                <span><span class="sw" style="background:var(--ok)"></span>answer</span>
+            </div>
+            <div class="status" id="status"></div>
+            <div class="metrics" id="metrics"></div>
+            <div class="controls">
+                <button id="back" class="ghost">&#9664; Back</button>
+                <button id="step">Step &#9654;</button>
+                <button id="auto" class="ghost">&#9654; Auto</button>
+                <button id="reset" class="ghost">&#8635; Reset</button>
+            </div>
+            <div class="editrow">
+                <label>array <input id="arrIn" inputmode="numeric" autocomplete="off" spellcheck="false"></label>
+                <label id="tgtWrap">target <input id="tgtIn" type="number" inputmode="numeric" autocomplete="off"></label>
+                <button id="rand" class="ghost">&#127922; Randomize</button>
+            </div>
+            <div class="codepanel" id="code"></div>
+            <p class="predlabel" id="footnote" style="margin-top:10px"></p>
+        </section>
+
+        <p class="card callout" style="font-size:0.9rem"><b>Try to break it:</b> type <code>5</code> (a single element) into the array box. Most hand-rolled peak-finders crash here on <code>nums[mid+1]</code>. This one returns <code>0</code> and never enters the loop &mdash; the loop shape guarantees safety, no guard needed. (Principle&nbsp;4.)</p>
+
+        <h2>Why the corner cases vanish</h2>
+        <div class="grid">
+            <div class="pr">
+                <div class="n">01</div><h3>Regions, not elements</h3>
+                <p>Each step asks one thing: is the answer in <span class="mono">[left, mid]</span> or <span class="mono">[mid+1, right]</span>? One comparison discards one half. Classifying <code>mid</code> (&ldquo;is <em>this</em> the peak?&rdquo;) needs three &mdash; and drags in both neighbours and the ends.</p>
+            </div>
+            <div class="pr">
+                <div class="n">02</div><h3>Hold the invariant</h3>
+                <p>Keep the answer <em>always</em> inside <span class="mono">[left, right]</span>. Then when the window shrinks to one cell, that cell <em>is</em> the answer &mdash; automatically. This is why you write <code>right = mid</code> (not <code>mid-1</code>) when <code>mid</code> could still be it: discarding a live candidate breaks the invariant.</p>
+            </div>
+            <div class="pr">
+                <div class="n">03</div><h3>Match the triad</h3>
+                <p>Loop condition + update rule + return value are <em>one set</em>. Locating a guaranteed boundary &rarr; <span class="mono">while left &lt; right</span>, <span class="mono">right=mid</span> / <span class="mono">left=mid+1</span>, <span class="mono">return left</span>. Searching a maybe-absent value &rarr; <span class="mono">while left &le; right</span>, <span class="mono">&plusmn;1</span> moves, <span class="mono">return -1</span>. Mixing rows is where your bugs live.</p>
+            </div>
+            <div class="pr">
+                <div class="n">04</div><h3>Safety is structural</h3>
+                <p>With <span class="mono">left &lt; right</span>, <span class="mono">mid = (left+right)//2</span> always gives <span class="mono">mid &lt; right</span> &mdash; so <span class="mono">mid+1</span> is always in bounds. That theorem is what lets you delete <code>if mid == len-1</code>. Craving a boundary guard = wrong frame.</p>
+            </div>
+            <div class="pr">
+                <div class="n">05</div><h3>Prove progress on [a, b]</h3>
+                <p><span class="mono">left = mid + 1</span> always advances. <span class="mono">right = mid</span> advances only when <span class="mono">mid &lt; right</span> &mdash; which the strict loop guarantees. The two-element case is where infinite loops and off-by-ones hide. Trace it; if it terminates there, it terminates everywhere.</p>
+            </div>
+            <div class="pr">
+                <div class="n">06</div><h3>Not even about arrays</h3>
+                <p><span class="mono">feasible(x)</span> over a value range is the same shape: F&hellip;F&nbsp;T&hellip;T, find the first True. &ldquo;Min days to ship&rdquo;, &ldquo;smallest divisor&rdquo;, &radic;n &mdash; all binary search once you name the monotonic predicate.</p>
+            </div>
+        </div>
+
+        <h2>Feel the triad &mdash; mix it and break it</h2>
+        <p>Same goal every time: find the first <span class="mono">i</span> with <span class="mono">nums[i] &ge; 5</span> in <span class="mono">[1, 3, 4, 6, 8, 9]</span> (answer: index&nbsp;3). We fix <code>right = mid</code> and let you pick the other two knobs. Only one combination terminates <em>and</em> is correct.</p>
+
+        <section class="card">
+            <div class="mixrow">
+                <label>loop:
+                    <select id="mixLoop">
+                        <option value="lt">while left &lt; right</option>
+                        <option value="le">while left &le; right</option>
+                    </select>
+                </label>
+                <label>shrink move:
+                    <select id="mixMove">
+                        <option value="p1">left = mid + 1</option>
+                        <option value="p0">left = mid</option>
+                    </select>
+                </label>
+                <button id="mixRun">Run</button>
+            </div>
+            <div class="codepanel" id="mixCode"></div>
+            <div class="verdict" id="mixVerdict"></div>
+        </section>
+        <p style="font-size:0.9rem;color:var(--muted)">These are exactly the two mistakes that cost an hour on #33: <code>left = mid</code> with no <code>+1</code> (no progress &rarr; infinite loop), and <code>&le;</code> paired with a non-shrinking move. The template doesn&rsquo;t hide these cases &mdash; it makes them impossible to write.</p>
+
+        <h2>The recipe (write this, every time)</h2>
+        <p style="font-size:0.9rem;color:var(--muted)">Tap each step as you internalize it.</p>
+        <ol class="recipe" id="recipe">
+            <li><b>Name the monotonic predicate</b> <span class="mono">P(i)</span> that flips False&rarr;True. If you can&rsquo;t, it isn&rsquo;t binary search.</li>
+            <li><b>Set left, right</b> to the full inclusive range of candidate positions.</li>
+            <li><b>Pick the triad row.</b> Locating a boundary &rarr; <span class="mono">while left &lt; right</span>, return <span class="mono">left</span>.</li>
+            <li><b>One comparison at mid</b> &rarr; <span class="mono">right = mid</span> (answer at/left) or <span class="mono">left = mid + 1</span> (answer strictly right).</li>
+            <li><b>Write zero boundary guards.</b> Wanting one means your predicate is wrong.</li>
+            <li><b>Trace [a, b].</b> Terminates correctly there &rarr; you&rsquo;re done.</li>
+        </ol>
+
+        <details>
+            <summary>Apply it cold to #162 Find Peak</summary>
+            <p><b>1. Predicate:</b> <span class="mono">P(i) = nums[i] &gt; nums[i+1]</span> &mdash; are we on the down-slope? False on the way up, True from the peak onward. Flips once &rarr; binary-searchable.</p>
+            <p><b>2. Range:</b> <span class="mono">left, right = 0, n-1</span>.</p>
+            <p><b>3. Triad:</b> locating a guaranteed peak &rarr; strict loop, <span class="mono">return left</span>.</p>
+            <p><b>4. One comparison:</b> <span class="mono">P(mid)</span> True &rarr; peak at/left &rarr; <span class="mono">right = mid</span>; else <span class="mono">left = mid + 1</span>.</p>
+            <p><b>5. Guards:</b> none. <span class="mono">mid &lt; right</span> makes <span class="mono">mid+1</span> always valid.</p>
+            <p>The code isn&rsquo;t memorized &mdash; it <em>fell out</em> of the recipe:</p>
+            <pre><code>left, right = 0, len(nums) - 1
+while left &lt; right:
+    mid = (left + right) // 2
+    if nums[mid] &gt; nums[mid + 1]:   # down-slope
+        right = mid                  # peak at mid or left
+    else:
+        left = mid + 1               # peak strictly right
+return left                          # left == right -&gt; a peak</code></pre>
+            <p><b>6.</b> Trace <span class="mono">[2, 1]</span>: mid=0, 2&gt;1 &rarr; right=0 &rarr; return 0. Trace <span class="mono">[1, 2]</span>: mid=0, 1&gt;2 false &rarr; left=1 &rarr; return 1. Both terminate, both correct. Ship it.</p>
+        </details>
+
+        <p style="margin-top:1.6em">The deeper point: <em>the template isn&rsquo;t a thing to recall &mdash; it&rsquo;s what you get when you commit to the frame first.</em> Predicate &rarr; invariant &rarr; triad, <em>before</em> the first line of the loop. Grow branches to patch the current element and you rebuild the corner cases by hand, every time.</p>
+
+        <footer>
+            Personal explainer &middot; unlisted &middot; <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+
+    <script>
+    (function () {
+        "use strict";
+        var $ = function (id) { return document.getElementById(id); };
+        var clamp = function (v, lo, hi) { return Math.max(lo, Math.min(hi, v)); };
+
+        // ---------- presets ----------
+        // Each preset owns its code + step logic so the animation always matches the shown code.
+        var PRESETS = {
+            peak: {
+                label: "#162 Find Peak",
+                needsTarget: false,
+                predText: 'P(i) = nums[i] > nums[i+1]  —  on the down-slope?  first True = a peak',
+                foot: "",
+                predicate: function (a, i) { return i === a.length - 1 ? true : a[i] > a[i + 1]; },
+                code: [
+                    "left, right = 0, len(nums) - 1",
+                    "while left < right:",
+                    "    mid = (left + right) // 2",
+                    "    if nums[mid] > nums[mid + 1]:      # down-slope?",
+                    "        right = mid                    # peak at/left",
+                    "    else:",
+                    "        left = mid + 1                 # peak right",
+                    "return left                            # left==right"
+                ],
+                loop: "strict",
+                decide: function (a, t, l, r) {
+                    var mid = (l + r) >> 1;
+                    if (a[mid] > a[mid + 1]) {
+                        return { mid: mid, nl: l, nr: mid, line: 4,
+                            text: "nums[" + mid + "]=" + a[mid] + " > nums[" + (mid + 1) + "]=" + a[mid + 1] + " → down-slope → a peak is at/left of " + mid + " → right = " + mid };
+                    }
+                    return { mid: mid, nl: mid + 1, nr: r, line: 6,
+                        text: "nums[" + mid + "]=" + a[mid] + " ≤ nums[" + (mid + 1) + "]=" + a[mid + 1] + " → up-slope → peak is strictly right → left = " + (mid + 1) };
+                },
+                answerText: function (a, i) { return "peak at index " + i + " (value " + a[i] + ")"; },
+                retLine: 7,
+                randomize: function () {
+                    var n = 5 + Math.floor(Math.random() * 5), out = [], prev = 1 + Math.floor(Math.random() * 9);
+                    out.push(prev);
+                    for (var k = 1; k < n; k++) {
+                        var d = 1 + Math.floor(Math.random() * 4); if (Math.random() < 0.5) d = -d;
+                        var nv = clamp(prev + d, 0, 40); if (nv === prev) nv = prev + 1;
+                        out.push(nv); prev = nv;
+                    }
+                    return out;
+                }
+            },
+            minrot: {
+                label: "#153 Find Min (rotated)",
+                needsTarget: false,
+                predText: 'P(i) = nums[i] ≤ nums[last]  —  in the lower run?  first True = the min',
+                foot: "Coloring uses the fixed last element as the mental model; the code compares mid to the current right — equivalent for a rotated sorted array.",
+                predicate: function (a, i) { return a[i] <= a[a.length - 1]; },
+                code: [
+                    "left, right = 0, len(nums) - 1",
+                    "while left < right:",
+                    "    mid = (left + right) // 2",
+                    "    if nums[mid] > nums[right]:        # min is right of mid",
+                    "        left = mid + 1",
+                    "    else:                              # min at/left of mid",
+                    "        right = mid",
+                    "return left                            # index of the minimum"
+                ],
+                loop: "strict",
+                decide: function (a, t, l, r) {
+                    var mid = (l + r) >> 1;
+                    if (a[mid] > a[r]) {
+                        return { mid: mid, nl: mid + 1, nr: r, line: 4,
+                            text: "nums[" + mid + "]=" + a[mid] + " > nums[right=" + r + "]=" + a[r] + " → min is strictly right → left = " + (mid + 1) };
+                    }
+                    return { mid: mid, nl: l, nr: mid, line: 6,
+                        text: "nums[" + mid + "]=" + a[mid] + " ≤ nums[right=" + r + "]=" + a[r] + " → min is at/left → right = " + mid };
+                },
+                answerText: function (a, i) { return "min at index " + i + " (value " + a[i] + ")"; },
+                retLine: 7,
+                randomize: function () {
+                    var n = 6 + Math.floor(Math.random() * 3), base = [], v = 1 + Math.floor(Math.random() * 5);
+                    for (var k = 0; k < n; k++) { base.push(v); v += 1 + Math.floor(Math.random() * 4); }
+                    var rot = Math.floor(Math.random() * n);
+                    return base.slice(rot).concat(base.slice(0, rot));
+                }
+            },
+            search: {
+                label: "#704 Search target",
+                needsTarget: true,
+                predText: 'P(i) = nums[i] ≥ target  —  first True is where target sits (or would go)',
+                foot: "Exact search still rides a monotonic predicate; here we return early on ==.",
+                predicate: function (a, i, t) { return a[i] >= t; },
+                code: [
+                    "left, right = 0, len(nums) - 1",
+                    "while left <= right:",
+                    "    mid = (left + right) // 2",
+                    "    if nums[mid] == target:",
+                    "        return mid",
+                    "    elif nums[mid] < target:",
+                    "        left = mid + 1",
+                    "    else:",
+                    "        right = mid - 1",
+                    "return -1"
+                ],
+                loop: "inclusive",
+                decide: function (a, t, l, r) {
+                    var mid = (l + r) >> 1;
+                    if (a[mid] === t) return { mid: mid, found: mid, line: 4, text: "nums[" + mid + "]=" + a[mid] + " == target → found at index " + mid };
+                    if (a[mid] < t) return { mid: mid, nl: mid + 1, nr: r, line: 6, text: "nums[" + mid + "]=" + a[mid] + " < " + t + " → go right → left = " + (mid + 1) };
+                    return { mid: mid, nl: l, nr: mid - 1, line: 8, text: "nums[" + mid + "]=" + a[mid] + " > " + t + " → go left → right = " + (mid - 1) };
+                },
+                answerText: function (a, i) { return i < 0 ? "target not present → -1" : "found at index " + i; },
+                retLine: 9,
+                randomize: function () {
+                    var n = 6 + Math.floor(Math.random() * 3), out = [], v = 1 + Math.floor(Math.random() * 4);
+                    for (var k = 0; k < n; k++) { out.push(v); v += 1 + Math.floor(Math.random() * 3); }
+                    return out;
+                },
+                randTarget: function (a) { return Math.random() < 0.65 ? a[Math.floor(Math.random() * a.length)] : a[0] + 1; }
+            },
+            rotated: {
+                label: "#33 Search rotated",
+                needsTarget: true,
+                predText: 'No single monotonic predicate — rotation breaks it. So: which half is sorted?',
+                foot: "The rotation means no global F…FT…T strip exists. The move: find the sorted half, ask if target is inside it, discard the other half. Still region-based, still O(log n).",
+                predicate: null,
+                code: [
+                    "left, right = 0, len(nums) - 1",
+                    "while left <= right:",
+                    "    mid = (left + right) // 2",
+                    "    if nums[mid] == target:",
+                    "        return mid",
+                    "    if nums[left] <= nums[mid]:               # left half sorted",
+                    "        if nums[left] <= target < nums[mid]:",
+                    "            right = mid - 1",
+                    "        else:",
+                    "            left = mid + 1",
+                    "    else:                                     # right half sorted",
+                    "        if nums[mid] < target <= nums[right]:",
+                    "            left = mid + 1",
+                    "        else:",
+                    "            right = mid - 1",
+                    "return -1"
+                ],
+                loop: "inclusive",
+                decide: function (a, t, l, r) {
+                    var mid = (l + r) >> 1;
+                    if (a[mid] === t) return { mid: mid, found: mid, line: 4, text: "nums[" + mid + "]=" + a[mid] + " == target → found at index " + mid };
+                    if (a[l] <= a[mid]) {
+                        if (a[l] <= t && t < a[mid])
+                            return { mid: mid, nl: l, nr: mid - 1, line: 7, text: "left half [" + l + ".." + mid + "] sorted & target in [" + a[l] + "," + a[mid] + ") → right = " + (mid - 1) };
+                        return { mid: mid, nl: mid + 1, nr: r, line: 9, text: "left half sorted but target not in it → left = " + (mid + 1) };
+                    }
+                    if (a[mid] < t && t <= a[r])
+                        return { mid: mid, nl: mid + 1, nr: r, line: 12, text: "right half [" + mid + ".." + r + "] sorted & target in (" + a[mid] + "," + a[r] + "] → left = " + (mid + 1) };
+                    return { mid: mid, nl: l, nr: mid - 1, line: 14, text: "right half sorted but target not in it → right = " + (mid - 1) };
+                },
+                answerText: function (a, i) { return i < 0 ? "target not present → -1" : "found at index " + i; },
+                retLine: 15,
+                randomize: function () {
+                    var n = 6 + Math.floor(Math.random() * 3), base = [], v = 1 + Math.floor(Math.random() * 4);
+                    for (var k = 0; k < n; k++) { base.push(v); v += 1 + Math.floor(Math.random() * 3); }
+                    var rot = Math.floor(Math.random() * n);
+                    return base.slice(rot).concat(base.slice(0, rot));
+                },
+                randTarget: function (a) { return Math.random() < 0.7 ? a[Math.floor(Math.random() * a.length)] : 999; }
+            }
+        };
+
+        var ORDER = ["peak", "minrot", "search", "rotated"];
+        var DEFAULTS = { peak: [1, 2, 1, 3, 5, 6, 4], minrot: [4, 5, 6, 7, 0, 1, 2], search: [1, 3, 4, 6, 8, 9], rotated: [4, 5, 6, 7, 0, 1, 2] };
+        var DEFTGT = { search: 6, rotated: 0 };
+
+        var key = "peak", arr = DEFAULTS.peak.slice(), target = 0, cur = null, hist = [], timer = null;
+
+        // ---------- state machine ----------
+        function fresh() {
+            return { left: 0, right: arr.length - 1, mid: null, done: false, answer: null, status: "ready",
+                steps: 0, comps: 0, line: null, text: "Ready — press Step ▶ (or Auto)." };
+        }
+        function cloneState(s) { var c = {}; for (var k in s) c[k] = s[k]; return c; }
+
+        function finalize() {
+            var p = PRESETS[key];
+            cur.done = true; cur.mid = null; cur.line = p.retLine;
+            if (p.loop === "strict") {
+                cur.answer = cur.left; cur.status = "converged";
+                cur.text = "left == right == " + cur.left + " → converged. Answer: " + p.answerText(arr, cur.left);
+            } else {
+                cur.answer = -1; cur.status = "notfound";
+                cur.text = "left > right → " + p.answerText(arr, -1);
+            }
+        }
+
+        function step() {
+            if (!cur || cur.done) return;
+            var p = PRESETS[key];
+            var active = p.loop === "strict" ? cur.left < cur.right : cur.left <= cur.right;
+            if (!active) { hist.push(cloneState(cur)); finalize(); render(); return; }
+            hist.push(cloneState(cur));
+            var d = p.decide(arr, target, cur.left, cur.right);
+            cur.comps++; cur.mid = d.mid; cur.line = d.line; cur.text = d.text;
+            if (d.found !== undefined) { cur.done = true; cur.answer = d.found; cur.status = "found"; }
+            else {
+                cur.left = d.nl; cur.right = d.nr; cur.steps++;
+                var still = p.loop === "strict" ? cur.left < cur.right : cur.left <= cur.right;
+                if (!still) finalize();
+            }
+            render();
+        }
+
+        function back() { if (hist.length) { cur = hist.pop(); render(); } }
+        function reset() { stopAuto(); hist = []; cur = fresh(); render(); }
+
+        // ---------- rendering ----------
+        function render() {
+            var p = PRESETS[key];
+            // chips
+            var chips = $("chips"); chips.innerHTML = "";
+            ORDER.forEach(function (k) {
+                var b = document.createElement("button");
+                b.className = "chip" + (k === key ? " on" : ""); b.textContent = PRESETS[k].label;
+                b.onclick = function () { switchPreset(k); };
+                chips.appendChild(b);
+            });
+            $("predLabel").textContent = p.predText;
+            $("footnote").textContent = p.foot || "";
+            $("tgtWrap").style.display = p.needsTarget ? "flex" : "none";
+
+            // cells
+            var cells = $("cells"); cells.innerHTML = "";
+            for (var i = 0; i < arr.length; i++) {
+                var inWin = cur && i >= cur.left && i <= cur.right && !cur.done;
+                var c = document.createElement("div");
+                c.className = "cell" + (inWin ? " inwin" : "") + (cur && !inWin && !(cur.done && i === cur.answer) ? " out" : "");
+                if (cur && cur.mid === i && !cur.done) c.className += " mid";
+                if (cur && cur.done && cur.answer === i && cur.answer >= 0) c.className += " ans";
+                if (p.predicate) {
+                    var pv = p.predicate(arr, i, target);
+                    var bar = document.createElement("div"); bar.className = "pbar " + (pv ? "t" : "f"); c.appendChild(bar);
+                }
+                var val = document.createElement("div"); val.className = "val"; val.textContent = arr[i]; c.appendChild(val);
+                var idx = document.createElement("div"); idx.className = "idx"; idx.textContent = i; c.appendChild(idx);
+                var pt = document.createElement("div"); pt.className = "ptrs";
+                if (cur && !cur.done) {
+                    if (cur.left === i) pt.appendChild(mk("ptr L", "L"));
+                    if (cur.mid === i) pt.appendChild(mk("ptr M", "M"));
+                    if (cur.right === i) pt.appendChild(mk("ptr R", "R"));
+                }
+                c.appendChild(pt);
+                cells.appendChild(c);
+            }
+
+            $("status").textContent = cur ? cur.text : "";
+            var logn = Math.max(1, Math.ceil(Math.log2(Math.max(2, arr.length))));
+            $("metrics").innerHTML = "steps: <b>" + (cur ? cur.steps : 0) + "</b>" +
+                " &nbsp; comparisons: <b>" + (cur ? cur.comps : 0) + "</b>" +
+                " &nbsp; n = <b>" + arr.length + "</b>" +
+                " &nbsp; worst case ⌈log₂ n⌉ = <b>" + logn + "</b> steps";
+
+            // code
+            var code = $("code"); code.innerHTML = "";
+            p.code.forEach(function (ln, i) {
+                var d = document.createElement("div");
+                d.className = "cline" + (cur && cur.line === i ? " active" : "");
+                d.textContent = ln; code.appendChild(d);
+            });
+
+            $("step").textContent = cur && cur.done ? "Done ✓" : "Step ▶";
+            $("step").disabled = !!(cur && cur.done);
+            $("back").disabled = hist.length === 0;
+            $("arrIn").value = arr.join(", ");
+            if (p.needsTarget) $("tgtIn").value = target;
+        }
+        function mk(cls, txt) { var s = document.createElement("span"); s.className = cls; s.textContent = txt; return s; }
+
+        // ---------- controls ----------
+        function switchPreset(k) {
+            stopAuto(); key = k; arr = DEFAULTS[k].slice();
+            target = PRESETS[k].needsTarget ? DEFTGT[k] : 0;
+            hist = []; cur = fresh(); render();
+        }
+        function stopAuto() { if (timer) { clearInterval(timer); timer = null; $("auto").textContent = "▶ Auto"; } }
+        function toggleAuto() {
+            if (timer) { stopAuto(); return; }
+            if (cur && cur.done) reset();
+            $("auto").textContent = "⏸ Pause";
+            timer = setInterval(function () { if (cur && cur.done) { stopAuto(); return; } step(); }, 850);
+        }
+        function readArr() {
+            var raw = $("arrIn").value.split(/[\s,]+/).map(Number).filter(function (x) { return isFinite(x); });
+            if (raw.length) { stopAuto(); arr = raw; hist = []; cur = fresh(); render(); }
+        }
+        function readTgt() { var v = Number($("tgtIn").value); if (isFinite(v)) { stopAuto(); target = v; hist = []; cur = fresh(); render(); } }
+        function randomize() {
+            stopAuto(); var p = PRESETS[key]; arr = p.randomize();
+            if (p.needsTarget) target = p.randTarget(arr);
+            hist = []; cur = fresh(); render();
+        }
+
+        $("step").onclick = step;
+        $("back").onclick = back;
+        $("reset").onclick = reset;
+        $("auto").onclick = toggleAuto;
+        $("rand").onclick = randomize;
+        $("arrIn").addEventListener("change", readArr);
+        $("tgtIn").addEventListener("change", readTgt);
+
+        cur = fresh(); render();
+
+        // ---------- triad mixer ----------
+        var MIX = [1, 3, 4, 6, 8, 9], MIXT = 5, MIXANS = 3, CAP = 40;
+        function renderMixCode() {
+            var strict = $("mixLoop").value === "lt", std = $("mixMove").value === "p1";
+            var lines = [
+                "left, right = 0, len(nums) - 1",
+                strict ? "while left < right:" : "while left <= right:",
+                "    mid = (left + right) // 2",
+                "    if nums[mid] >= 5:",
+                "        right = mid",
+                "    else:",
+                std ? "        left = mid + 1" : "        left = mid",
+                "return left"
+            ];
+            var box = $("mixCode"); box.innerHTML = "";
+            lines.forEach(function (ln, i) {
+                var d = document.createElement("div"); d.className = "cline";
+                if ((i === 1) || (i === 6)) d.className += " active";
+                d.textContent = ln; box.appendChild(d);
+            });
+        }
+        function runMix() {
+            var strict = $("mixLoop").value === "lt", std = $("mixMove").value === "p1";
+            var l = 0, r = MIX.length - 1, steps = 0, looped = false, lastL = -1, lastR = -1, stuck = 0;
+            while (true) {
+                var active = strict ? l < r : l <= r;
+                if (!active) break;
+                if (steps >= CAP) { looped = true; break; }
+                if (l === lastL && r === lastR) { stuck++; if (stuck > 2) { looped = true; break; } } else stuck = 0;
+                lastL = l; lastR = r;
+                var mid = (l + r) >> 1;
+                if (MIX[mid] >= MIXT) r = mid; else l = std ? mid + 1 : mid;
+                steps++;
+            }
+            var v = $("mixVerdict"); v.className = "verdict show";
+            if (looped) {
+                v.className += " bad";
+                v.innerHTML = "<span class=\"tag\">✗ Infinite loop.</span> No progress — the window stops shrinking (stuck at left=" + l + ", right=" + r + ") and the loop never exits. This is the #33 bug exactly.";
+            } else if (l === MIXANS) {
+                v.className += " good";
+                v.innerHTML = "<span class=\"tag\">✓ Correct.</span> Converged in " + steps + " steps → returned index " + l + " (value " + MIX[l] + "). This is the only combination that both terminates and is right.";
+            } else {
+                v.className += " bad";
+                v.innerHTML = "<span class=\"tag\">✗ Wrong answer.</span> Terminated at index " + l + " (expected " + MIXANS + ") — it discarded a live candidate and broke the invariant.";
+            }
+        }
+        $("mixLoop").addEventListener("change", function () { renderMixCode(); $("mixVerdict").className = "verdict"; });
+        $("mixMove").addEventListener("change", function () { renderMixCode(); $("mixVerdict").className = "verdict"; });
+        $("mixRun").onclick = runMix;
+        renderMixCode();
+
+        // ---------- recipe checklist ----------
+        var rec = $("recipe");
+        if (rec) rec.querySelectorAll("li").forEach(function (li) {
+            li.addEventListener("click", function () { li.classList.toggle("done"); });
+        });
+    })();
+    </script>
+</body>
+</html>
