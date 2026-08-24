@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "The LLD Cheat Sheet"
+  slug: lld-cheatsheet
+  date: 2026-08-24
+  description: "Machine-coding rounds for ML/platform roles — interactive 60-minute clock, scoring weights, nine mid-vs-staff moments with real code, the 6-pattern toolbox, error→policy map, and the say-this-out-loud script bank."
+
 - title: "Binary Search, Reframed"
   slug: binary-search-reframed
   date: 2026-08-23
