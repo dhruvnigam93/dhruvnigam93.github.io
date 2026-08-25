@@ -172,6 +172,27 @@
         .recipe li.done::before { content: "\2713"; background: var(--ok); border-color: var(--ok); color: #fff; }
         .recipe li b { color: var(--accent); }
 
+        /* three knobs + spec builder */
+        .knobs { display: grid; gap: 12px; grid-template-columns: 1fr; margin: 1em 0; }
+        @media (min-width: 620px) { .knobs { grid-template-columns: 1fr 1fr 1fr; } }
+        .knob { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+        .knob .kn { font-family: ui-monospace, Menlo, monospace; font-weight: 700; font-size: 0.74rem; letter-spacing: 0.03em; }
+        .knob.k1 .kn { color: var(--pL); } .knob.k2 .kn { color: var(--pM); } .knob.k3 .kn { color: var(--pR); }
+        .knob h3 { margin: 3px 0 6px; font-size: 0.98rem; }
+        .knob p { font-size: 0.85rem; margin: 0.35em 0; color: var(--fg); }
+        .kh1 { color: var(--pL); font-weight: 700; } .kh2 { color: var(--pM); font-weight: 700; } .kh3 { color: var(--pR); font-weight: 700; }
+        .specrow { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 0.85rem; margin-bottom: 10px; }
+        .specrow select {
+            font: inherit; font-size: 0.85rem; font-family: ui-monospace, Menlo, monospace; color: var(--fg);
+            background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; min-height: 44px; max-width: 100%;
+        }
+        .speclegend { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 0.72rem; color: var(--muted); margin: 2px 0 12px; }
+        .speclegend span { display: inline-flex; align-items: center; gap: 5px; }
+        .specwhy { font-size: 0.88rem; margin: 12px 0 0; }
+        .spectrap { margin-top: 10px; padding: 10px 12px; border-radius: 12px; font-size: 0.85rem; background: var(--fls-bg); border: 1px solid var(--bad); }
+        .spectrap .tag { color: var(--bad); font-weight: 700; }
+        .specex { font-size: 0.8rem; color: var(--muted); margin-top: 10px; font-family: ui-monospace, Menlo, monospace; }
+
         footer { margin-top: 3em; padding-top: 1.2em; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
     </style>
 </head>
@@ -180,7 +201,7 @@
         <a class="back" href="/explainers/">&larr; all explainers</a>
 
         <h1>Binary Search, Reframed</h1>
-        <p class="meta">Added 2026-08-23</p>
+        <p class="meta">Added 2026-08-23 &middot; updated 2026-08-25 (the three knobs: condition, range, return)</p>
 
         <p class="lead">You keep writing <code>if mid == 0</code> guards and getting infinite loops. The fix isn&rsquo;t memorizing a template &mdash; it&rsquo;s one reframe that makes the template <em>fall out</em>, corner cases already handled.</p>
 
@@ -197,6 +218,8 @@
         <table>
             <tr><th>Problem</th><th>Hidden predicate <span class="mono">P(i)</span></th><th>You want</th></tr>
             <tr><td>#704 standard search</td><td class="mono">nums[i] &ge; target</td><td>first True</td></tr>
+            <tr><td>#35 insert pos / lower bound</td><td class="mono">nums[i] &ge; target</td><td>first True = where it goes</td></tr>
+            <tr><td>#1146 floor (last &le; target)</td><td class="mono">nums[i] &gt; target</td><td>first True, then step back one</td></tr>
             <tr><td>#162 Find Peak</td><td class="mono">nums[i] &gt; nums[i+1]</td><td>first True = a peak</td></tr>
             <tr><td>#153 Find Min (rotated)</td><td class="mono">nums[i] &le; nums[last]</td><td>first True = the min</td></tr>
             <tr><td>binary-search-on-answer</td><td class="mono">feasible(x)</td><td>first True = min feasible x</td></tr>
@@ -289,12 +312,65 @@
         </section>
         <p style="font-size:0.9rem;color:var(--muted)">These are exactly the two mistakes that cost an hour on #33: <code>left = mid</code> with no <code>+1</code> (no progress &rarr; infinite loop), and <code>&le;</code> paired with a non-shrinking move. The template doesn&rsquo;t hide these cases &mdash; it makes them impossible to write.</p>
 
+        <h2>The three knobs: condition &middot; range &middot; return</h2>
+        <p>Once the triad is fixed, every problem is just filling <b>three blanks</b>. Loop shape, <code>mid</code>, and the two moves never change &mdash; you only choose the <span class="mono" style="color:var(--pL)">condition</span>, the <span class="mono" style="color:var(--pM)">range</span>, and the <span class="mono" style="color:var(--pR)">return</span>. Get these right and the code writes itself. Get <em>one</em> wrong and it type-checks, passes the sample, and hands you the mirror-image answer.</p>
+
+        <div class="knobs">
+            <div class="knob k1">
+                <div class="kn">&#9312; CONDITION</div>
+                <h3>Make your answer the <em>first</em> True</h3>
+                <p>Phrase the test so the strip reads <span class="mono">F&hellip;F&nbsp;T&hellip;T</span> and the thing you want is the <b>first True</b>. Ask: <em>what&rsquo;s true of my answer and everything to its right, but false to its left?</em></p>
+                <p>If it comes out <span class="mono">T&hellip;T&nbsp;F&hellip;F</span> (you want the <em>last</em> True), you can&rsquo;t search that directly &mdash; <b>negate it</b>, then fix up with knob&nbsp;&#9314;.</p>
+            </div>
+            <div class="knob k2">
+                <div class="kn">&#9313; RANGE</div>
+                <h3>Cover every answer &mdash; including &ldquo;none&rdquo;</h3>
+                <p>Answer is always a real element (a peak, the min)? <span class="mono">0, n-1</span>.</p>
+                <p>Answer could be <em>&ldquo;nothing qualifies&rdquo;</em> &mdash; target past the end? <span class="mono">0, n</span>. You need the extra slot so <code>left</code> can land at <code>n</code>.</p>
+                <p>Searching a <em>value</em>, not an index? <span class="mono">lo, hi</span> = smallest conceivable, largest guaranteed-OK.</p>
+            </div>
+            <div class="knob k3">
+                <div class="kn">&#9314; RETURN</div>
+                <h3><span class="mono">left</span> or <span class="mono">left&nbsp;&minus;&nbsp;1</span></h3>
+                <p>After the loop, <span class="mono">left</span> <em>is</em> the first True. Want that boundary &rarr; <span class="mono">return left</span>.</p>
+                <p>Want the item <em>just before</em> it (floor, &radic;x, last True) &rarr; <span class="mono">return left - 1</span>.</p>
+                <p>Just presence? <span class="mono">left if a[left]==t else -1</span>.</p>
+            </div>
+        </div>
+
+        <p>Pick what you&rsquo;re looking for &mdash; the three blanks fill in, and it shows you the exact spot the floor/ceiling bug hides:</p>
+
+        <section class="card">
+            <div class="specrow">
+                <label>I want: <select id="specGoal"></select></label>
+            </div>
+            <div class="speclegend">
+                <span><span class="sw" style="background:var(--pL)"></span>&#9312; condition</span>
+                <span><span class="sw" style="background:var(--pM)"></span>&#9313; range</span>
+                <span><span class="sw" style="background:var(--pR)"></span>&#9314; return</span>
+            </div>
+            <div class="codepanel" id="specCode"></div>
+            <p class="specwhy" id="specWhy"></p>
+            <div class="spectrap" id="specTrap" style="display:none"></div>
+            <p class="specex" id="specEx"></p>
+        </section>
+
+        <div class="card callout" style="font-size:0.9rem">
+            <p style="margin-top:0"><b>Floor and ceiling are mirror twins.</b> Same range, same loop, same everything &mdash; exactly two things flip:</p>
+            <table>
+                <tr><th>you want</th><th>&#9312; condition</th><th>&#9314; return</th></tr>
+                <tr><td>ceiling &mdash; first <span class="mono">&ge; t</span></td><td class="mono">a[mid] &ge; t</td><td class="mono">left</td></tr>
+                <tr><td>floor &mdash; last <span class="mono">&le; t</span></td><td class="mono">a[mid] &gt; t</td><td class="mono">left - 1</td></tr>
+            </table>
+            <p style="margin-bottom:0">Reach for the ceiling row on a floor problem and nothing complains &mdash; it just quietly returns the wrong neighbour whenever the query lands <em>between</em> two elements. That was <a href="#" onclick="return false" style="pointer-events:none;color:inherit;text-decoration:underline dotted">#1146 Snapshot Array</a>: <span class="mono">&ge;</span>&nbsp;+&nbsp;<span class="mono">left</span> gave the ceiling; the floor needed <span class="mono">&gt;</span>&nbsp;+&nbsp;<span class="mono">left-1</span>.</p>
+        </div>
+
         <h2>The recipe (write this, every time)</h2>
         <p style="font-size:0.9rem;color:var(--muted)">Tap each step as you internalize it.</p>
         <ol class="recipe" id="recipe">
-            <li><b>Name the monotonic predicate</b> <span class="mono">P(i)</span> that flips False&rarr;True. If you can&rsquo;t, it isn&rsquo;t binary search.</li>
-            <li><b>Set left, right</b> to the full inclusive range of candidate positions.</li>
-            <li><b>Pick the triad row.</b> Locating a boundary &rarr; <span class="mono">while left &lt; right</span>, return <span class="mono">left</span>.</li>
+            <li><b>Name the monotonic predicate</b> <span class="mono">P(i)</span> that flips False&rarr;True &mdash; so your answer is the <em>first</em> True (knob&nbsp;&#9312;). If you can&rsquo;t, it isn&rsquo;t binary search.</li>
+            <li><b>Set left, right</b> to cover every candidate (knob&nbsp;&#9313;): <span class="mono">0, n-1</span> if the answer must be a real element, <span class="mono">0, n</span> if &ldquo;nothing qualifies&rdquo; is possible.</li>
+            <li><b>Pick the triad row + return</b> (knob&nbsp;&#9314;). Locating a boundary &rarr; <span class="mono">while left &lt; right</span>; the boundary itself &rarr; <span class="mono">return left</span>, the item just before it (floor, &radic;x) &rarr; <span class="mono">return left - 1</span>.</li>
             <li><b>One comparison at mid</b> &rarr; <span class="mono">right = mid</span> (answer at/left) or <span class="mono">left = mid + 1</span> (answer strictly right).</li>
             <li><b>Write zero boundary guards.</b> Wanting one means your predicate is wrong.</li>
             <li><b>Trace [a, b].</b> Terminates correctly there &rarr; you&rsquo;re done.</li>
@@ -689,6 +765,77 @@ return left                          # left == right -&gt; a peak</code></pre>
         if (rec) rec.querySelectorAll("li").forEach(function (li) {
             li.addEventListener("click", function () { li.classList.toggle("done"); });
         });
+
+        // ---------- spec builder (condition / range / return chooser) ----------
+        var GOALS = {
+            lower: {
+                label: "first index with a[i] ≥ target   (lower bound / ceiling / insert pos)",
+                range: "0, len(a)", cond: "a[mid] >= target", ret: "left",
+                why: "You want the first position that reaches target. Range is 0, len(a) — not len(a)-1 — because target may be larger than every element, and then the answer is n (insert at the very end).",
+                ex: "[1, 3, 5, 7], target 4  →  left stops at index 2 (value 5)."
+            },
+            upper: {
+                label: "first index with a[i] > target   (upper bound)",
+                range: "0, len(a)", cond: "a[mid] > target", ret: "left",
+                why: "Strictly greater — the slot just past the last element equal to target. Same range logic; the answer can be n.",
+                ex: "[1, 3, 3, 5], target 3  →  left stops at index 3 (value 5), past both 3s."
+            },
+            floor: {
+                label: "last index with a[i] ≤ target   (floor)",
+                range: "0, len(a)", cond: "a[mid] > target", ret: "left - 1",
+                why: "Floor is the LAST True of ≤ — and you can't search last-True. So flip to the FIRST True of > target (the first element too big), then step back one with left - 1. Range must be 0, len(a): if every element is ≤ target, left marches to n and left-1 = n-1 is the last element, correctly the floor.",
+                trap: "Using a[mid] >= target with return left gives the CEILING, not the floor. The entire fix is the mirror swap: >=  →  >, and left  →  left - 1. This is the #1146 bug — it passes any sample with an exact match and only breaks when the query lands between two elements.",
+                ex: "[10, 20, 40], target 30  →  first '>30' is index 2  →  floor = index 1 (value 20)."
+            },
+            exact: {
+                label: "is target present?   (exact match)",
+                range: "0, len(a)", cond: "a[mid] >= target", ret: "left if left < len(a) and a[left] == target else -1",
+                why: "Locate the lower bound, then a single equality check at left decides presence — no separate search.",
+                ex: "[1, 3, 5], target 4  →  left = 2, a[2] = 5 ≠ 4  →  -1."
+            },
+            feasible: {
+                label: "smallest value that works   (binary-search-on-the-answer)",
+                range: "lo, hi", cond: "feasible(mid)", ret: "left",
+                why: "No array — you search the value range itself. feasible(x) must be monotone: once a value works, every larger value works. Koko speed: lo, hi = 1, max(piles). Ship packages: max(w), sum(w). (√x uses feasible = mid*mid > x with return left - 1.)",
+                ex: "Koko piles=[3,6,7,11], H=8  →  smallest feasible eating speed = 4."
+            }
+        };
+        var GORDER = ["lower", "upper", "floor", "exact", "feasible"];
+        function specEsc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+        function renderSpec() {
+            var g = GOALS[$("specGoal").value];
+            var rows = [
+                { p: "left, right = ", h: g.range, s: "", c: "kh2" },
+                { p: "while left < right:" },
+                { p: "    mid = (left + right) // 2" },
+                { p: "    if ", h: g.cond, s: ":", c: "kh1" },
+                { p: "        right = mid" },
+                { p: "    else:" },
+                { p: "        left = mid + 1" },
+                { p: "return ", h: g.ret, s: "", c: "kh3" }
+            ];
+            var box = $("specCode"); box.innerHTML = "";
+            rows.forEach(function (r) {
+                var d = document.createElement("div"); d.className = "cline";
+                var html = specEsc(r.p || "");
+                if (r.h !== undefined) html += '<span class="' + r.c + '">' + specEsc(r.h) + "</span>" + specEsc(r.s || "");
+                d.innerHTML = html; box.appendChild(d);
+            });
+            $("specWhy").innerHTML = '<b style="color:var(--accent)">Why:</b> ' + specEsc(g.why);
+            var t = $("specTrap");
+            if (g.trap) { t.style.display = "block"; t.innerHTML = '<span class="tag">⚠ Trap:</span> ' + specEsc(g.trap); }
+            else { t.style.display = "none"; }
+            $("specEx").textContent = "e.g.  " + g.ex;
+        }
+        var specSel = $("specGoal");
+        if (specSel) {
+            GORDER.forEach(function (k) {
+                var o = document.createElement("option"); o.value = k; o.textContent = GOALS[k].label; specSel.appendChild(o);
+            });
+            specSel.value = "floor"; // default to the trap that bit us on #1146
+            specSel.addEventListener("change", renderSpec);
+            renderSpec();
+        }
     })();
     </script>
 </body>
