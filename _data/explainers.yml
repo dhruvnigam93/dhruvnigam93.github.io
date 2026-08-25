@@ -7,6 +7,21 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "LUMOS — Staff-Level Defense Kit"
+  slug: lumos-defense-kit
+  date: 2026-08-25
+  description: "The defensible version of every LUMOS grill answer — architecture, the token, resume↔paper reconciliation, scaling-law scripts with an arithmetic widget, the A/B scoping, Accio reframe, and the open-homework list."
+
+- title: "GRPO, Step by Step"
+  slug: grpo-step-by-step
+  date: 2026-08-25
+  description: "Interactive walkthrough of the GRPO loop — cast, counting calculator, where the KL lives, token-level inspector — plus the real Banter Bot production run and the DeBERTa margin-regression reward model behind it."
+
+- title: "GRPO / Banter Bot — Interview Refresher"
+  slug: grpo-interview-refresher
+  date: 2026-08-25
+  description: "Rehearsal script for the GRPO/Banter Bot grill — 14 model answers with number-audit chips (saved in-browser), rebuilt weak spots, the emergent-Hinglish pocket story, and delivery rules."
+
 - title: "The LLD Cheat Sheet"
   slug: lld-cheatsheet
   date: 2026-08-24

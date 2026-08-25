@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<title>GRPO / Banter Bot — Interview Refresher</title>
+<style>
+  :root {
+    --page:        #f9f9f7;
+    --surface:     #fcfcfb;
+    --ink:         #0b0b0b;
+    --ink-2:       #52514e;
+    --muted:       #898781;
+    --hairline:    rgba(11,11,11,0.10);
+    --grid:        #e1e0d9;
+    --accent:      #2a78d6;
+    --accent-track:#cde2fb;
+    --good:        #0ca30c;
+    --good-text:   #006300;
+    --good-tint:   rgba(12,163,12,0.12);
+    --warn:        #fab219;
+    --warn-tint:   rgba(250,178,25,0.20);
+    --warn-border: #c98500;
+    --crit:        #d03b3b;
+    --crit-tint:   rgba(208,59,59,0.10);
+    --blue-tint:   rgba(42,120,214,0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page:        #0d0d0d;
+      --surface:     #1a1a19;
+      --ink:         #ffffff;
+      --ink-2:       #c3c2b7;
+      --muted:       #898781;
+      --hairline:    rgba(255,255,255,0.10);
+      --grid:        #2c2c2a;
+      --accent:      #3987e5;
+      --accent-track:#0d366b;
+      --good:        #0ca30c;
+      --good-text:   #0ca30c;
+      --good-tint:   rgba(12,163,12,0.18);
+      --warn:        #fab219;
+      --warn-tint:   rgba(250,178,25,0.16);
+      --warn-border: #fab219;
+      --crit:        #d03b3b;
+      --crit-tint:   rgba(208,59,59,0.18);
+      --blue-tint:   rgba(57,135,229,0.16);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.55;
+    font-size: 15px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px 80px; }
+
+  /* ---------- sticky header ---------- */
+  header.top {
+    position: sticky; top: 0; z-index: 50;
+    background: var(--surface);
+    border-bottom: 1px solid var(--hairline);
+    padding: 12px 20px;
+  }
+  .top-inner { max-width: 880px; margin: 0 auto; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .top h1 { font-size: 16px; font-weight: 700; margin: 0; white-space: nowrap; }
+  .top .sub { font-size: 12px; color: var(--muted); }
+  .meter-block { flex: 1; min-width: 220px; }
+  .meter-label { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--ink-2); margin-bottom: 4px; }
+  .meter-label b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .meter { height: 8px; border-radius: 4px; background: var(--accent-track); overflow: hidden; }
+  .meter > div { height: 100%; width: 0%; background: var(--accent); border-radius: 4px; transition: width .25s ease; }
+  .tile { text-align: center; padding: 2px 10px; }
+  .tile .v { font-size: 20px; font-weight: 600; line-height: 1.1; }
+  .tile .l { font-size: 11px; color: var(--muted); }
+
+  /* ---------- section headings ---------- */
+  h2 { font-size: 20px; margin: 44px 0 6px; }
+  h2 .num { color: var(--muted); font-weight: 500; margin-right: 6px; }
+  .section-sub { color: var(--ink-2); font-size: 14px; margin: 0 0 18px; }
+
+  /* ---------- legend / how-to ---------- */
+  .howto {
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px;
+    padding: 16px 18px; margin-top: 24px; font-size: 13.5px; color: var(--ink-2);
+  }
+  .howto b { color: var(--ink); }
+  .howto ul { margin: 8px 0 0; padding-left: 20px; }
+  .howto li { margin: 4px 0; }
+
+  /* ---------- fill chips ---------- */
+  .fill {
+    display: inline-block; min-width: 52px; padding: 0 8px; margin: 0 1px;
+    border-radius: 6px; font-weight: 600; font-size: 0.94em;
+    background: var(--warn-tint); border: 1px dashed var(--warn-border);
+    color: var(--ink); outline: none; white-space: nowrap; cursor: text;
+    line-height: 1.5; vertical-align: baseline;
+  }
+  .fill:empty::before { content: attr(data-ph); color: var(--warn-border); font-weight: 600; opacity: .95; }
+  .fill.filled { background: var(--good-tint); border: 1px solid var(--good); }
+  .fill:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--blue-tint); }
+  .locked {
+    display: inline-block; padding: 0 8px; border-radius: 6px; font-weight: 600; font-size: .94em;
+    background: var(--good-tint); border: 1px solid var(--good); white-space: nowrap;
+  }
+  .locked::after { content: " ✓"; color: var(--good-text); font-size: .85em; }
+
+  /* ---------- badges ---------- */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 999px; border: 1px solid transparent;
+  }
+  .b-keep  { background: var(--good-tint); color: var(--good-text); border-color: var(--good); }
+  .b-fix   { background: var(--crit-tint); color: var(--crit); border-color: var(--crit); }
+  .b-new   { background: var(--blue-tint); color: var(--accent); border-color: var(--accent); }
+  .b-time  { background: transparent; color: var(--muted); border-color: var(--hairline); text-transform: none; letter-spacing: 0; font-weight: 600; }
+
+  /* ---------- audit table ---------- */
+  table.audit {
+    width: 100%; border-collapse: collapse; background: var(--surface);
+    border: 1px solid var(--hairline); border-radius: 12px; overflow: hidden;
+    font-size: 13.5px;
+  }
+  .audit th {
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); font-weight: 700; padding: 10px 12px; border-bottom: 1px solid var(--grid);
+    background: var(--surface);
+  }
+  .audit td { padding: 9px 12px; border-bottom: 1px solid var(--grid); vertical-align: middle; }
+  .audit tr:last-child td { border-bottom: none; }
+  .audit td.what { font-weight: 600; }
+  .audit td.where { color: var(--ink-2); font-size: 12.5px; }
+  .audit td.val { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .audit td.chk { text-align: center; width: 74px; }
+  .audit input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--good); cursor: pointer; }
+  .audit tr.done td { opacity: .55; }
+  .audit tr.done td.chk { opacity: 1; }
+  .audit .flag { color: var(--crit); font-weight: 700; font-size: 12px; }
+
+  /* ---------- question cards ---------- */
+  .qcard {
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px;
+    padding: 20px 22px 16px; margin: 18px 0;
+  }
+  .qhead { display: flex; align-items: flex-start; gap: 12px; }
+  .qnum {
+    flex: none; width: 34px; height: 34px; border-radius: 50%;
+    background: var(--ink); color: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px;
+  }
+  .qtext { font-weight: 700; font-size: 15.5px; line-height: 1.4; padding-top: 5px; }
+  .qmeta { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 0 46px; }
+  .answer {
+    margin: 14px 0 0 46px; padding: 2px 0 2px 16px;
+    border-left: 3px solid var(--accent);
+    color: var(--ink-2); font-size: 14.5px;
+  }
+  .answer p { margin: 0 0 10px; }
+  .answer p:last-child { margin-bottom: 0; }
+  .answer b, .answer strong { color: var(--ink); }
+  .shape { margin: 12px 0 0 46px; font-size: 12.5px; color: var(--muted); }
+  .shape b { color: var(--ink-2); }
+  .note {
+    margin: 12px 0 0 46px; padding: 10px 14px; border-radius: 10px;
+    font-size: 13px; color: var(--ink-2); background: var(--page);
+    border: 1px solid var(--hairline);
+  }
+  .note.danger { background: var(--crit-tint); border-color: var(--crit); color: var(--ink); }
+  .note.danger b:first-child { color: var(--crit); }
+  .note b { color: var(--ink); }
+  .rehearse { margin: 14px 0 0 46px; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
+  .rehearse input { width: 17px; height: 17px; accent-color: var(--good); cursor: pointer; }
+  .qcard.done { border-color: var(--good); }
+  .qcard.done .qnum { background: var(--good); color: #fff; }
+
+  /* ---------- math panel ---------- */
+  .math {
+    margin: 12px 0 0 46px; padding: 10px 14px; border-radius: 10px;
+    background: var(--blue-tint); border: 1px solid var(--accent);
+    font-size: 13.5px; font-variant-numeric: tabular-nums; color: var(--ink);
+  }
+
+  /* ---------- rules ---------- */
+  ol.rules { margin: 0; padding-left: 0; counter-reset: r; list-style: none; }
+  ol.rules li {
+    counter-increment: r; position: relative; padding: 12px 16px 12px 52px; margin: 10px 0;
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px;
+    color: var(--ink-2); font-size: 14px;
+  }
+  ol.rules li::before {
+    content: counter(r); position: absolute; left: 14px; top: 12px;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--ink); color: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 12px;
+  }
+  ol.rules b { color: var(--ink); }
+
+  /* ---------- toc ---------- */
+  .toc { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
+  .toc a {
+    font-size: 12px; font-weight: 600; text-decoration: none; color: var(--ink-2);
+    border: 1px solid var(--hairline); background: var(--surface);
+    padding: 4px 10px; border-radius: 999px;
+  }
+  .toc a:hover { border-color: var(--accent); color: var(--accent); }
+
+  footer { margin-top: 60px; font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+  footer button {
+    font: inherit; color: var(--crit); background: none; border: 1px solid var(--hairline);
+    border-radius: 8px; padding: 4px 12px; cursor: pointer;
+  }
+  @media print {
+    header.top { position: static; }
+    .qcard, ol.rules li, table.audit { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div style="max-width:980px;margin:0 auto;padding:12px 20px 0">
+  <a href="/explainers/" style="color:var(--muted);text-decoration:none;font-size:14px">&larr; all explainers</a>
+</div>
+
+<header class="top">
+  <div class="top-inner">
+    <div>
+      <h1>GRPO / Banter Bot — Answer Script</h1>
+      <div class="sub">From grill session 2026-08-16 · rehearse out loud · Added 2026-08-25</div>
+    </div>
+    <div class="meter-block">
+      <div class="meter-label"><span>Numbers verified</span><b><span id="audit-count">0</span>/13</b></div>
+      <div class="meter"><div id="audit-bar"></div></div>
+    </div>
+    <div class="tile"><div class="v" id="rehearse-count">0/14</div><div class="l">answers rehearsed</div></div>
+    <div class="tile"><div class="v">5.5<span style="font-size:13px;color:var(--muted)">/10</span></div><div class="l">last grill score</div></div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="howto">
+    <b>How to use this page.</b> Everything you type is saved in this browser (localStorage) — safe to close and reopen.
+    <ul>
+      <li><span class="fill" data-ph="amber chip" style="pointer-events:none"></span> = a number you must go pull from the training scripts / dashboards. <b>Click it and type the value</b> — it turns green, and the same number syncs everywhere it appears on the page.</li>
+      <li><span class="locked">confirmed value</span> = settled in the grill session. Don't second-guess it.</li>
+      <li><span class="badge b-keep">✓ keep as-is</span> answers won in the grill — rehearse verbatim. <span class="badge b-new">rebuilt</span> answers were restructured after the debrief. <span class="badge b-fix">⚠ broke in grill</span> answers failed under pressure — these get double reps.</li>
+      <li>Tick <b>“Said it aloud, clean, no page”</b> under each answer only when that's literally true.</li>
+    </ul>
+    <div class="toc">
+      <a href="#audit">Audit</a><a href="#q1">Q1 Pipeline</a><a href="#q2">Q2 RM loss</a><a href="#q3">Q3 Why margins</a><a href="#q4">Q4 GRPO norm</a><a href="#q5">Q5 Upvote bias</a><a href="#q6">Q6 222K pairs</a><a href="#q7">Q7 Split</a><a href="#q8">Q8 RM validation</a><a href="#q9">Q9 GRPO vs DPO</a><a href="#q10">Q10 Rollout prompts</a><a href="#q11">Q11 GRPO update</a><a href="#q12">Q12 KL story</a><a href="#q13">Q13 Memory math</a><a href="#q14">Q14 +16%</a><a href="#fu">Follow-ups</a><a href="#pocket">★ Hinglish story</a><a href="#rules">Delivery</a>
+    </div>
+  </div>
+
+  <!-- ================= AUDIT ================= -->
+  <h2 id="audit"><span class="num">1</span>The number audit — do this first</h2>
+  <p class="section-sub">Every row is a number the grill exposed as unverified. Pull it from the source, type it into the chip, tick the box. The header meter tracks this.</p>
+
+  <table class="audit">
+    <thead><tr><th>Number</th><th>Where to find it</th><th>Value</th><th>Verified</th></tr></thead>
+    <tbody>
+      <tr><td class="what">Posts used for RM training</td><td class="where">Data pipeline / scraper output</td><td class="val"><span class="fill" data-key="posts" data-ph="≈1,200?"></span></td><td class="chk"><input type="checkbox" class="vchk" data-id="a1"></td></tr>
+      <tr><td class="what">Comments sampled per post</td><td class="where">Data pipeline (said 20 in grill)</td><td class="val"><span class="fill" data-key="cpp" data-ph="20?"></span></td><td class="chk"><input type="checkbox" class="vchk" data-id="a2"></td></tr>
+      <tr><td class="what">Total preference pairs</td><td class="where">Training-set size · resume says 222K; 1,200 × C(20,2) ≈ 228K ✓ roughly</td><td class="val"><span class="fill" data-key="pairs" data-ph="222K?"></span></td><td class="chk"><input type="checkbox" class="vchk" data-id="a3"></td></tr>
+      <tr><td class="what">Held-out validation posts</td><td class="where">Eval split (said ~500)</td><td class="val"><span class="fill" data-key="valposts" data-ph="≈500?"></span></td><td class="chk"><input type="checkbox" class="vchk" data-id="a4"></td></tr>
+      <tr><td class="what">RM pairwise ranking accuracy</td><td class="where">Eval logs (said 92% — see Q8 caveat)</td><td class="val"><span class="fill" data-key="acc" data-ph="92%?"></span></td><td class="chk"><input type="checkbox" class="vchk" data-id="a5"></td></tr>
+      <tr><td class="what">Group size G</td><td class="where">GRPO config — <b>never say 12 again</b></td><td class="val"><span class="locked">G = 16</span></td><td class="chk"><input type="checkbox" class="vchk" data-id="a6"></td></tr>
+      <tr><td class="what">KL coefficient β</td><td class="where">GRPO config — <span class="flag">could not produce in grill</span></td><td class="val"><span class="fill" data-key="beta" data-ph="β = ?"></span></td><td class="chk"><input type="checkbox" class="vchk" data-id="a7"></td></tr>
+      <tr><td class="what">LR · LoRA rank · LoRA α · target modules</td><td class="where">GRPO config (linear layers confirmed) — α scales adapter output by α/r</td><td class="val"><span class="fill" data-key="lr" data-ph="LR?"></span> <span class="fill" data-key="rank" data-ph="rank?"></span> <span class="fill" data-key="alpha" data-ph="α?"></span></td><td class="chk"><input type="checkbox" class="vchk" data-id="a8"></td></tr>
+      <tr><td class="what">Rollout engine</td><td class="where">Training code — HF generate in TRL? colocated vLLM?</td><td class="val"><span class="fill" data-key="engine" data-ph="engine?"></span></td><td class="chk"><input type="checkbox" class="vchk" data-id="a9"></td></tr>
+      <tr><td class="what">Optimizer steps per rollout batch</td><td class="where">GRPO config</td><td class="val"><span class="locked">1</span></td><td class="chk"><input type="checkbox" class="vchk" data-id="a10"></td></tr>
+      <tr><td class="what">Control vs treatment retention <span class="flag">⚠ reconcile</span></td><td class="where">Experiment dashboard — said 19.5% vs 22% = <b>+12.8% relative, resume says +16%</b>. Fix resume or memorize why.</td><td class="val"><span class="fill" data-key="ctrl" data-ph="19.5%?"></span> vs <span class="fill" data-key="treat" data-ph="22%?"></span></td><td class="chk"><input type="checkbox" class="vchk" data-id="a11"></td></tr>
+      <tr><td class="what">Experiment run length</td><td class="where">Dashboard</td><td class="val"><span class="fill" data-key="weeks" data-ph="? weeks"></span></td><td class="chk"><input type="checkbox" class="vchk" data-id="a12"></td></tr>
+      <tr><td class="what">Users per arm</td><td class="where">Dashboard (said 150K)</td><td class="val"><span class="fill" data-key="arm" data-ph="150K?"></span></td><td class="chk"><input type="checkbox" class="vchk" data-id="a13"></td></tr>
+    </tbody>
+  </table>
+
+  <!-- ================= QUESTIONS ================= -->
+  <h2><span class="num">2</span>The fourteen questions</h2>
+  <p class="section-sub">Interviewer's question in bold; your answer below the blue bar. Timing badge = how long the spoken answer should run.</p>
+
+  <!-- Q1 -->
+  <div class="qcard" id="q1">
+    <div class="qhead"><div class="qnum">Q1</div><div class="qtext">“Walk me through the pipeline end to end. What did YOU build?”</div></div>
+    <div class="qmeta"><span class="badge b-time">⏱ 60–90 sec</span><span class="badge b-new">rebuilt</span></div>
+    <div class="answer">
+      <p>We had a banter bot in production — users ask it to roast a player or a team — running on stock Llama 8B, and the responses were clean but not funny. Stock LLMs aren't trained to be engaging. So the bet was: if we can <b>measure</b> engagingness, we can optimize for it directly with RL.</p>
+      <p>Three stages, and I built all three. <b>One:</b> a reward model — DeBERTa-v3 with a scoring head, trained on <span class="fill" data-key="pairs" data-ph="222K?"></span> preference pairs mined from Reddit sports subreddits, where upvotes are a proxy for engagingness. <b>Two:</b> GRPO post-training of Llama 8B with LoRA against that reward model, with a per-token KL penalty to the base model — on a single 80GB A100. <b>Three:</b> deployment — the tuned model served via vLLM, validated with a <span class="fill" data-key="arm" data-ph="150K?"></span>-per-arm A/B against the untuned model, which showed a <span class="fill" data-key="lift" data-ph="+16%? verify"></span> lift in week-over-week feature retention.</p>
+      <p>I personally wrote the Reddit data pipeline, the reward model training, the GRPO training loop and config, and ran the A/B. The serving infra existed; I plugged the new model into it.</p>
+    </div>
+    <div class="shape"><b>Shape:</b> goal → 3 stages → ownership claim. <b>Trap defused:</b> “I vs we” — claim the three stages explicitly, concede the serving infra before being asked.</div>
+    <div class="rehearse"><input type="checkbox" class="rchk" data-id="q1"><label>Said it aloud, clean, no page</label></div>
+  </div>
+
+  <!-- Q2 -->
+  <div class="qcard" id="q2">
+    <div class="qhead"><div class="qnum">Q2</div><div class="qtext">“State the reward model loss precisely.”</div></div>
+    <div class="qmeta"><span class="badge b-time">⏱ 20 sec</span><span class="badge b-fix">⚠ broke in grill — took two attempts</span></div>
+    <div class="answer">
+      <p>One training example is a pair of comments from the same post. Upvote scores are normalized within the post to [0,1] — call them R1 and R2. The model does a forward pass on each (post + comment), outputs scores p1 and p2 through a sigmoid head. The loss is squared error on the margin: <b>((R1 − R2) − (p1 − p2))²</b>. So it's a margin regression, not Bradley-Terry — deliberately.</p>
+    </div>
+    <div class="note"><b>Rule:</b> one training example, one formula, done. Do NOT ramble into two versions of the objective like last time.</div>
+    <div class="rehearse"><input type="checkbox" class="rchk" data-id="q2"><label>Said it aloud, clean, no page</label></div>
+  </div>
+
+  <!-- Q3 -->
+  <div class="qcard" id="q3">
+    <div class="qhead"><div class="qnum">Q3</div><div class="qtext">“Why margin regression instead of Bradley-Terry?”</div></div>
+    <div class="qmeta"><span class="badge b-time">⏱ 30 sec</span><span class="badge b-new">rebuilt — two reasons, this order</span></div>
+    <div class="answer">
+      <p>Bradley-Terry only preserves the <b>ordering</b> — it throws away how much better one response is. Reddit is one of the only preference sources where you get real-valued magnitudes, and comment quality follows a power law — the top comment isn't slightly better than the fifth, it's 50x better. I wanted the reward model to carry that resolution.</p>
+      <p>And it matters downstream: GRPO's advantage is (r − mean)/std <b>within</b> a group, which is an affine transform — so relative margins within the group survive. A reward model that gets magnitudes right gives better-shaped advantages across my 16 rollouts than a pure ranker would. The cost is that the targets are noisier than binary preferences — I accepted that trade.</p>
+    </div>
+    <div class="rehearse"><input type="checkbox" class="rchk" data-id="q3"><label>Said it aloud, clean, no page</label></div>
+  </div>
+
+  <!-- Q4 -->
+  <div class="qcard" id="q4">
+    <div class="qhead"><div class="qnum">Q4</div><div class="qtext">“GRPO standardizes rewards — doesn't that destroy your absolute scale?”</div></div>
+    <div class="qmeta"><span class="badge b-time">⏱ 15 sec</span><span class="badge b-keep">✓ keep as-is — you won this one</span></div>
+    <div class="answer">
+      <p>It destroys scale <b>across</b> prompts, not <b>within</b> a group. Standardization is affine — subtract mean, divide by std — so the relative magnitudes among my 16 rollouts are preserved exactly. That within-group resolution is precisely what the margin-trained reward model buys. Cross-prompt scale I genuinely don't need, because advantages never compare across prompts.</p>
+    </div>
+    <div class="rehearse"><input type="checkbox" class="rchk" data-id="q4"><label>Said it aloud, clean, no page</label></div>
+  </div>
+
+  <!-- Q5 -->
+  <div class="qcard" id="q5">
+    <div class="qhead"><div class="qnum">Q5</div><div class="qtext">“Reddit upvotes measure timing and position, not quality. What did you do?”</div></div>
+    <div class="qmeta"><span class="badge b-time">⏱ 30 sec</span><span class="badge b-new">rebuilt — own the limitation in sentence one</span></div>
+    <div class="answer">
+      <p>They're a noisy proxy — position bias and early-mover advantage are real, and I didn't fully remove them. What I did: only high-traffic sports subreddits, where heavy vote volume dilutes position effects; only posts older than six months, so scores had fully converged; and within-post normalization, so I never compare across threads. The residual bet was that with enough volume, comment quality dominates timing noise — and the downstream A/B is what ultimately validated that bet.</p>
+    </div>
+    <div class="shape"><b>Shape:</b> mitigation → residual risk → downstream validation. Do NOT list biases you “thought about” without saying what you did.</div>
+    <div class="rehearse"><input type="checkbox" class="rchk" data-id="q5"><label>Said it aloud, clean, no page</label></div>
+  </div>
+
+  <!-- Q6 -->
+  <div class="qcard" id="q6">
+    <div class="qhead"><div class="qnum">Q6</div><div class="qtext">“222K pairs — from how many posts? How did you pair them?”</div></div>
+    <div class="qmeta"><span class="badge b-time">⏱ 20 sec</span><span class="badge b-fix">⚠ broke in grill — arithmetic collapsed twice</span></div>
+    <div class="answer">
+      <p><span class="fill" data-key="posts" data-ph="≈1,200?"></span> posts survived filtering, roughly <span class="fill" data-key="cpp" data-ph="20?"></span> comments each after sampling — I capped comments per post so no single thread dominates. Within each post, all pairs: C(20,2) is 190 pairs per post, times ~1,200 posts is ~228K, which is where the <span class="fill" data-key="pairs" data-ph="222K?"></span> on the resume comes from after dedup and cleanup. So the pair count is large but the honest unit of diversity is <span class="fill" data-key="posts" data-ph="≈1,200?"></span> posts — I'm upfront about that.</p>
+    </div>
+    <div class="math">Memorize the arithmetic until it's reflex: &nbsp; C(20,2) = 190 &nbsp;·&nbsp; 190 × 1,200 = 228,000 ≈ 222K ✓ &nbsp;·&nbsp; (in the grill you said 10,000 posts → that implies 1.9M — the exact mistake that broke you)</div>
+    <div class="note"><b>Why “I'm upfront about that” matters:</b> saying it first kills the “222K is theater” attack before it's thrown.</div>
+    <div class="rehearse"><input type="checkbox" class="rchk" data-id="q6"><label>Said it aloud, clean, no page</label></div>
+  </div>
+
+  <!-- Q7 -->
+  <div class="qcard" id="q7">
+    <div class="qhead"><div class="qnum">Q7</div><div class="qtext">“How did you split train/validation? What was the metric?”</div></div>
+    <div class="qmeta"><span class="badge b-time">⏱ 20 sec</span><span class="badge b-keep">✓ mostly landed — lead with the leakage-proof design</span></div>
+    <div class="answer">
+      <p>Split at the <b>post level</b> — pair-level splitting would leak, since every comment appears in ~19 pairs. <span class="fill" data-key="posts" data-ph="≈1,200?"></span> posts for training, <span class="fill" data-key="valposts" data-ph="≈500?"></span> held-out posts for validation. Metric: pairwise ranking accuracy on held-out pairs — does the model score the higher-upvoted comment higher. That came in at <span class="fill" data-key="acc" data-ph="92%?"></span>.</p>
+    </div>
+    <div class="rehearse"><input type="checkbox" class="rchk" data-id="q7"><label>Said it aloud, clean, no page</label></div>
+  </div>
+
+  <!-- Q8 -->
+  <div class="qcard" id="q8">
+    <div class="qhead"><div class="qnum">Q8</div><div class="qtext">“Did you validate the reward model on policy-generated text?”</div></div>
+    <div class="qmeta"><span class="badge b-time">⏱ 40 sec</span><span class="badge b-fix">⚠ worst answer of the grill — this exact shape, no deviation</span></div>
+    <div class="answer">
+      <p><b>No — and that's a real limitation:</b> the RM was validated on held-out Reddit comments, which is a different distribution from policy rollouts. What I had instead were three compensating controls. <b>One,</b> I tracked reward on a held-out prompt set at every checkpoint during GRPO — if the RM were being gamed, held-out reward and output quality diverge, and I was reading the outputs at every checkpoint. <b>Two,</b> I monitored HellaSwag to catch capability regression. <b>Three,</b> the final arbiter was the A/B — real users, not the reward model. If I did it again, I'd label a few hundred policy generations mid-training and check RM agreement in exactly the regime GRPO uses it — discriminating between same-policy samples, where margins are small.</p>
+    </div>
+    <div class="note"><b>Follow-up you must expect — “Is 92% suspiciously high?”:</b> Fair — random pairing across the full upvote range means many easy pairs; the top-comment-vs-throwaway pair inflates the average. Stratified by margin, accuracy on close pairs would be meaningfully lower. If you have the stratified number, give it: <span class="fill" data-key="accstrat" data-ph="stratified %?"></span> on closest-quartile pairs. If not, say you'd measure exactly that.</div>
+    <div class="rehearse"><input type="checkbox" class="rchk" data-id="q8"><label>Said it aloud, clean, no page</label></div>
+  </div>
+
+  <!-- Q9 -->
+  <div class="qcard" id="q9">
+    <div class="qhead"><div class="qnum">Q9</div><div class="qtext">“Why GRPO over DPO? You already had preference pairs.”</div></div>
+    <div class="qmeta"><span class="badge b-time">⏱ 45 sec</span><span class="badge b-fix">⚠ THE rebuild — distribution shift FIRST, margins second</span></div>
+    <div class="answer">
+      <p>Because DPO would have optimized the wrong distribution. DPO trains directly on my preference pairs — and my pairs are <b>Reddit comments on Reddit posts</b>. Running DPO on that data pushes Llama toward imitating upvoted Reddit comments — off-policy imitation of text my bot should never produce verbatim. What I actually want is to improve <b>the policy's own generations</b>. The reward model is the generalization step: it learns what engaging looks like from Reddit, and then GRPO applies that judgment to on-policy rollouts.</p>
+      <p><b>Second-order reason:</b> DPO's implicit reward only uses orderings; my margin-trained RM preserves magnitude, which sharpens within-group advantages.</p>
+      <p>And GRPO specifically over PPO because it drops the value network — no critic to train or fit in memory, which mattered on a single A100.</p>
+    </div>
+    <div class="note danger"><b>In the grill:</b> you gave the margins argument three times and never said “distribution shift.” The interviewer had to hand it to you. This answer gets double reps.</div>
+    <div class="rehearse"><input type="checkbox" class="rchk" data-id="q9"><label>Said it aloud, clean, no page</label></div>
+  </div>
+
+  <!-- Q10 -->
+  <div class="qcard" id="q10">
+    <div class="qhead"><div class="qnum">Q10</div><div class="qtext">“What prompts did you roll out on? Your RM never saw your user queries.”</div></div>
+    <div class="qmeta"><span class="badge b-time">⏱ 30 sec</span><span class="badge b-new">rebuilt</span></div>
+    <div class="answer">
+      <p>Rollouts were on the Reddit posts themselves — but that's less of a mismatch than it sounds, because of how the posts were filtered. I used an LLM judge to keep only posts that read like my production queries — opinion-soliciting prompts about a player or a team, “what do you think of X,” “roast Y.” So the RM scores prompts from the distribution it trained on, and that distribution was deliberately curated to match production. The residual gap — production queries are shorter and more imperative than Reddit posts — is real; <span class="fill" data-key="qmix" data-ph="any query-style rollout mixing or post-hoc eval on real queries? state it"></span>.</p>
+    </div>
+    <div class="rehearse"><input type="checkbox" class="rchk" data-id="q10"><label>Said it aloud, clean, no page</label></div>
+  </div>
+
+  <!-- Q11 -->
+  <div class="qcard" id="q11">
+    <div class="qhead"><div class="qnum">Q11</div><div class="qtext">“State the GRPO update. Advantage, per-token loss, clipping, KL, your numbers.”</div></div>
+    <div class="qmeta"><span class="badge b-time">⏱ 45 sec</span><span class="badge b-fix">⚠ depth check — said G=16 then G=12 in one answer, no β</span></div>
+    <div class="answer">
+      <p>One prompt, <span class="locked">G = 16</span> rollouts sampled from the current policy. Each rollout gets a scalar reward from the RM. Advantage for rollout i is <b>(rᵢ − group mean) / group std</b> — same advantage applied to every token of that rollout. Per-token loss is the clipped policy-gradient objective — importance ratio times advantage — but in my setup I took exactly <span class="locked">one optimizer step per rollout batch</span>, so the policy that generated equals the policy being updated, the ratio is identically 1, and clipping never binds. It's pure on-policy REINFORCE with group-normalized advantages.</p>
+      <p>KL enters the objective directly — a per-token KL penalty to the reference policy, weighted by β = <span class="fill" data-key="beta" data-ph="β = ?"></span>. Not folded into the reward like classic PPO-RLHF — it's a separate additive term in the loss.</p>
+      <p>Config: LoRA rank <span class="fill" data-key="rank" data-ph="rank?"></span>, α <span class="fill" data-key="alpha" data-ph="α?"></span> on the linear layers — the adapter output BAx is scaled by <b>α/r</b> before being added back to the frozen path, so α/r sets the effective adapter strength — LR <span class="fill" data-key="lr" data-ph="LR?"></span>, <span class="fill" data-key="batch" data-ph="prompts/batch?"></span> prompts per batch, trained for <span class="fill" data-key="steps" data-ph="steps?"></span> steps on one 80GB A100.</p>
+    </div>
+    <div class="shape"><b>Deliver it like a recipe you've cooked 50 times.</b> The config is the ownership proof — “I built this end to end” + config amnesia reads as inflation even when it isn't.</div>
+    <div class="rehearse"><input type="checkbox" class="rchk" data-id="q11"><label>Said it aloud, clean, no page</label></div>
+  </div>
+
+  <!-- Q12 -->
+  <div class="qcard" id="q12">
+    <div class="qhead"><div class="qnum">Q12</div><div class="qtext">“What happened when the KL weight was wrong?”</div></div>
+    <div class="qmeta"><span class="badge b-time">⏱ 30 sec</span><span class="badge b-keep">✓ your best answer — keep the war story</span></div>
+    <div class="answer">
+      <p>We launched without a KL term at all, and got entropy collapse — the policy found a degenerate mode, repeating near-identical high-reward phrasing, and output entropy cratered into gibberish. That's what taught us the KL term isn't optional. We added the per-token penalty and tuned β up until generation stayed diverse while reward still climbed. And because reward-vs-quality can silently diverge, I also monitored <b>HellaSwag</b> across checkpoints as a canary — I picked it over MMLU deliberately: a banter bot doesn't need grad-school knowledge, it needs common-sense grounding, and HellaSwag is exactly the common-sense completion regime I was worried about degrading. It held flat at <span class="fill" data-key="hs" data-ph="HellaSwag score?"></span>.</p>
+    </div>
+    <div class="note"><b>Watch:</b> in the grill you said “MMLU” under pressure — the more famous benchmark name. The HellaSwag version is the true one AND the better answer. Close the scripted-vs-lived gap on this line specifically.</div>
+    <div class="rehearse"><input type="checkbox" class="rchk" data-id="q12"><label>Said it aloud, clean, no page</label></div>
+  </div>
+
+  <!-- Q13 -->
+  <div class="qcard" id="q13">
+    <div class="qhead"><div class="qnum">Q13</div><div class="qtext">“Memory math: 8B model, reference model, reward model, rollouts — one GPU?”</div></div>
+    <div class="qmeta"><span class="badge b-time">⏱ 30 sec</span><span class="badge b-keep">✓ mostly landed — but say 80GB from the start, not 40</span></div>
+    <div class="answer">
+      <p>One 80GB A100. It works because of LoRA: base weights in bf16 are ~16GB and stay frozen; only adapter parameters get optimizer state, which is megabytes, not gigabytes. The reference model is <b>free</b> — it's the same base weights with adapters disabled, so the KL reference costs zero extra memory. The DeBERTa RM is ~<span class="fill" data-key="rmsize" data-ph="___M?"></span> params, negligible. Rollout generation ran <span class="fill" data-key="engine" data-ph="HF generate in TRL / colocated vLLM?"></span>; generation was the throughput bottleneck, not memory.</p>
+    </div>
+    <div class="rehearse"><input type="checkbox" class="rchk" data-id="q13"><label>Said it aloud, clean, no page</label></div>
+  </div>
+
+  <!-- Q14 -->
+  <div class="qcard" id="q14">
+    <div class="qhead"><div class="qnum">Q14</div><div class="qtext">“+16% feature retention. Define it, and how do you know it was YOUR model?”</div></div>
+    <div class="qmeta"><span class="badge b-time">⏱ 60 sec</span><span class="badge b-fix">⚠ number is unreconciled — do not rehearse until the audit row is green</span></div>
+    <div class="answer">
+      <p><b>Metric first:</b> among users who used the banter bot in week one, the fraction who used it again in week two. Feature-level retention, not app retention.</p>
+      <p><b>Design:</b> the feature was already live on stock Llama 8B via Vertex — so the control arm isolates the <b>model change</b>, not the feature existing. <span class="fill" data-key="arm" data-ph="150K?"></span> users randomized per arm, run for <span class="fill" data-key="weeks" data-ph="? weeks"></span>. Treatment retained at <span class="fill" data-key="treat" data-ph="22%?"></span>, control at <span class="fill" data-key="ctrl" data-ph="19.5%?"></span> — that's the <span class="fill" data-key="lift" data-ph="relative lift?"></span> relative lift.</p>
+      <p><b>Two caveats I'll name before you do.</b> Conditioning on week-one usage is post-treatment — if the new model changed who used the bot in week one, the arms' week-two populations aren't perfectly comparable; week-one usage rates were <span class="fill" data-key="w1" data-ph="w1 usage rates?"></span> across arms, so the conditioning was benign. And this ran during IPL, when engagement swings weekly — but seasonality hits both arms identically; randomization is the whole point. Novelty effect is the one I'd flag honestly: <span class="fill" data-key="weeks" data-ph="? weeks"></span> is <span class="fill" data-key="novelty" data-ph="long enough / not?"></span> to fully rule it out.</p>
+    </div>
+    <div class="note danger"><b>⚠ RECONCILE BEFORE USING:</b> 22 vs 19.5 = +12.8% relative — the resume says +16%. Either the dashboard numbers differ from your memory, or the resume number is wrong. Fix whichever is broken. Do not walk into an interview with both.</div>
+    <div class="rehearse"><input type="checkbox" class="rchk" data-id="q14"><label>Said it aloud, clean, no page</label></div>
+  </div>
+
+  <!-- ================= FOLLOW-UPS ================= -->
+  <h2 id="fu"><span class="num">3</span>Likely follow-ups not asked yet</h2>
+  <p class="section-sub">Not full scripts — but each needs its number pulled before the next grill. All chips here count as prep debt.</p>
+
+  <div class="qcard">
+    <div class="qhead"><div class="qnum" style="background:var(--ink-2)">F1</div><div class="qtext">“What did the policy learn to exploit — length? Keywords?”</div></div>
+    <div class="answer"><p>Have ONE concrete reward-hacking observation beyond entropy collapse. Check reward-vs-length correlation in your logs: <span class="fill" data-key="lencorr" data-ph="corr = ?"></span>. If length bias existed, say what you did about it.</p></div>
+  </div>
+  <div class="qcard">
+    <div class="qhead"><div class="qnum" style="background:var(--ink-2)">F2</div><div class="qtext">“Was there an SFT stage before GRPO, or RL straight from the instruct model?”</div></div>
+    <div class="answer"><p><span class="fill" data-key="sft" data-ph="SFT stage? yes/no — verify"></span>. If no SFT: “the instruct model was already in-distribution for chat; GRPO only had to move style, not format” — but know if that's true.</p></div>
+  </div>
+  <div class="qcard">
+    <div class="qhead"><div class="qnum" style="background:var(--ink-2)">F3</div><div class="qtext">“How long did GRPO training take? How many prompts total?”</div></div>
+    <div class="answer"><p><span class="fill" data-key="hours" data-ph="? hours"></span> of training, <span class="fill" data-key="uprompts" data-ph="? unique prompts"></span> unique prompts.</p></div>
+  </div>
+  <div class="qcard">
+    <div class="qhead"><div class="qnum" style="background:var(--ink-2)">F4</div><div class="qtext">“Toxicity? You trained a roast bot on Reddit rewards.”</div></div>
+    <div class="answer"><p>Training-side: moderated/removed comments were excluded from the data. Serving-side guardrails: <span class="fill" data-key="tox" data-ph="what existed at serving time?"></span>.</p></div>
+  </div>
+  <div class="qcard">
+    <div class="qhead"><div class="qnum" style="background:var(--ink-2)">F5</div><div class="qtext">“3,000 RPM at 400ms TTFT on an A100 — one GPU?”</div></div>
+    <div class="answer"><p>Serving story is a different bullet, but have it loaded: <span class="fill" data-key="serve" data-ph="replicas / max concurrency / output tokens"></span>.</p></div>
+  </div>
+  <div class="qcard">
+    <div class="qhead"><div class="qnum" style="background:var(--ink-2)">F6</div><div class="qtext">“Standard RLHF samples preference pairs from the model itself. Yours came from Reddit. Why not collect preferences on your own model's outputs?”</div></div>
+    <div class="answer">
+      <p><b>Own it.</b> Canonical preference data — InstructGPT, Llama 2 — is sampled from the SFT policy precisely so the RM is on-distribution for what it scores. Mine is off-policy preference data, same family as the <b>SHP dataset</b> (Stanford Human Preferences — also built from Reddit scores). The reason: no labeling budget or annotation team for K-way human rankings of model samples; Reddit gave me 222K pairs for free with a <b>real-user engagement signal</b>, which is closer to my actual objective — engagingness — than contractor ratings would be. The cost is exactly the Q8 limitation: the RM is off-distribution for policy outputs. With budget, the upgrade is: sample pairs from the policy mid-training, label them, refresh the RM — iterated RLHF.</p>
+    </div>
+  </div>
+
+  <!-- ================= POCKET STORY ================= -->
+  <h2 id="pocket"><span class="num">4</span>Pocket story — emergent Hinglish</h2>
+  <p class="section-sub">Deploy on “any surprising behavior?” or “how do you know the RL actually worked?” — your strongest evidence the pipeline did real optimization, not imitation.</p>
+  <div class="qcard">
+    <div class="qhead"><div class="qnum" style="background:var(--good)">★</div><div class="qtext">The Hinglish emergence story</div></div>
+    <div class="qmeta"><span class="badge b-time">⏱ 30 sec</span><span class="badge b-keep">✓ pocket story — always loaded</span></div>
+    <div class="answer">
+      <p>The most interesting emergent behavior: on Indian-cricket prompts, the policy started responding in <b>Hinglish even when the prompt was pure English</b>. Base Llama never does that — instruct models mirror the prompt's language. But in Indian cricket subreddits, the highest-engagement comments are Hinglish — code-switching IS the banter register — so the reward model scored Hinglish rollouts higher, and GRPO amplified it until the policy broke language-mirroring. That's the clearest evidence the pipeline optimized engagingness rather than imitating a style: nothing in the SFT prior produces this. The reward signal taught it. And it survived the A/B — that register is part of what drove the retention lift.</p>
+    </div>
+    <div class="note"><b>Be ready for the follow-up — “Did users who wrote in English actually want Hinglish back?”:</b> Honest answer: we didn't segment the A/B by language preference — aggregate retention was up; with more time I'd check per-segment. If you DID segment or saw user feedback either way, state it: <span class="fill" data-key="hinglish-seg" data-ph="segmented? feedback?"></span></div>
+    <div class="rehearse"><input type="checkbox" class="rchk" data-id="pocket"><label>Said it aloud, clean, no page</label></div>
+  </div>
+
+  <!-- ================= RULES ================= -->
+  <h2 id="rules"><span class="num">5</span>Delivery rules — from the grill debrief</h2>
+  <ol class="rules">
+    <li><b>Numbers in a flat, declarative voice.</b> Never “I think it was close to.” If unverified, say “I'd have to check” ONCE, cleanly — don't guess and wobble.</li>
+    <li><b>Never end an answer with “right?”</b> — no validation-seeking. The interviewer is not there to agree with you.</li>
+    <li><b>Land the last sentence.</b> Every answer above ends on a deliberate closer — practice stopping there instead of trailing off.</li>
+    <li><b>Name your own limitations first</b> (Q5, Q8, Q14 do this). It converts attack surface into credibility.</li>
+    <li><b>“DeBERTa-v3” — say it precisely.</b> One-liner if pushed: encoder with disentangled content/position attention, v3 pretrained ELECTRA-style with replaced-token detection. Never “BERT v3.”</li>
+  </ol>
+
+  <footer>
+    <span>Everything typed here lives only in this browser's localStorage.</span>
+    <button id="reset">Reset all progress</button>
+  </footer>
+</div>
+
+<script>
+(function () {
+  const NS = 'grpo-answer-script-v1';
+  let store;
+  try { store = JSON.parse(localStorage.getItem(NS)) || {}; } catch (e) { store = {}; }
+  store.fills = store.fills || {};
+  store.checks = store.checks || {};
+  const save = () => localStorage.setItem(NS, JSON.stringify(store));
+
+  const fills = document.querySelectorAll('.fill[data-key]');
+  const vchks = document.querySelectorAll('.vchk');
+  const rchks = document.querySelectorAll('.rchk');
+
+  function styleFill(el) {
+    el.classList.toggle('filled', el.textContent.trim() !== '');
+  }
+
+  function refresh() {
+    fills.forEach(styleFill);
+    const av = [...vchks].filter(c => c.checked).length;
+    document.getElementById('audit-count').textContent = av;
+    document.getElementById('audit-bar').style.width = (av / vchks.length * 100) + '%';
+    vchks.forEach(c => c.closest('tr').classList.toggle('done', c.checked));
+    const rv = [...rchks].filter(c => c.checked).length;
+    document.getElementById('rehearse-count').textContent = rv + '/' + rchks.length;
+    rchks.forEach(c => c.closest('.qcard').classList.toggle('done', c.checked));
+  }
+
+  fills.forEach(el => {
+    el.setAttribute('contenteditable', 'plaintext-only');
+    if (el.getAttribute('contenteditable') !== 'plaintext-only') el.setAttribute('contenteditable', 'true');
+    const k = el.dataset.key;
+    if (store.fills[k]) el.textContent = store.fills[k];
+    el.addEventListener('input', () => {
+      const v = el.textContent.trim();
+      if (v) store.fills[k] = v; else delete store.fills[k];
+      document.querySelectorAll('.fill[data-key="' + k + '"]').forEach(o => {
+        if (o !== el) o.textContent = v;
+      });
+      refresh(); save();
+    });
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
+  });
+
+  [...vchks, ...rchks].forEach(c => {
+    const id = (c.classList.contains('vchk') ? 'v-' : 'r-') + c.dataset.id;
+    c.checked = !!store.checks[id];
+    c.addEventListener('change', () => {
+      if (c.checked) store.checks[id] = true; else delete store.checks[id];
+      refresh(); save();
+    });
+  });
+
+  document.getElementById('reset').addEventListener('click', () => {
+    if (!confirm('Clear all typed numbers and checkboxes?')) return;
+    localStorage.removeItem(NS);
+    location.reload();
+  });
+
+  refresh();
+})();
+</script>
+</body>
+</html>

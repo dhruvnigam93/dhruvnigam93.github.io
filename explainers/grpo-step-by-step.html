@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<title>GRPO, step by step — rollouts, updates, and where the KL lives</title>
+<style>
+  :root {
+    --page: #f9f9f7;
+    --surface-1: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --policy: #2a78d6;   /* pi_theta  — trainable policy */
+    --old:    #eda100;   /* pi_old    — rollout snapshot */
+    --ref:    #4a3aa7;   /* pi_ref    — frozen reference */
+    --reward: #1baf7a;   /* reward magnitude bars */
+    --pos:    #2a78d6;   /* diverging + pole */
+    --neg:    #e34948;   /* diverging − pole */
+    --mid:    #f0efec;   /* diverging neutral */
+    --policy-wash: rgba(42,120,214,0.10);
+    --old-wash:    rgba(237,161,0,0.12);
+    --ref-wash:    rgba(74,58,167,0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #0d0d0d;
+      --surface-1: #1a1a19;
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255,255,255,0.10);
+      --policy: #3987e5;
+      --old:    #c98500;
+      --ref:    #9085e9;
+      --reward: #199e70;
+      --pos:    #3987e5;
+      --neg:    #e66767;
+      --mid:    #383835;
+      --policy-wash: rgba(57,135,229,0.14);
+      --old-wash:    rgba(201,133,0,0.16);
+      --ref-wash:    rgba(144,133,233,0.14);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  main { max-width: 1060px; margin: 0 auto; padding: 32px 20px 80px; }
+  header.hero { padding: 40px 0 8px; }
+  h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: -0.02em; }
+  .sub { color: var(--ink-2); font-size: 16px; max-width: 720px; margin: 0; }
+  section { margin-top: 44px; }
+  h2 { font-size: 20px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .kicker { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px; }
+  .lede { color: var(--ink-2); margin: 4px 0 16px; max-width: 780px; }
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+
+  /* ---------- cast ---------- */
+  .cast-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+  .model-card { position: relative; padding-top: 14px; }
+  .model-card .tag {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-weight: 700; font-size: 15px;
+  }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+  .model-card .role { font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin: 2px 0 8px; }
+  .model-card p { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+  .model-card .life { margin-top: 10px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--grid); padding-top: 8px; }
+
+  /* ---------- stepper ---------- */
+  .rail { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .rail button {
+    font: inherit; font-size: 13px; font-weight: 600;
+    background: var(--surface-1); color: var(--ink-2);
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 6px 14px; cursor: pointer;
+  }
+  .rail button.on { background: var(--ink); color: var(--page); border-color: var(--ink); }
+  .rail button.done { color: var(--ink); }
+  #stage-canvas {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
+    padding: 22px; min-height: 330px;
+  }
+  .narr { display: flex; gap: 14px; align-items: flex-start; margin-top: 14px; }
+  .narr .txt { flex: 1; }
+  .narr h3 { margin: 0 0 4px; font-size: 16px; }
+  .narr p { margin: 0 0 6px; color: var(--ink-2); font-size: 14px; max-width: 840px; }
+  .narr p strong { color: var(--ink); }
+  .nav-btns { display: flex; gap: 8px; margin-top: 14px; }
+  .nav-btns button {
+    font: inherit; font-weight: 600; font-size: 14px;
+    border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface-1); color: var(--ink);
+    padding: 8px 18px; cursor: pointer;
+  }
+  .nav-btns button.primary { background: var(--ink); color: var(--page); border-color: var(--ink); }
+  .nav-btns button:disabled { opacity: 0.4; cursor: default; }
+  .hint { font-size: 12px; color: var(--muted); align-self: center; margin-left: 6px; }
+
+  /* stage internals */
+  .prompt-card {
+    border: 1px solid var(--border); border-left: 3px solid var(--baseline);
+    border-radius: 8px; padding: 8px 12px; background: var(--page);
+    font-size: 13.5px; font-weight: 600;
+  }
+  .group-block { display: grid; grid-template-columns: 170px 1fr; gap: 14px; align-items: start; margin-bottom: 18px; }
+  .rollout-row { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  .rollout {
+    display: grid; grid-template-columns: 44px 1fr 220px; gap: 10px; align-items: center;
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
+    background: var(--surface-1); font-size: 13px;
+  }
+  .rollout .oid { font-weight: 700; color: var(--ink-2); font-size: 12px; }
+  .rollout .txt { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rollout.gen { border-left: 3px solid var(--old); }
+  .barcell { display: flex; align-items: center; gap: 8px; }
+  .bar-track { position: relative; height: 16px; flex: 1; }
+  .bar {
+    position: absolute; top: 1px; height: 14px;
+    border-radius: 0 4px 4px 0;
+  }
+  .bar.neg { border-radius: 4px 0 0 4px; }
+  .bar-val { font-size: 12px; font-weight: 600; color: var(--ink-2); min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+  .zeroline { position: absolute; top: -3px; bottom: -3px; width: 1px; background: var(--baseline); }
+  .gstat { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .stage-note {
+    margin-top: 6px; font-size: 12.5px; color: var(--muted);
+    border-top: 1px solid var(--grid); padding-top: 10px;
+  }
+  .pill {
+    display: inline-block; font-size: 11.5px; font-weight: 700;
+    padding: 2px 9px; border-radius: 999px; margin-left: 8px; vertical-align: 1px;
+  }
+  .pill.old { background: var(--old-wash); color: var(--ink); }
+  .pill.policy { background: var(--policy-wash); color: var(--ink); }
+  .pill.ref { background: var(--ref-wash); color: var(--ink); }
+
+  /* stage 5 */
+  .iterbox { display: grid; grid-template-columns: 1fr 320px; gap: 22px; }
+  @media (max-width: 800px) { .iterbox { grid-template-columns: 1fr; } }
+  .drift-track { position: relative; height: 90px; margin: 26px 8px 4px; }
+  .drift-line { position: absolute; left: 0; right: 0; top: 44px; height: 1px; background: var(--baseline); }
+  .clipzone { position: absolute; top: 20px; height: 49px; background: var(--policy-wash); border-radius: 6px; }
+  .dot { position: absolute; top: 37px; width: 15px; height: 15px; border-radius: 50%; border: 2px solid var(--surface-1); }
+  .dot-label { position: absolute; font-size: 11.5px; font-weight: 700; color: var(--ink-2); white-space: nowrap; }
+  .ratio-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .rchip {
+    font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;
+    border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; color: var(--ink-2);
+  }
+  .rchip.clipped { border-style: dashed; color: var(--muted); text-decoration: line-through; }
+  .counterbig { font-size: 40px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1; }
+  .counterbig small { font-size: 14px; font-weight: 600; color: var(--muted); letter-spacing: 0; display: block; }
+
+  /* ---------- calculator ---------- */
+  .calc { display: grid; grid-template-columns: 320px 1fr; gap: 26px; }
+  @media (max-width: 860px) { .calc { grid-template-columns: 1fr; } }
+  .sliders label { display: block; font-size: 13px; font-weight: 600; margin: 14px 0 2px; }
+  .sliders label:first-child { margin-top: 0; }
+  .sliders .trl { font-weight: 500; color: var(--muted); font-size: 12px; }
+  .sliders input[type=range] { width: 100%; accent-color: var(--policy); }
+  .sliders output { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; align-content: start; }
+  .tile { background: var(--page); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .tile .lbl { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+  .tile .val { font-size: 30px; font-weight: 650; letter-spacing: -0.02em; }
+  .tile .notelet { font-size: 11.5px; color: var(--muted); }
+  .cycle-strip { grid-column: 1 / -1; margin-top: 4px; }
+  .strip { display: flex; height: 34px; border-radius: 8px; overflow: hidden; gap: 2px; background: var(--surface-1); }
+  .strip .seg { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--ink); }
+  .seg.gen { background: var(--old-wash); flex: 3; }
+  .seg.upd { background: var(--policy-wash); }
+  .calc-sentence { grid-column: 1 / -1; font-size: 14px; color: var(--ink-2); margin-top: 4px; }
+  .calc-sentence strong { color: var(--ink); }
+
+  /* ---------- KL section ---------- */
+  .klgrid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px; }
+  @media (max-width: 860px) { .klgrid { grid-template-columns: 1fr; } }
+  .kl-diagram { text-align: center; padding: 26px 18px; }
+  .token-box {
+    display: inline-block; font-weight: 700; font-size: 15px;
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px; background: var(--page);
+  }
+  .prob-row { display: flex; justify-content: center; gap: 14px; margin-top: 20px; flex-wrap: wrap; }
+  .prob {
+    border-radius: 10px; padding: 10px 14px; min-width: 128px;
+    border: 1px solid var(--border); font-size: 13px;
+  }
+  .prob b { display: block; font-size: 14px; }
+  .prob .p { font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  .arrow-note { display: flex; justify-content: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+  .arr {
+    font-size: 12.5px; border-radius: 8px; padding: 8px 12px; max-width: 250px; text-align: left;
+  }
+  .arr b { font-size: 13px; }
+  .vs-card h3 { margin: 0 0 6px; font-size: 15px; }
+  .vs-card p { margin: 0 0 10px; font-size: 13.5px; color: var(--ink-2); }
+  .vs-card .divider { border-top: 1px solid var(--grid); margin: 12px 0; }
+
+  /* ---------- formula ---------- */
+  .formula-wrap { padding: 26px 22px; overflow-x: auto; }
+  .formula {
+    font-size: 17px; white-space: nowrap; text-align: center;
+    font-family: Georgia, "Times New Roman", serif; font-style: italic;
+  }
+  .formula sub, .formula sup { font-size: 11px; }
+  .fpart { padding: 3px 2px; border-radius: 5px; cursor: pointer; border-bottom: 2px solid transparent; }
+  .fpart:hover, .fpart.on { background: var(--policy-wash); border-bottom-color: var(--policy); }
+  .fpart[data-key="kl"]:hover, .fpart[data-key="kl"].on { background: var(--ref-wash); border-bottom-color: var(--ref); }
+  .fpart[data-key="ratio"]:hover, .fpart[data-key="ratio"].on { background: var(--old-wash); border-bottom-color: var(--old); }
+  #part-explainer { margin-top: 16px; min-height: 84px; background: var(--page); border-radius: 10px; padding: 14px 16px; }
+  #part-explainer h4 { margin: 0 0 4px; font-size: 14px; }
+  #part-explainer p { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+
+  /* ---------- inspector ---------- */
+  .insp-controls { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
+  .insp-controls label { font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px; }
+  .insp-controls select {
+    font: inherit; font-size: 13.5px; padding: 6px 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface-1); color: var(--ink);
+  }
+  .insp-controls input[type=range] { width: 220px; accent-color: var(--policy); }
+  .tok-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .tok-table th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--grid); }
+  .tok-table td { padding: 5px 8px; border-bottom: 1px solid var(--grid); vertical-align: middle; }
+  .tok { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: var(--page); border: 1px solid var(--border); border-radius: 5px; padding: 2px 7px; white-space: nowrap; }
+  .ratio-cell { position: relative; height: 18px; min-width: 210px; }
+  .ratio-band { position: absolute; top: 0; bottom: 0; background: var(--mid); border-radius: 4px; }
+  .ratio-one { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--baseline); }
+  .ratio-dot { position: absolute; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--old); border: 2px solid var(--surface-1); }
+  .klbar-track { position: relative; height: 14px; min-width: 110px; }
+  .klbar { position: absolute; top: 1px; height: 12px; background: var(--ref); border-radius: 0 4px 4px 0; }
+  .num { font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  .flag-clip { font-size: 11px; font-weight: 700; color: var(--muted); }
+  .insp-caption { margin-top: 12px; font-size: 13px; color: var(--ink-2); }
+  .insp-caption strong { color: var(--ink); }
+  .adv-chip { font-size: 12px; font-weight: 700; border-radius: 6px; padding: 2px 8px; }
+
+  /* ---------- ahas ---------- */
+  .aha-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+  .aha h3 { margin: 0 0 6px; font-size: 14.5px; }
+  .aha p { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+  .aha .n { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--page); align-items: center; justify-content: center; font-size: 12px; font-weight: 700; margin-right: 8px; }
+
+  footer { margin-top: 56px; font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--grid); padding-top: 16px; }
+  footer a { color: var(--ink-2); }
+  code.k { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; background: var(--page); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-2); margin-top: 10px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+  table.map { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+  table.map th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--grid); font-weight: 600; }
+  table.map td { padding: 7px 10px; border-bottom: 1px solid var(--grid); color: var(--ink-2); }
+  table.map td:first-child { color: var(--ink); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+
+<a href="/explainers/" style="display:inline-block;margin:8px 0 0;color:var(--muted);text-decoration:none;font-size:14px">&larr; all explainers</a>
+<header class="hero">
+  <div class="kicker">Interview prep · post-training · Added 2026-08-25</div>
+  <h1>GRPO, step by step</h1>
+  <p class="sub">The training loop, the counting (batch → rollouts → updates → optimizer steps),
+  and where the KL actually lives — then the real production run (Banter Bot at Dream11) and the
+  reward model behind it. Built to kill the confusions that resurface every time.</p>
+</header>
+
+<!-- ================= CAST ================= -->
+<section>
+  <div class="kicker">1 · The cast</div>
+  <h2>Three models, one reward function — keep their jobs separate</h2>
+  <p class="lede">Almost every GRPO confusion is really a confusion about <em>which model</em> a quantity is computed against. Fix these four roles first.</p>
+  <div class="cast-grid">
+    <div class="card model-card" style="border-top: 3px solid var(--policy)">
+      <span class="tag"><span class="swatch" style="background:var(--policy)"></span>π<sub>θ</sub> — the policy</span>
+      <div class="role">TRAINABLE · changes every optimizer step</div>
+      <p>The model you're improving. The only thing gradients ever touch.</p>
+      <div class="life">Lifespan of its weights: one optimizer step.</div>
+    </div>
+    <div class="card model-card" style="border-top: 3px solid var(--old)">
+      <span class="tag"><span class="swatch" style="background:var(--old)"></span>π<sub>old</sub> — the sampler</span>
+      <div class="role">FROZEN SNAPSHOT · refreshed every generation cycle</div>
+      <p>A copy of π<sub>θ</sub> taken at rollout time. It generated the completions, so the importance ratio and the clip are measured against <em>it</em>.</p>
+      <div class="life">Lifespan: one generation cycle (μ update iterations).</div>
+    </div>
+    <div class="card model-card" style="border-top: 3px solid var(--ref)">
+      <span class="tag"><span class="swatch" style="background:var(--ref)"></span>π<sub>ref</sub> — the anchor</span>
+      <div class="role">FROZEN FOREVER · usually the SFT checkpoint</div>
+      <p>Never updated. The KL penalty is measured against <em>it</em> — "don't forget who you were before RL."</p>
+      <div class="life">Lifespan: the whole run. (Dropped entirely when β = 0.)</div>
+    </div>
+    <div class="card model-card" style="border-top: 3px solid var(--baseline)">
+      <span class="tag"><span class="swatch" style="background:var(--baseline)"></span>R — the reward</span>
+      <div class="role">REWARD MODEL or PROGRAMMATIC CHECK</div>
+      <p>Scores each finished completion with one scalar. In verifiable domains (math, code) it's just a correctness check.</p>
+      <div class="life">One number per completion. No critic. No value model. Anywhere.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= STEPPER ================= -->
+<section>
+  <div class="kicker">2 · The loop</div>
+  <h2>One generation cycle, six moves</h2>
+  <p class="lede">Walk it with a toy config: <strong>N = 2 prompts</strong>, <strong>G = 4 rollouts each</strong> (so 8 sequences), <strong>μ = 3 update iterations</strong>. Use ← → keys or the buttons.</p>
+  <div class="rail" id="rail"></div>
+  <div id="stage-canvas"></div>
+  <div class="narr card">
+    <div class="txt">
+      <h3 id="narr-title"></h3>
+      <div id="narr-body"></div>
+    </div>
+  </div>
+  <div class="nav-btns">
+    <button id="btn-prev">← Back</button>
+    <button id="btn-next" class="primary">Next →</button>
+    <span class="hint" id="stage-hint"></span>
+  </div>
+</section>
+
+<!-- ================= COUNTING ================= -->
+<section>
+  <div class="kicker">3 · The counting</div>
+  <h2>“How many optimizer steps per rollout?” — the calculator</h2>
+  <p class="lede">This is the arithmetic that keeps slipping. Four knobs fully determine it. Move them and watch the counts.</p>
+  <div class="card calc">
+    <div class="sliders">
+      <label>N — prompts per generation cycle <span class="trl">(batch of prompts)</span>: <output id="o-n">8</output></label>
+      <input type="range" id="s-n" min="1" max="32" value="8">
+      <label>G — rollouts per prompt <span class="trl">(TRL: <code class="k">num_generations</code>)</span>: <output id="o-g">8</output></label>
+      <input type="range" id="s-g" min="2" max="16" value="8">
+      <label>B — completions per optimizer step <span class="trl">(per-device batch × world × grad-accum)</span>: <output id="o-b">16</output></label>
+      <input type="range" id="s-b" min="4" max="64" step="4" value="16">
+      <label>μ — update iterations per rollout batch <span class="trl">(TRL: <code class="k">num_iterations</code>)</span>: <output id="o-mu">1</output></label>
+      <input type="range" id="s-mu" min="1" max="4" value="1">
+    </div>
+    <div class="tiles">
+      <div class="tile"><div class="lbl">Sequences generated per cycle</div><div class="val" id="t-seq">64</div><div class="notelet">N × G rollouts, scored once</div></div>
+      <div class="tile"><div class="lbl">Optimizer steps per epoch over them</div><div class="val" id="t-steps1">4</div><div class="notelet">N·G ÷ B <span id="t-divnote"></span></div></div>
+      <div class="tile"><div class="lbl">Optimizer steps per generation cycle</div><div class="val" id="t-total">4</div><div class="notelet">μ × (N·G ÷ B) — <em>the</em> answer</div></div>
+      <div class="tile"><div class="lbl">Times each rollout is trained on</div><div class="val" id="t-reuse">1</div><div class="notelet">= μ. &gt;1 ⇒ off-policy ⇒ clip matters</div></div>
+    </div>
+    <div class="cycle-strip">
+      <div class="strip" id="cycle-strip"></div>
+      <div class="legend">
+        <span><span class="swatch" style="background:var(--old)"></span>generate (inference only — vLLM does this part)</span>
+        <span><span class="swatch" style="background:var(--policy)"></span>one optimizer step (gradients)</span>
+      </div>
+    </div>
+    <p class="calc-sentence" id="calc-sentence"></p>
+  </div>
+  <table class="map">
+    <tr><th>Symbol</th><th>Meaning</th><th>TRL <code class="k">GRPOConfig</code></th><th>Typical value</th></tr>
+    <tr><td>G</td><td>group size — rollouts per prompt</td><td><code class="k">num_generations</code></td><td>8–16 (paper: 64 for math)</td></tr>
+    <tr><td>μ</td><td>update iterations over one rollout batch</td><td><code class="k">num_iterations</code></td><td>1 (default) — μ&gt;1 reuses rollouts</td></tr>
+    <tr><td>ε</td><td>clip range on the ratio</td><td><code class="k">epsilon</code></td><td>0.2</td></tr>
+    <tr><td>β</td><td>KL coefficient vs π<sub>ref</sub></td><td><code class="k">beta</code></td><td>0.04 in the paper; 0 in many modern recipes</td></tr>
+    <tr><td>—</td><td>token-averaging scheme for the loss</td><td><code class="k">loss_type</code></td><td>per-sequence (GRPO) vs global token mean (Dr.GRPO/DAPO)</td></tr>
+  </table>
+</section>
+
+<!-- ================= KL ================= -->
+<section>
+  <div class="kicker">4 · The KL question</div>
+  <h2>Two comparisons, two different jobs — and only one of them is a KL</h2>
+  <p class="lede">At every single token, the current policy is compared against <strong>two</strong> other models. Conflating these two comparisons is <em>the</em> classic GRPO confusion.</p>
+  <div class="klgrid">
+    <div class="card kl-diagram">
+      <div style="font-size:12.5px; color:var(--muted); margin-bottom:10px">one token position <i>t</i> in completion <i>o<sub>i</sub></i></div>
+      <span class="token-box">P(“204” | prefix)</span>
+      <div class="prob-row">
+        <div class="prob" style="background:var(--old-wash)"><b>π<sub>old</sub></b><span class="p">0.40</span></div>
+        <div class="prob" style="background:var(--policy-wash)"><b>π<sub>θ</sub> (now)</b><span class="p">0.46</span></div>
+        <div class="prob" style="background:var(--ref-wash)"><b>π<sub>ref</sub></b><span class="p">0.31</span></div>
+      </div>
+      <div class="arrow-note">
+        <div class="arr" style="background:var(--old-wash)">
+          <b>ratio r<sub>t</sub> = 0.46 / 0.40 = 1.15</b><br>
+          vs π<sub>old</sub> → fed into the clipped surrogate. Trust region: “don't move too far per rollout batch.” <em>Not a KL term.</em>
+        </div>
+        <div class="arr" style="background:var(--ref-wash)">
+          <b>KL<sub>t</sub> ≈ 0.052</b> (k3 estimator)<br>
+          vs π<sub>ref</sub> → multiplied by β, added to the loss. Regularizer: “don't drift from the SFT model.” <em>This is the only KL.</em>
+        </div>
+      </div>
+    </div>
+    <div class="card vs-card">
+      <h3>Where does the KL go? PPO-RLHF vs GRPO</h3>
+      <p><strong>PPO-RLHF (InstructGPT):</strong> KL(π<sub>θ</sub>‖π<sub>ref</sub>) is subtracted from the <em>reward</em> per token — r<sub>t</sub> = r<sub>RM</sub> − β·KL — and then advantages come out of GAE with a learned critic. The KL contaminates the advantage estimate.</p>
+      <p><strong>GRPO:</strong> the KL is pulled <em>out</em> of the reward and added as a separate per-token term directly in the <em>loss</em>. The advantage stays a pure, group-normalized reward signal.</p>
+      <div class="divider"></div>
+      <p><strong>The estimator</strong> (what the code computes per token, no logits over the full vocab needed):<br>
+      <code class="k">kl = exp(ref_logp − θ_logp) − (ref_logp − θ_logp) − 1</code><br>
+      Schulman's k3 — unbiased, always ≥ 0.</p>
+      <div class="divider"></div>
+      <p><strong>Nobody computes a KL to π<sub>old</sub>.</strong> The π<sub>old</sub> comparison is the ratio + clip. If you say “KL with the old policy” in an interview, you've merged two different mechanisms.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FORMULA ================= -->
+<section>
+  <div class="kicker">5 · The objective</div>
+  <h2>Loss anatomy — hover each piece</h2>
+  <div class="card formula-wrap">
+    <div class="formula" id="formula">
+      J(θ) =
+      <span class="fpart" data-key="expect">𝔼<sub>q∼D, {o<sub>i</sub>}∼π<sub>old</sub></sub></span>
+      <span class="fpart" data-key="groupavg">(1/G) Σ<sub>i=1..G</sub></span>
+      <span class="fpart" data-key="tokenavg">(1/|o<sub>i</sub>|) Σ<sub>t=1..|o<sub>i</sub>|</sub></span>
+      {
+      <span class="fpart" data-key="clip">min[</span><span class="fpart" data-key="ratio">r<sub>i,t</sub>(θ)</span><span class="fpart" data-key="adv">Â<sub>i</sub></span><span class="fpart" data-key="clip">, clip(</span><span class="fpart" data-key="ratio">r<sub>i,t</sub>(θ)</span><span class="fpart" data-key="clip">, 1−ε, 1+ε)</span><span class="fpart" data-key="adv">Â<sub>i</sub></span><span class="fpart" data-key="clip">]</span>
+      −
+      <span class="fpart" data-key="kl">β·D<sub>KL</sub>[π<sub>θ</sub> ‖ π<sub>ref</sub>]</span>
+      }
+    </div>
+    <div id="part-explainer">
+      <h4>Hover (or tap) any highlighted piece</h4>
+      <p>r<sub>i,t</sub>(θ) = π<sub>θ</sub>(o<sub>i,t</sub> | q, o<sub>i,&lt;t</sub>) / π<sub>old</sub>(o<sub>i,t</sub> | q, o<sub>i,&lt;t</sub>) &nbsp;·&nbsp; Â<sub>i</sub> = (R<sub>i</sub> − mean(R<sub>group</sub>)) / std(R<sub>group</sub>)</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= INSPECTOR ================= -->
+<section>
+  <div class="kicker">6 · Token-level view</div>
+  <h2>One completion under the microscope</h2>
+  <p class="lede">Every token of a completion shares the <em>same</em> advantage, but each token has its <em>own</em> ratio and its own KL. Drag the slider to simulate updates accumulating on one rollout batch (μ &gt; 1) and watch ratios drift into the clip wall.</p>
+  <div class="card">
+    <div class="insp-controls">
+      <div>
+        <label for="insp-comp">Completion</label>
+        <select id="insp-comp">
+          <option value="0">good rollout — Â = +1.30 (push tokens UP)</option>
+          <option value="1">bad rollout — Â = −0.97 (push tokens DOWN)</option>
+        </select>
+      </div>
+      <div>
+        <label for="insp-drift">Updates already taken on this rollout batch: <output id="o-drift">0</output></label>
+        <input type="range" id="insp-drift" min="0" max="3" value="0">
+      </div>
+      <div style="font-size:12.5px; color:var(--muted); padding-bottom:6px">ε = 0.2, so the no-clip zone is ratio ∈ [0.8, 1.2] (gray band)</div>
+    </div>
+    <table class="tok-table" id="tok-table"></table>
+    <p class="insp-caption" id="insp-caption"></p>
+  </div>
+</section>
+
+<!-- ================= PROJECT ================= -->
+<section>
+  <div class="kicker">7 · The real run</div>
+  <h2>This exact loop, in production — Banter Bot at Dream11</h2>
+  <p class="lede">Everything above ran for real: GRPO post-training of Llama&nbsp;8B (LoRA) so a fantasy-sports
+  banter bot would stop being clean-but-boring. Stock LLMs aren't trained to be engaging; the bet was
+  that if engagingness can be <em>measured</em>, it can be optimized directly with RL. Three stages,
+  one 80&nbsp;GB A100.</p>
+
+  <div class="cast-grid">
+    <div class="card model-card" style="border-top: 3px solid var(--reward)">
+      <span class="tag">Stage 1 — reward model</span>
+      <div class="role">MEASURE ENGAGINGNESS</div>
+      <p>DeBERTa-v3 with a scoring head, trained on <strong>222K preference pairs</strong> mined from
+      high-traffic Reddit sports subreddits — upvotes as the proxy for engagingness. Full anatomy in
+      section 8 below.</p>
+      <div class="life">Output: one scalar per completion — the R in the loop above.</div>
+    </div>
+    <div class="card model-card" style="border-top: 3px solid var(--policy)">
+      <span class="tag">Stage 2 — GRPO post-training</span>
+      <div class="role">OPTIMIZE FOR IT</div>
+      <p>Llama&nbsp;8B + LoRA on the linear layers, <strong>G&nbsp;=&nbsp;16</strong> rollouts per prompt,
+      per-token KL to the reference, <strong>one optimizer step per rollout batch</strong>. Rollout prompts:
+      the Reddit posts themselves, LLM-judge-filtered to look like production queries ("roast&nbsp;X",
+      "what do you think of&nbsp;Y").</p>
+      <div class="life">μ = 1, one step per batch ⇒ ratio ≡ 1 ⇒ clip never binds.</div>
+    </div>
+    <div class="card model-card" style="border-top: 3px solid var(--old)">
+      <span class="tag">Stage 3 — deploy &amp; validate</span>
+      <div class="role">REAL USERS ARE THE ARBITER</div>
+      <p>Tuned model served via vLLM. A/B against the untuned model, <strong>~150K users per arm</strong>,
+      on week-over-week <em>feature</em> retention (used the bot in week 1 → used it again in week 2).</p>
+      <div class="life">Lift: +16% relative on the resume; grill recall was 19.5%→22% (≈ +12.8%) — reconcile
+      against the dashboard before quoting either.</div>
+    </div>
+  </div>
+
+  <table class="map">
+    <tr><th>Symbol above</th><th>What it was in this run</th></tr>
+    <tr><td>π<sub>θ</sub></td><td>Llama 8B + LoRA adapters — base weights frozen in bf16 (~16 GB); optimizer state only on adapter params (megabytes). That's why one A100 is enough.</td></tr>
+    <tr><td>π<sub>old</sub></td><td>Identical to π<sub>θ</sub> — with exactly one optimizer step per rollout batch, the policy that generated <em>is</em> the policy being updated. Every ratio is 1; the machinery reduces to on-policy REINFORCE with a group baseline.</td></tr>
+    <tr><td>π<sub>ref</sub></td><td>The same base weights with adapters <em>disabled</em> — the KL reference costs zero extra memory. This is LoRA's second, underrated gift.</td></tr>
+    <tr><td>R</td><td>The DeBERTa-v3 margin-regression reward model (section 8) — a ~100M-class encoder, negligible next to the policy.</td></tr>
+    <tr><td>β·KL</td><td>Per-token penalty in the loss, added <em>after</em> the entropy-collapse incident below, then tuned up until generations stayed diverse while reward kept climbing.</td></tr>
+    <tr><td>bottleneck</td><td>Generation, not memory — rollout sampling dominated wall-clock, exactly the pattern from section 2.</td></tr>
+  </table>
+
+  <div class="aha-grid" style="margin-top:14px">
+    <div class="card aha"><h3><span class="n">⚠</span>War story 1 — entropy collapse</h3>
+      <p>First launch had <strong>no KL term at all</strong>. The policy found a degenerate mode: near-identical
+      high-reward phrasing repeated everywhere, output entropy cratering into gibberish. That's what the KL
+      is <em>for</em> — the per-token anchor to π<sub>ref</sub> went in, β tuned up until diversity held while
+      reward still climbed. "The KL isn't optional" is a lesson this run paid for.</p></div>
+    <div class="card aha"><h3><span class="n">☂</span>War story 2 — the HellaSwag canary</h3>
+      <p>Reward-vs-quality can diverge silently, so a capability benchmark ran at every checkpoint.
+      <strong>HellaSwag over MMLU, deliberately</strong>: a banter bot doesn't need grad-school knowledge, it
+      needs common-sense grounding — HellaSwag is exactly the common-sense completion regime most at risk.
+      It held flat throughout.</p></div>
+    <div class="card aha"><h3><span class="n">★</span>War story 3 — emergent Hinglish</h3>
+      <p>On Indian-cricket prompts the policy started replying in <strong>Hinglish even when the prompt was pure
+      English</strong>. Instruct models mirror the prompt's language — nothing in the SFT prior produces this.
+      But on Indian cricket subreddits the highest-engagement comments are Hinglish; the RM scored it higher and
+      GRPO amplified it until language-mirroring broke. The clearest evidence the pipeline optimized
+      engagingness rather than imitating a style — and that register survived into the A/B win.</p></div>
+  </div>
+</section>
+
+<!-- ================= REWARD MODEL ================= -->
+<section>
+  <div class="kicker">8 · The reward model</div>
+  <h2>DeBERTa-v3 + margin regression — where R actually comes from</h2>
+  <p class="lede">GRPO consumes one scalar per rollout and never asks where it came from. In this run it came
+  from a deliberately non-standard choice: a <em>margin-regression</em> reward model instead of Bradley-Terry —
+  a bet that only makes sense once you remember what the group-normalized advantage preserves.</p>
+
+  <div class="cast-grid">
+    <div class="card model-card" style="border-top: 3px solid var(--reward)">
+      <span class="tag">Architecture</span>
+      <div class="role">ENCODER + SCORING HEAD</div>
+      <p><strong>DeBERTa-v3</strong> — encoder with disentangled content/position attention, v3 pretrained
+      ELECTRA-style with replaced-token detection. Input: post + comment in one forward pass. Scoring head
+      through a sigmoid → p ∈ [0,1].</p>
+      <div class="life">One forward pass per comment; the pair loss compares two passes.</div>
+    </div>
+    <div class="card model-card" style="border-top: 3px solid var(--old)">
+      <span class="tag">Data</span>
+      <div class="role">REDDIT AS A PREFERENCE ORACLE</div>
+      <p>~1,200 posts from high-traffic sports subreddits, <strong>only posts &gt; 6 months old</strong> (scores
+      fully converged), ~20 comments sampled per post (capped so no thread dominates). All within-post pairs:
+      C(20,2) = 190 per post × ~1,200 posts ≈ 228K → <strong>222K after dedup</strong>. Upvotes normalized
+      within-post to [0,1] — never compared across threads.</p>
+      <div class="life">Off-policy preference data — same family as Stanford Human Preferences (SHP).</div>
+    </div>
+    <div class="card model-card" style="border-top: 3px solid var(--ref)">
+      <span class="tag">Validation</span>
+      <div class="role">SPLIT AT THE POST LEVEL</div>
+      <p>Pair-level splitting would leak — every comment appears in ~19 pairs. So the split is by post, with
+      held-out posts for validation. Metric: pairwise ranking accuracy on held-out pairs ≈ <strong>92%</strong> —
+      with a caveat: random pairing across the full upvote range makes many pairs easy. Stratified by margin,
+      accuracy on close pairs is meaningfully lower.</p>
+      <div class="life">Known limitation: never validated on policy-generated text (see below).</div>
+    </div>
+  </div>
+
+  <div class="klgrid" style="margin-top:14px">
+    <div class="card vs-card">
+      <h3>The loss — margin regression, not Bradley-Terry</h3>
+      <p>One training example = two comments from the same post, targets R₁, R₂ ∈ [0,1] (normalized upvotes),
+      model scores p₁, p₂. Loss:</p>
+      <p style="text-align:center; font-family: Georgia, serif; font-style: italic; font-size:16px; color:var(--ink)">
+        ℓ = ((R₁ − R₂) − (p₁ − p₂))²
+      </p>
+      <p><strong>Bradley-Terry</strong> (−log σ(s₁ − s₂)) preserves only the <em>ordering</em> — it throws away how
+      much better one response is. Reddit is one of the only preference sources with real-valued magnitudes, and
+      comment quality is power-law distributed: the top comment isn't slightly better than the fifth, it's 50×
+      better. Margin regression keeps that resolution.</p>
+      <div class="divider"></div>
+      <p><strong>Why it matters downstream:</strong> GRPO's advantage (r − mean)/std is an <em>affine</em> transform
+      within the group — relative margins among the 16 rollouts survive standardization exactly. A magnitude-aware
+      RM gives better-shaped advantages than a pure ranker. The cost, accepted: targets are noisier than binary
+      preferences.</p>
+    </div>
+    <div class="card">
+      <h3 style="margin:0 0 6px; font-size:15px">What each loss sees — drag the true gap</h3>
+      <p style="margin:0 0 10px; font-size:13.5px; color:var(--ink-2)">Two comments on the same post. Slide their
+      true (normalized-upvote) gap and watch what each objective asks the model to learn.</p>
+      <label style="display:block; font-size:13px; font-weight:600; margin-bottom:2px">true gap R₁ − R₂:
+        <output id="rm-gap-out">0.50</output></label>
+      <input type="range" id="rm-gap" min="0.02" max="0.95" step="0.01" value="0.50"
+             style="width:100%; accent-color: var(--reward)">
+      <div style="display:grid; gap:8px; margin-top:12px">
+        <div style="border:1px solid var(--border); border-radius:8px; padding:10px 12px; background:var(--page)">
+          <div style="font-size:12px; font-weight:700; color:var(--muted)">BRADLEY-TERRY TARGET</div>
+          <div id="rm-bt" style="font-size:14px; font-weight:600"></div>
+        </div>
+        <div style="border:1px solid var(--border); border-radius:8px; padding:10px 12px; background:var(--page)">
+          <div style="font-size:12px; font-weight:700; color:var(--muted)">MARGIN-REGRESSION TARGET</div>
+          <div id="rm-mr" style="font-size:14px; font-weight:600"></div>
+          <div class="bar-track" style="max-width:100%; margin-top:6px"><div id="rm-mr-bar" class="bar" style="left:0; background:var(--reward)"></div></div>
+        </div>
+      </div>
+      <p id="rm-verdict" style="margin:10px 0 0; font-size:12.5px; color:var(--muted); border-top:1px solid var(--grid); padding-top:8px"></p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3 style="margin:0 0 6px; font-size:15px">The honest no — and the three compensating controls</h3>
+    <p style="margin:0 0 8px; font-size:13.5px; color:var(--ink-2)">The RM was validated on held-out Reddit
+    comments — a different distribution from policy rollouts. That's a real limitation, owned out loud. What stood
+    in for it: <strong>(1)</strong> reward on a held-out prompt set tracked at every GRPO checkpoint, with outputs
+    read by hand — if the RM were being gamed, held-out reward and visible quality diverge; <strong>(2)</strong> the
+    HellaSwag canary for capability regression; <strong>(3)</strong> the A/B as final arbiter — real users, not the
+    reward model. The upgrade if done again: label a few hundred <em>policy</em> generations mid-training and check
+    RM agreement exactly where GRPO uses it — discriminating between same-policy samples, where margins are small.</p>
+  </div>
+</section>
+
+<!-- ================= AHAS ================= -->
+<section>
+  <div class="kicker">9 · Say these out loud</div>
+  <h2>Eight lines that signal depth in an interview</h2>
+  <div class="aha-grid">
+    <div class="card aha"><h3><span class="n">1</span>Advantage is per-completion, not per-token</h3>
+      <p>One scalar per rollout — (R − group mean)/group std — broadcast to every token in that completion. GRPO has no per-token credit assignment from a critic; the only per-token quantities are the ratio and the KL.</p></div>
+    <div class="card aha"><h3><span class="n">2</span>Two comparisons, two jobs</h3>
+      <p>Ratio + clip vs π<sub>old</sub> = trust region (safe rollout reuse). KL vs π<sub>ref</sub> = regularizer (don't drift from SFT). There is no KL to the old policy, ever.</p></div>
+    <div class="card aha"><h3><span class="n">3</span>At μ = 1 the clip is dead machinery</h3>
+      <p>First update after generation: π<sub>θ</sub> = π<sub>old</sub>, every ratio is exactly 1, min/clip do nothing — GRPO reduces to vanilla policy gradient with a group baseline. The PPO machinery only wakes up when rollouts are reused (μ &gt; 1, or the batch consumed over multiple optimizer steps).</p></div>
+    <div class="card aha"><h3><span class="n">4</span>All-same rewards ⇒ the group is dead weight</h3>
+      <p>If all G rollouts get the same reward (all correct or all wrong), std ≈ 0 and every advantage is 0 — zero gradient from that prompt. This is why DAPO does dynamic sampling (resample until groups are mixed) and why prompt difficulty curation matters so much.</p></div>
+    <div class="card aha"><h3><span class="n">5</span>No critic is the whole point</h3>
+      <p>PPO needs a separate value model (≈ policy-sized) trained alongside. GRPO's baseline is just the group mean — that's roughly half the memory and none of the value-loss instability. The price: you need G samples per prompt to estimate it.</p></div>
+    <div class="card aha"><h3><span class="n">6</span>Token averaging is a live design choice</h3>
+      <p>GRPO averages per-sequence then across the group — which under-weights tokens in long completions (length bias). Dr.GRPO and DAPO average over all tokens in the batch instead. In TRL it's literally a flag: <code class="k">loss_type</code>. Also: β = 0 is common now — drop π<sub>ref</sub>, save a forward pass and the memory.</p></div>
+    <div class="card aha"><h3><span class="n">7</span>Margin regression because standardization is affine</h3>
+      <p>Group normalization subtracts the mean and divides by the std — relative magnitudes <em>within</em> the group survive exactly. A Bradley-Terry ranker throws magnitude away at training time; a margin-trained RM carries it through to the advantages. Cross-prompt scale is destroyed, and that's fine — advantages never compare across prompts.</p></div>
+    <div class="card aha"><h3><span class="n">8</span>The KL earned its place — we launched without it</h3>
+      <p>No KL term → entropy collapse: a degenerate high-reward mode, then gibberish. The per-token anchor to π<sub>ref</sub> is what keeps reward-climbing from becoming mode-collapse. And monitor a capability canary (HellaSwag here) — reward and quality can diverge without either curve telling you.</p></div>
+  </div>
+</section>
+
+<footer>
+  Sources: DeepSeekMath (Shao et al., arXiv:2402.03300, §4) · TRL <code class="k">GRPOTrainer</code> docs ·
+  DAPO (arXiv:2503.14476) · Dr.GRPO / “Understanding R1-Zero-Like Training” (arXiv:2503.20783) ·
+  Banter Bot production run (Dream11, 2026) — sections 7–8.
+  Toy numbers in sections 1–6 are illustrative, but every formula and mechanism matches the paper and the TRL implementation.
+</footer>
+
+</main>
+
+<script>
+"use strict";
+/* ---------------- shared toy data ---------------- */
+const PROMPTS = [
+  { q: "q₁ · “Compute 12 × 17.”", rewards: [0.9, 0.7, 0.2, 0.2],
+    texts: ["12×10=120, 12×7=84, sum = 204 ✓", "17×12 = 17×10 + 17×2 = 204 ✓ (sloppy)", "12×17 = 194 ✗", "It's 1934 ✗"] },
+  { q: "q₂ · “Is 91 prime?”", rewards: [1.0, 0.0, 0.0, 0.0],
+    texts: ["91 = 7×13, not prime ✓", "Yes, prime ✗", "Yes — odd and not ÷3 ✗", "Prime, I think ✗"] },
+];
+function groupStats(rs) {
+  const m = rs.reduce((a, b) => a + b, 0) / rs.length;
+  const v = rs.reduce((a, b) => a + (b - m) * (b - m), 0) / rs.length;
+  const s = Math.sqrt(v);
+  return { mean: m, std: s, adv: rs.map(r => s > 1e-8 ? (r - m) / s : 0) };
+}
+const STATS = PROMPTS.map(p => groupStats(p.rewards));
+const fmt = (x, d = 2) => (x >= 0 ? "+" : "") + x.toFixed(d);
+
+/* ---------------- stage canvas builders ---------------- */
+function promptCards(withPill) {
+  return PROMPTS.map(p =>
+    `<div class="prompt-card">${p.q}${withPill ? '' : ''}</div>`).join("");
+}
+function rewardBar(r) {
+  const w = Math.max(2, r * 150);
+  return `<div class="barcell"><div class="bar-track" style="max-width:160px">
+    <div class="bar" style="left:0;width:${w}px;background:var(--reward)"></div></div>
+    <span class="bar-val">${r.toFixed(1)}</span></div>`;
+}
+function advBar(a) {
+  const scale = 46, w = Math.max(2, Math.abs(a) * scale), c = 88;
+  const left = a >= 0 ? c : c - w;
+  const cls = a >= 0 ? "" : " neg";
+  const col = a >= 0 ? "var(--pos)" : "var(--neg)";
+  return `<div class="barcell"><div class="bar-track" style="max-width:200px">
+    <div class="zeroline" style="left:${c}px"></div>
+    <div class="bar${cls}" style="left:${left}px;width:${w}px;background:${col}"></div></div>
+    <span class="bar-val">${fmt(a)}</span></div>`;
+}
+function groupsHTML(mode) { // mode: 'gen' | 'reward' | 'adv'
+  return PROMPTS.map((p, gi) => {
+    const st = STATS[gi];
+    const rows = p.texts.map((t, i) => {
+      let cell = "";
+      if (mode === "reward") cell = rewardBar(p.rewards[i]);
+      if (mode === "adv") cell = advBar(st.adv[i]);
+      return `<div class="rollout gen">
+        <span class="oid">o${i + 1}</span><span class="txt">${t}</span>
+        <span>${cell}</span></div>`;
+    }).join("");
+    const gstat = mode === "adv"
+      ? `<div class="gstat">group mean = ${st.mean.toFixed(2)}, std = ${st.std.toFixed(2)} → Â = (R − mean) / std</div>` : "";
+    return `<div class="group-block">
+      <div><div class="prompt-card">${p.q}</div>${mode !== 'gen' ? '' : '<div class="gstat">G = 4 rollouts ↓ sampled by π<sub>old</sub></div>'}</div>
+      <div><div class="rollout-row">${rows}</div>${gstat}</div>
+    </div>`;
+  }).join("");
+}
+
+/* ---------------- stages ---------------- */
+const MU_DEMO = 3;
+let iterCount = 0; // stage-5 sub-state
+
+const STAGES = [
+  {
+    rail: "1 · Sample prompts",
+    title: "Sample a batch of prompts",
+    canvas: () => `<div style="display:grid;gap:12px;max-width:420px">
+        <div class="gstat">dataset D → draw N = 2 prompts</div>${promptCards()}
+      </div>
+      <div class="stage-note">Nothing model-related yet. In TRL, the number of distinct prompts per cycle is
+      <code class="k">generation_batch_size / num_generations</code>.</div>`,
+    narr: `<p>One <strong>generation cycle</strong> starts here. Everything in stages 2–5 happens to this one batch of prompts before any new data is drawn.</p>`
+  },
+  {
+    rail: "2 · Generate rollouts",
+    title: "π_old generates G completions per prompt — the “rollouts”",
+    canvas: () => `<div class="gstat" style="margin-bottom:10px">π<sub>old</sub> (snapshot of the current policy) samples with temperature — pure inference, no gradients. This is the slow, expensive phase, which is why TRL hands it to vLLM.<span class="pill old">π_old at work</span></div>${groupsHTML("gen")}`,
+    narr: `<p><strong>Vocabulary lock-in:</strong> one <strong>rollout</strong> = one sampled completion. One <strong>group</strong> = the G rollouts of the same prompt (G = <code class="k">num_generations</code>). The batch = N × G = 8 sequences total.</p>
+           <p>π<sub>old</sub> is frozen the moment these samples exist — the ratios in stage 5 are measured against exactly these generation-time probabilities (they get cached as <code class="k">old_logps</code>).</p>`
+  },
+  {
+    rail: "3 · Score",
+    title: "Reward: one scalar per completion",
+    canvas: () => `<div class="gstat" style="margin-bottom:10px">Reward model or programmatic verifier scores each finished sequence. One number per rollout — no per-token rewards.</div>${groupsHTML("reward")}`,
+    narr: `<p>Note what did <strong>not</strong> happen: no value model predicted anything, and no KL was mixed into these rewards (that's the PPO-RLHF trick — GRPO keeps rewards clean and puts KL in the loss later).</p>`
+  },
+  {
+    rail: "4 · Advantages",
+    title: "Group-relative advantage: normalize within each group",
+    canvas: () => `<div class="gstat" style="margin-bottom:10px">Â<sub>i</sub> = (R<sub>i</sub> − mean of group) / std of group — computed per prompt-group, <em>never</em> across groups.</div>${groupsHTML("adv")}`,
+    narr: `<p>This is the “GR” in GRPO and the entire replacement for PPO's critic: <strong>the group mean is the baseline</strong>. “Being right when the group mostly failed” (q₂/o₁: Â = +1.73) is worth more than “being right when it was easy.”</p>
+           <p><strong>One scalar per completion.</strong> Every token of rollout o₁ will inherit Â = +1.30. If all four rewards had been equal, std ≈ 0 → all Â = 0 → this prompt contributes nothing this cycle.</p>`
+  },
+  {
+    rail: "5 · μ update iterations",
+    title: "The inner loop: reuse the same rollouts for μ optimizer passes",
+    canvas: stage5HTML,
+    narr: `<p>This is the part you keep confusing, so precisely: the 8 rollouts get packed into mini-batches; each pass over them takes <strong>N·G ÷ B optimizer steps</strong>; and the whole pass is repeated <strong>μ times</strong> (<code class="k">num_iterations</code>). Total: <strong>μ × N·G ÷ B optimizer steps per generation cycle</strong>. Here: B = 8, μ = 3 → 3 steps.</p>
+           <p>Per token, the loss combines: ratio vs <strong>π_old</strong> (clipped at 1±ε) × the completion's Â, minus β × KL vs <strong>π_ref</strong>. Click the button and watch ratios drift off 1.0 — that's the batch going off-policy.</p>`
+  },
+  {
+    rail: "6 · Refresh & repeat",
+    title: "Rollouts are spent — snapshot the policy and regenerate",
+    canvas: () => `<div style="display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:center;padding:26px 0">
+        <div class="card" style="border-top:3px solid var(--old);min-width:230px">
+          <b>π<sub>old</sub> ← π<sub>θ</sub></b>
+          <p style="margin:6px 0 0;font-size:13px;color:var(--ink-2)">The sampler snapshot catches up to everything stage 5 learned.</p>
+        </div>
+        <div style="font-size:22px;color:var(--muted)">→</div>
+        <div class="card" style="min-width:230px">
+          <b style="text-decoration:line-through;color:var(--muted)">8 old rollouts</b>
+          <p style="margin:6px 0 0;font-size:13px;color:var(--ink-2)">Thrown away. They describe a policy that no longer exists.</p>
+        </div>
+        <div style="font-size:22px;color:var(--muted)">→</div>
+        <div class="card" style="border-top:3px solid var(--ref);min-width:230px">
+          <b>π<sub>ref</sub> unchanged</b>
+          <p style="margin:6px 0 0;font-size:13px;color:var(--ink-2)">Still the original SFT checkpoint. It never moves, all run long.</p>
+        </div>
+      </div>
+      <div class="stage-note">Cycle ledger: 8 sequences generated · 8 scalar rewards · 2 group normalizations · 3 optimizer steps (μ = 3, B = 8). Back to stage 1 with fresh prompts.</div>`,
+    narr: `<p>That's one full generation cycle. The rhythm of GRPO training is <strong>generate (expensive, no gradients) → update μ times (cheap-ish, gradients) → regenerate</strong>. Training-step counts in logs usually count optimizer steps, so divide by μ·(N·G/B) to know how many generation cycles you've really done.</p>`
+  },
+];
+
+/* stage 5 interactive */
+const DEMO_DELTAS = [0.05, 0.12, -0.04, 0.16, 0.02, -0.10, 0.08, 0.21]; // per-token log-ratio drift per update (sample tokens)
+function stage5HTML() {
+  const s = iterCount;
+  const px = 68;
+  const thetaX = 40 + s * px;
+  const chips = DEMO_DELTAS.map(d => {
+    const r = Math.exp(s * d);
+    const clipped = r > 1.2 || r < 0.8;
+    return `<span class="rchip${clipped ? " clipped" : ""}" title="per-token ratio vs pi_old">${r.toFixed(2)}</span>`;
+  }).join("");
+  const nClipped = DEMO_DELTAS.filter(d => { const r = Math.exp(s * d); return r > 1.2 || r < 0.8; }).length;
+  const capMsg = s === 0
+    ? "Update 1 hasn't happened yet: π_θ still equals π_old — every ratio is exactly 1.00, the clip is inert."
+    : s < MU_DEMO
+      ? `After update ${s}: π_θ has moved, ratios spread. ${nClipped ? nClipped + " token(s) hit the clip wall — their gradient is zeroed." : "All ratios still inside 1±ε."}`
+      : `μ = ${MU_DEMO} iterations done. ${nClipped} token(s) clipped. These rollouts are exhausted → stage 6.`;
+  return `<div class="iterbox">
+    <div>
+      <div class="gstat">policy drift on ONE rollout batch (schematic) — clip band = how far tokens may push before gradients cut off</div>
+      <div class="drift-track">
+        <div class="clipzone" style="left:8px;width:${40 + px * 1.15}px"></div>
+        <div class="drift-line"></div>
+        <div class="dot" style="left:34px;background:var(--old)"></div>
+        <div class="dot-label" style="left:20px;top:66px">π<sub>old</sub> (fixed)</div>
+        <div class="dot" style="left:${thetaX}px;background:var(--policy);transition:left .35s"></div>
+        <div class="dot-label" style="left:${thetaX - 12}px;top:8px;color:var(--ink)">π<sub>θ</sub></div>
+      </div>
+      <div class="gstat">sample per-token ratios r<sub>t</sub> = π<sub>θ</sub>/π<sub>old</sub> (8 tokens):</div>
+      <div class="ratio-chips">${chips}</div>
+      <div class="stage-note">${capMsg}</div>
+    </div>
+    <div>
+      <div class="counterbig">${s} / ${MU_DEMO}<small>update iterations used on this rollout batch (μ)</small></div>
+      <div class="counterbig" style="margin-top:14px">${s}<small>optimizer steps this cycle (B = 8 ⇒ 1 step per iteration)</small></div>
+      <div class="nav-btns" style="margin-top:16px">
+        <button class="primary" id="btn-iter" ${s >= MU_DEMO ? "disabled" : ""}>▶ take optimizer step ${Math.min(s + 1, MU_DEMO)}</button>
+      </div>
+      <div class="stage-note">per-token loss: min(r·Â, clip(r, 0.8, 1.2)·Â) − β·KL(π<sub>θ</sub>‖π<sub>ref</sub>)<br>
+      <span class="pill old">ratio → π_old</span><span class="pill ref">KL → π_ref</span><span class="pill policy">gradients → π_θ only</span></div>
+    </div>
+  </div>`;
+}
+
+/* stepper wiring */
+let stage = 0;
+const railEl = document.getElementById("rail");
+STAGES.forEach((s, i) => {
+  const b = document.createElement("button");
+  b.textContent = s.rail;
+  b.addEventListener("click", () => { stage = i; renderStage(); });
+  railEl.appendChild(b);
+});
+function renderStage() {
+  if (stage !== 4) iterCount = 0;
+  [...railEl.children].forEach((b, i) => {
+    b.classList.toggle("on", i === stage);
+    b.classList.toggle("done", i < stage);
+  });
+  const st = STAGES[stage];
+  document.getElementById("stage-canvas").innerHTML = st.canvas();
+  document.getElementById("narr-title").textContent = st.title;
+  document.getElementById("narr-body").innerHTML = st.narr;
+  document.getElementById("btn-prev").disabled = stage === 0;
+  document.getElementById("btn-next").textContent = stage === STAGES.length - 1 ? "↺ Restart loop" : "Next →";
+  document.getElementById("stage-hint").textContent = `stage ${stage + 1} of ${STAGES.length}`;
+  const ib = document.getElementById("btn-iter");
+  if (ib) ib.addEventListener("click", () => {
+    iterCount = Math.min(iterCount + 1, MU_DEMO);
+    document.getElementById("stage-canvas").innerHTML = stage5HTML();
+    renderStage.rebindIter();
+  });
+  renderStage.rebindIter = () => {
+    const b2 = document.getElementById("btn-iter");
+    if (b2) b2.addEventListener("click", () => {
+      iterCount = Math.min(iterCount + 1, MU_DEMO);
+      document.getElementById("stage-canvas").innerHTML = stage5HTML();
+      renderStage.rebindIter();
+    });
+  };
+}
+document.getElementById("btn-prev").addEventListener("click", () => { stage = Math.max(0, stage - 1); renderStage(); });
+document.getElementById("btn-next").addEventListener("click", () => { stage = (stage + 1) % STAGES.length; renderStage(); });
+document.addEventListener("keydown", e => {
+  if (/(INPUT|SELECT|TEXTAREA)/.test(e.target.tagName)) return;
+  if (e.key === "ArrowRight") { stage = (stage + 1) % STAGES.length; renderStage(); }
+  if (e.key === "ArrowLeft") { stage = Math.max(0, stage - 1); renderStage(); }
+});
+renderStage();
+
+/* ---------------- calculator ---------------- */
+const $ = id => document.getElementById(id);
+function calc() {
+  const N = +$("s-n").value, G = +$("s-g").value, B = +$("s-b").value, mu = +$("s-mu").value;
+  $("o-n").textContent = N; $("o-g").textContent = G; $("o-b").textContent = B; $("o-mu").textContent = mu;
+  const seq = N * G;
+  const perEpoch = Math.ceil(seq / B);
+  const total = mu * perEpoch;
+  $("t-seq").textContent = seq;
+  $("t-steps1").textContent = perEpoch;
+  $("t-total").textContent = total;
+  $("t-reuse").textContent = mu;
+  $("t-divnote").textContent = seq % B ? "(rounded up — real trainers require divisibility)" : "";
+  const strip = $("cycle-strip");
+  strip.innerHTML = "";
+  const genSeg = `<div class="seg gen">generate ${seq} rollouts</div>`;
+  let updSegs = "";
+  const shown = Math.min(total, 24);
+  for (let i = 0; i < shown; i++) updSegs += `<div class="seg upd" style="flex:1" title="optimizer step ${i + 1}">${total <= 12 ? (i + 1) : ""}</div>`;
+  strip.innerHTML = genSeg + updSegs + (total > shown ? `<div class="seg upd" style="flex:1.4">…×${total}</div>` : "");
+  $("calc-sentence").innerHTML =
+    `One generation cycle = <strong>${seq} sequences</strong> sampled once, then <strong>${mu} pass${mu > 1 ? "es" : ""}</strong> over them ` +
+    `at <strong>${B} completions per optimizer step</strong> → <strong>${total} optimizer step${total > 1 ? "s" : ""} per rollout phase</strong>. ` +
+    (mu === 1 && total === 1
+      ? "Fully on-policy: every ratio = 1, the clip never fires."
+      : mu === 1
+        ? "μ = 1 but multiple steps per batch: later mini-batches are already slightly off-policy — the clip can fire."
+        : "Rollouts are reused — importance ratios drift from 1 and the clip is doing real work.");
+}
+["s-n", "s-g", "s-b", "s-mu"].forEach(id => $(id).addEventListener("input", calc));
+calc();
+
+/* ---------------- formula hover ---------------- */
+const PART_TEXT = {
+  expect: ["Sampling — done back in stages 1–2", "Prompts come from the dataset; the G completions come from π_old. Everything inside the bracket is evaluated on those frozen rollouts. This expectation IS the generation phase."],
+  groupavg: ["Average over the group", "G completions of the same prompt (num_generations). The loss weights each rollout in the group equally — the group is also where the advantage baseline comes from."],
+  tokenavg: ["Average over tokens — a contested choice", "GRPO normalizes per sequence, so a token in a long completion counts less than one in a short completion (length bias — one reason models ramble under GRPO). Dr.GRPO/DAPO switch to a global token mean. TRL exposes this as loss_type."],
+  ratio: ["The importance ratio — vs π_old, per token", "r = π_θ(token)/π_old(token). Corrects for the fact that after the first update you're optimizing on samples from a slightly older policy. Equals exactly 1 on the first update after generation. This is NOT the KL term."],
+  adv: ["Group-relative advantage — per completion", "Â_i = (R_i − group mean)/group std. One scalar for the whole completion, broadcast to all its tokens. This is the critic replacement — the 'group relative' in the name."],
+  clip: ["The trust region — protects rollout reuse", "Pessimistic min over the unclipped and clipped terms, exactly PPO's surrogate. Once a token's ratio leaves [1−ε, 1+ε] in the advantage's direction, its gradient is cut off, so μ extra passes can't launch the policy off a cliff."],
+  kl: ["The KL penalty — vs π_ref, per token, in the LOSS", "β·KL(π_θ‖π_ref) estimated per token with k3: exp(ref−θ) − (ref−θ) − 1. Anchors the policy to the SFT model. Contrast PPO-RLHF, which hides this inside the reward. β = 0.04 in the paper; many modern recipes set β = 0 and delete π_ref."]
+};
+const expl = document.getElementById("part-explainer");
+document.querySelectorAll(".fpart").forEach(el => {
+  const show = () => {
+    document.querySelectorAll(".fpart").forEach(x => x.classList.toggle("on", x.dataset.key === el.dataset.key));
+    const [h, p] = PART_TEXT[el.dataset.key];
+    expl.innerHTML = `<h4>${h}</h4><p>${p}</p>`;
+  };
+  el.addEventListener("mouseenter", show);
+  el.addEventListener("click", show);
+});
+
+/* ---------------- token inspector ---------------- */
+const COMPS = [
+  { adv: 1.30, advLabel: "+1.30",
+    toks: ["First", "compute", "12×10", "=", "120", "then", "+84", "→ 204"],
+    delta: [0.05, 0.02, 0.12, 0.01, 0.09, -0.03, 0.15, 0.11],
+    rho: [-0.10, 0.05, -0.20, 0.02, -0.15, 0.08, -0.25, -0.18] },
+  { adv: -0.97, advLabel: "−0.97",
+    toks: ["Just", "guessing", ":", "12×17", "=", "1934", "?", "done"],
+    delta: [-0.06, -0.11, -0.02, -0.04, -0.01, -0.18, -0.09, -0.13],
+    rho: [0.12, 0.20, 0.03, -0.05, 0.01, 0.30, 0.15, 0.22] },
+];
+const EPS = 0.2, BETA = 0.04;
+function renderInspector() {
+  const c = COMPS[+$("insp-comp").value];
+  const s = +$("insp-drift").value;
+  $("o-drift").textContent = s;
+  const W = 210, rMin = 0.55, rMax = 1.75;
+  const x = r => Math.max(0, Math.min(W - 2, (r - rMin) / (rMax - rMin) * W));
+  let rows = `<tr><th>token</th><th>ratio r<sub>t</sub> vs π_old &nbsp;(band = no-clip zone 1±ε)</th><th>Â (shared)</th><th>KL<sub>t</sub> vs π_ref</th><th>status</th></tr>`;
+  let clippedCount = 0, klSum = 0;
+  c.toks.forEach((t, i) => {
+    const r = Math.exp(s * c.delta[i]);
+    const lr = c.rho[i] - s * c.delta[i];         // log(pi_ref) - log(pi_theta)
+    const kl = Math.exp(lr) - lr - 1;             // k3 estimator, >= 0
+    klSum += kl;
+    const clipped = c.adv > 0 ? r > 1 + EPS : r < 1 - EPS;
+    if (clipped) clippedCount++;
+    const advCol = c.adv >= 0 ? "var(--pos)" : "var(--neg)";
+    rows += `<tr>
+      <td><span class="tok">${t}</span></td>
+      <td><div class="ratio-cell">
+        <div class="ratio-band" style="left:${x(1 - EPS)}px;width:${x(1 + EPS) - x(1 - EPS)}px"></div>
+        <div class="ratio-one" style="left:${x(1)}px"></div>
+        <div class="ratio-dot" style="left:${x(r) - 5}px"></div>
+      </div></td>
+      <td><span class="num">${c.advLabel}</span></td>
+      <td><div class="barcell"><div class="klbar-track"><div class="klbar" style="width:${Math.min(104, kl * 900 + 1)}px"></div></div><span class="num">${kl.toFixed(3)}</span></div></td>
+      <td>${clipped ? '<span class="flag-clip">CLIPPED — gradient off</span>' : '<span class="num">' + r.toFixed(2) + '</span>'}</td>
+    </tr>`;
+  });
+  $("tok-table").innerHTML = rows;
+  const meanKl = klSum / c.toks.length;
+  $("insp-caption").innerHTML = s === 0
+    ? `<strong>Before the first update, every ratio is exactly 1.00</strong> — the yellow dots sit on the center line and the clip band is decorative. The KL column is already nonzero though: π_θ has been drifting from π_ref since the start of the run. Per-token penalty added to the loss: β · KL = 0.04 × ${meanKl.toFixed(3)} (mean) — small, but it never sleeps.`
+    : `After ${s} update${s > 1 ? "s" : ""} on this batch: <strong>${clippedCount} of 8 tokens are clipped</strong> — they stop contributing gradient no matter how large Â is. That's the trust region doing its one job: making rollout reuse (μ &gt; 1) safe. Meanwhile mean KL vs π_ref = ${meanKl.toFixed(3)} — a separate, always-on anchor, unrelated to the clip.`;
+}
+["insp-comp", "insp-drift"].forEach(id => $(id).addEventListener("input", renderInspector));
+renderInspector();
+
+/* ---------------- reward-model margin demo ---------------- */
+(function () {
+  const gap = document.getElementById("rm-gap");
+  if (!gap) return;
+  const out = document.getElementById("rm-gap-out"),
+        bt = document.getElementById("rm-bt"),
+        mr = document.getElementById("rm-mr"),
+        bar = document.getElementById("rm-mr-bar"),
+        verdict = document.getElementById("rm-verdict");
+  function renderRM() {
+    const g = +gap.value;
+    out.textContent = g.toFixed(2);
+    bt.textContent = "“comment 1 ranks above comment 2” — identical whether the gap is 0.02 or 0.95";
+    mr.textContent = "p₁ − p₂ should equal " + g.toFixed(2);
+    if (bar) bar.style.width = Math.max(2, g * 100) + "%";
+    verdict.textContent = g < 0.15
+      ? "Near-tie: BT still demands a confident ranking; margin regression asks for a small gap — which is exactly the regime GRPO lives in when discriminating 16 samples from the same policy."
+      : g > 0.7
+        ? "Blowout: the top comment is far better (power-law land). BT learns the same 1 bit as a near-tie; margin regression tells the advantages this rollout is much better, not just better."
+        : "Moderate gap: BT collapses it to the same 1 bit; margin regression preserves it — and group standardization, being affine, carries it into the advantage spacing.";
+  }
+  gap.addEventListener("input", renderRM);
+  renderRM();
+})();
+</script>
+</body>
+</html>

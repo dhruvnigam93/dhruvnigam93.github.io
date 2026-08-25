@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>LUMOS — Staff-Level Defense Kit</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --good: #067d5b;
+            --bad: #b4232c;
+            --warn: #9a6a00;
+            --good-bg: rgba(6,125,91,0.07);
+            --bad-bg: rgba(180,35,44,0.06);
+            --warn-bg: rgba(154,106,0,0.07);
+            --radius: 14px;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                --good: #4bd6a6;
+                --bad: #ff7b84;
+                --warn: #e5b567;
+                --good-bg: rgba(75,214,166,0.08);
+                --bad-bg: rgba(255,123,132,0.08);
+                --warn-bg: rgba(229,181,103,0.08);
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap { max-width: 720px; margin: 0 auto; padding: max(20px, env(safe-area-inset-top)) 20px 80px; }
+        .back { display: inline-block; margin: 8px 0 20px; color: var(--muted); text-decoration: none; font-size: 0.95rem; }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.3rem; margin: 2.2em 0 0.5em; }
+        h3 { font-size: 1.05rem; margin: 1.4em 0 0.4em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        code { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85em; }
+        .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin: 1em 0; }
+        /* say-this quote */
+        .say {
+            border-left: 4px solid var(--good);
+            background: var(--good-bg);
+            border-radius: 0 var(--radius) var(--radius) 0;
+            padding: 12px 16px;
+            margin: 0.9em 0;
+            font-size: 0.97rem;
+        }
+        .say::before { content: "SAY THIS — OUT LOUD"; display: block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; color: var(--good); margin-bottom: 6px; }
+        .trap {
+            border-left: 4px solid var(--bad);
+            background: var(--bad-bg);
+            border-radius: 0 var(--radius) var(--radius) 0;
+            padding: 12px 16px;
+            margin: 0.9em 0;
+            font-size: 0.95rem;
+        }
+        .trap::before { content: "THE TRAP"; display: block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; color: var(--bad); margin-bottom: 6px; }
+        .open-item {
+            border-left: 4px solid var(--warn);
+            background: var(--warn-bg);
+            border-radius: 0 var(--radius) var(--radius) 0;
+            padding: 12px 16px;
+            margin: 0.9em 0;
+            font-size: 0.95rem;
+        }
+        .open-item::before { content: "STILL OPEN — DO THE HOMEWORK"; display: block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; color: var(--warn); margin-bottom: 6px; }
+        /* numbers grid */
+        .numgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 1em 0; }
+        .num { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+        .num b { display: block; font-size: 1.15rem; line-height: 1.25; }
+        .num span { font-size: 0.78rem; color: var(--muted); line-height: 1.3; display: block; }
+        /* tables */
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 1em 0; }
+        th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); }
+        td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+        td.bad { color: var(--bad); font-weight: 600; }
+        td.good { color: var(--good); font-weight: 600; }
+        /* collapsibles */
+        details { border: 1px solid var(--line); border-radius: var(--radius); padding: 0 18px; margin: 12px 0; background: var(--card); }
+        summary { cursor: pointer; padding: 14px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 0.97rem; }
+        summary::-webkit-details-marker { display: none; }
+        summary::after { content: "+"; color: var(--muted); font-size: 1.4rem; line-height: 1; flex: none; }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        details > *:first-of-type:not(summary) { margin-top: 12px; }
+        /* slider widget */
+        input[type="range"] { width: 100%; height: 44px; accent-color: var(--accent); }
+        .sl-out { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .sl-row { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+        .toc { font-size: 0.92rem; columns: 2; column-gap: 24px; }
+        .toc a { display: block; text-decoration: none; padding: 2px 0; }
+        @media (max-width: 540px) { .toc { columns: 1; } }
+        footer { margin-top: 3em; padding-top: 1.2em; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
+        .tag { display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 999px; vertical-align: 2px; margin-left: 6px; }
+        .tag.paper { background: var(--good-bg); color: var(--good); }
+        .tag.gap { background: var(--warn-bg); color: var(--warn); }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>LUMOS — Staff-Level Defense Kit</h1>
+        <p class="meta">Added 2026-08-25 · built from the Aug 10–11 resume deep dives + the paper (arXiv:2512.08957v2) reconciliation</p>
+
+        <p>The ideal, defensible version of every LUMOS grill answer. Both deep-dive sessions scored
+        <strong>5.5/10</strong> — not because the work is weak, but because three headline numbers moved under
+        pressure and the strongest material kept arriving last. This page is the corrected spine: every number
+        matched to the paper, every broken answer rebuilt in the shape that survives follow-ups.</p>
+
+        <div class="card toc">
+            <a href="#opener">0 · The 90-second opener</a>
+            <a href="#numbers">1 · The numbers card</a>
+            <a href="#arch">2 · Architecture</a>
+            <a href="#token">3 · The token &amp; the sparsity concession</a>
+            <a href="#reconcile">4 · Resume ↔ paper reconciliation</a>
+            <a href="#scaling">5 · Scaling laws (+ the arithmetic widget)</a>
+            <a href="#multitask">6 · Multi-task loss</a>
+            <a href="#replaced">7 · “Replaced 50+ models”</a>
+            <a href="#ab">8 · The A/B — +3.15% DAU</a>
+            <a href="#mechanism">9 · Spend down AND DAU up</a>
+            <a href="#accio">10 · Accio, the data loader</a>
+            <a href="#gems">11 · The lab-facing gems</a>
+            <a href="#broke">12 · Questions that broke — rebuilt</a>
+            <a href="#delivery">13 · Delivery rules</a>
+        </div>
+
+        <h2 id="opener">0 · The 90-second opener (lab register)</h2>
+        <p>Lead with the mechanism, not the scale. A lab hears "foundation model" at this size and rolls its
+        eyes; it hears the cross-attention structure and leans in.</p>
+        <div class="say">
+            LUMOS is an encoder-decoder transformer for multi-task user-behavior prediction at Dream11 —
+            it replaced hand-engineered, task-specific models across the platform. The part I'd call novel:
+            the decoder cross-attends <em>from known future event context to encoded user history</em> —
+            queries come from the future sporting calendar, keys and values from the user's past — with decoder
+            self-attention removed, so each future day's prediction depends only on history and its own context.
+            That lets the model condition on scheduled exogenous events, which a decoder-only stack structurally
+            cannot do. Tokenization is one continuous vector per user-day; the loss is uncertainty-weighted
+            multi-task (Kendall et al.). Trained on 250M users × 360-day sequences — about 50&nbsp;TB — on
+            8×A100 in 72 hours. Against the specialist baselines it gained +0.025 ROC-AUC, and in a randomized
+            A/B on the promotion system — ~700K users per arm, 18 days — it drove
+            <strong>+3.15% DAU with −2.47% offer spend</strong>.
+        </div>
+        <p><strong>Retire the phrase "foundation model."</strong> Say "domain-specific multi-task sequence
+        model." Understating scale while overstating precision is the researcher's tell — in the good sense.</p>
+
+        <h2 id="numbers">1 · The numbers card — precise phrasing, memorized flat</h2>
+        <div class="numgrid">
+            <div class="num"><b>250M</b><span>users in the training population</span></div>
+            <div class="num"><b>360 days</b><span>context window (one full year per user)</span></div>
+            <div class="num"><b>~90B</b><span>user-day tokens (paper's token = one day)</span></div>
+            <div class="num"><b>1.7T</b><span>scalar feature values — NOT tokens. Never say "1.7T tokens"</span></div>
+            <div class="num"><b>50 TB</b><span>training corpus, streamed from Delta</span></div>
+            <div class="num"><b>7.23M → 200M</b><span>paper v1 params → production (rehearse the bridge line, §4)</span></div>
+            <div class="num"><b>8×A100 40GB</b><span>72 h — 576 GPU-hours per run</span></div>
+            <div class="num"><b>+0.025 AUC</b><span>vs baselines, 3 binary tasks (paper)</span></div>
+            <div class="num"><b>−4.6% MAPE</b><span>2 continuous tasks (paper)</span></div>
+            <div class="num"><b>~700K / arm</b><span>promotion-surface A/B, 18 days (paper). 1.4M was the TOTAL</span></div>
+            <div class="num"><b>+3.15% DAU</b><span>treatment vs control, promotion surface — not platform</span></div>
+            <div class="num"><b>−2.47%</b><span>offer spend, same experiment</span></div>
+        </div>
+        <p>Numbers get said in a flat declarative voice. Both grills produced <em>inverted</em> numbers under
+        pressure ("AUC reduction" meaning improvement; the churn 30→45% example garbled). Slow down on any
+        sentence containing a metric.</p>
+
+        <h2 id="arch">2 · Architecture — the two-minute walkthrough</h2>
+        <div class="say">
+            Dream11 had dozens of small task-specific models — same features, ad-hoc engineering, different
+            targets. Redundant, and operationally expensive. LUMOS collapses them into one sequence model.
+            The <strong>encoder</strong> ingests the user's history: one token per day, each a continuous
+            vector of that day's aggregated activity plus the event context for that day. The
+            <strong>decoder's sequence is the future event calendar</strong> — for each upcoming day, an event
+            vector summarizing what's scheduled. Queries come from those future-day vectors; cross-attention
+            reads the encoded history; there's no decoder self-attention, so each future day is conditionally
+            independent given history and its own context. The decoder output feeds task-specific heads — kept
+            deliberately deep so the shared embedding stays generic. Those embeddings became a product of their
+            own: teams train downstream models on them.
+        </div>
+        <details>
+            <summary>"Why cross-attention at all? Decoder-only would do next-action prediction fine."</summary>
+            <p>Because the future is not exchangeable with the past here. User activity at Dream11 is driven by
+            the <em>sporting calendar</em> — a known, scheduled, exogenous signal. A decoder-only stack can only
+            condition on what has already happened; the cross-attention structure lets every prediction condition
+            on what is <em>about</em> to happen ("IPL final on Saturday") without leaking it into the history
+            encoding. That's the architectural contribution — and the ablation backs it up (§11: removing future
+            event context hurts more than removing both).</p>
+        </details>
+
+        <h2 id="token">3 · The token — and the sparsity concession</h2>
+        <div class="say">
+            One token = one user-day: a fixed-length continuous vector of daily aggregates — contests joined,
+            deposits, app opens — plus that day's event context. There's no discrete vocabulary and no embedding
+            lookup; it's a linear projection into the model dimension. I'd call it aggregation, not feature
+            engineering: no domain knowledge, no task-specific choices — the same recipe would work unchanged
+            for e-commerce or food delivery. The real feature-engineering cost was always deciding <em>which</em>
+            features encode domain knowledge; here there are none.
+        </div>
+        <details>
+            <summary>"85–90% of your positions are empty days. You're burning ~99% of attention FLOPs on padding."</summary>
+            <p>Own it — this was handled honestly in the grill and it landed:</p>
+            <div class="say">
+                Average activation is 10–15%, so yes — most positions are empty days, and most attention pairs
+                are empty-empty. Two reasons we kept them. First, an empty day carries signal: the token still
+                contains that day's event context, so "didn't show up on a big match day" is information the model
+                sees explicitly. Second, uniform daily spacing kept the backbone identical to a standard LLM
+                stack — no custom position embeddings for irregular gaps. I'll concede the cost plainly: we never
+                ran the compressed-vs-padded ablation, because event-time compression needs a different
+                positional scheme — it's an architecture change, not a flag. It's the first thing I'd explore
+                in a v2.
+            </div>
+            <p><strong>Don't</strong> wave at "95% of use cases are daily-level" as if it settles the intra-day
+            ordering question — deposit-then-play and play-then-deposit differ on a gambling platform. The honest
+            line: daily aggregation was a tractability choice, validated only indirectly by downstream wins.</p>
+        </details>
+
+        <h2 id="reconcile">4 · Resume ↔ paper — the reconciliation you MUST have loaded</h2>
+        <p>The tech report is hyperlinked from the resume. Anyone who clicks sees both. Four of five headline
+        numbers differ — each needs one rehearsed bridge sentence, delivered <em>before</em> the interviewer
+        finds the gap.</p>
+        <table>
+            <tr><th>Claim</th><th>Resume / spoken</th><th>Paper v2</th><th>The bridge line</th></tr>
+            <tr>
+                <td>Parameters</td>
+                <td class="bad">200M</td>
+                <td>7.23M</td>
+                <td>"The tech report documents v1 at 7.2M; production scaled to 200M following the model-size
+                scaling exponent."</td>
+            </tr>
+            <tr>
+                <td>Models replaced</td>
+                <td class="bad">50+</td>
+                <td>13 dimensions, 5 with baselines</td>
+                <td>"The paper evaluates 13 predicted dimensions against 5 legacy baselines; the 50+ count is
+                production consumers migrated onto LUMOS heads/embeddings since."</td>
+            </tr>
+            <tr>
+                <td>Token count</td>
+                <td class="bad">1.7T tokens</td>
+                <td>token = day → ~90B</td>
+                <td>"~90B user-day tokens; 1.7T is the scalar feature-value count (~19–22 dims per day-token).
+                I say 90B tokens, 1.7T scalars, 50TB."</td>
+            </tr>
+            <tr>
+                <td>A/B cohort</td>
+                <td class="bad">1.4M/arm, 3 weeks</td>
+                <td>~700K/arm, 18 days</td>
+                <td>"700K per arm — 1.4M total across both cohorts — over 18 days." (The 1.4M-per-arm version
+                was a doubling error. Use the paper's numbers.)</td>
+            </tr>
+            <tr>
+                <td>Scaling sweep</td>
+                <td class="bad">20 sizes, 2M–500M</td>
+                <td>4 sizes (7.23M–20.81M), 9 data runs</td>
+                <td>"Four model sizes crossed with nine data diets in the published fit." Don't inflate the grid.</td>
+            </tr>
+        </table>
+        <div class="trap">
+            Any ML interviewer reads "1.7T tokens" as sequence positions — that's the only meaning the phrase
+            has. Correcting it mid-interview doesn't read as precision; it reads as a 10× inflation that got
+            caught, and it contaminates +3.15% DAU and the GRPO +16% too. The resume line should already say
+            <em>"~90B user-day tokens (1.7T scalar features) from 250M users."</em> Still a big number. Also true.
+        </div>
+
+        <h2 id="scaling">5 · Scaling laws — say the ratio, never the percentages</h2>
+        <p>This broke in both sessions: per-doubling percentages got computed wrong out loud, twice. The fix is
+        structural — the <em>ratio of exponents</em> is the insight, so lead with it and never quote per-doubling
+        arithmetic from memory.</p>
+        <div class="say">
+            We fit L&nbsp;=&nbsp;E&nbsp;+&nbsp;a·N<sup>−0.15</sup>&nbsp;+&nbsp;b·D<sup>−0.05</sup> — with an
+            irreducible term. The point wasn't the absolute optimum, it was the <em>ratio</em>: the parameter
+            exponent came out ~3× the data exponent with comparable coefficients, so at our operating point we
+            were far more parameter-starved than data-starved. That told us to scale the model, not collect more
+            history. We stopped at the shipped size because the lift was already large enough to deploy and it
+            fit serving with zero pipeline change — we knew we were leaving loss on the table, and scaling N is
+            the current workstream.
+        </div>
+        <p><strong>Volunteer the limitation before they find it</strong> — this is the strongest
+        scientist-not-salesperson signal available in the whole story:</p>
+        <div class="say">
+            The scaling law is the weakest result in the paper, and I'll flag it myself: it's fit on the
+            uncertainty-weighted composite loss, and because the sigmas are learned, runs aren't strictly
+            comparable — a model can lower that number by inflating its uncertainties. R² on the model-size fit
+            was 0.62 over a 3× range. If I reran it, I'd fit on a fixed held-out per-task metric — mean BCE
+            across the classification tasks.
+        </div>
+        <div class="card">
+            <h3 style="margin-top:0">The arithmetic widget — what N^(−0.152) actually buys</h3>
+            <p style="font-size:0.9rem">Paper fit: L(N) = 0.438·N<sup>−0.152</sup> (+ intercept). Drag the
+            multiplier; this is the slip that happened live — twice.</p>
+            <div class="sl-row">
+                <label for="sc-k" style="font-weight:600; font-size:0.92rem">Multiply parameters by
+                    <output id="sc-k-out" class="sl-out">4×</output></label>
+            </div>
+            <input type="range" id="sc-k" min="1" max="4" step="1" value="2">
+            <div class="sl-row" style="margin-top:6px">
+                <div><div class="sl-out" id="sc-red">19%</div><div style="font-size:0.78rem; color:var(--muted)">reduction of the <em>reducible</em> term (1 − k<sup>−0.152</sup>)</div></div>
+                <div style="flex:1; font-size:0.85rem; color:var(--muted)" id="sc-note"></div>
+            </div>
+        </div>
+        <div class="trap">
+            "4× params halves the loss" was said out loud in a grill. The real fit says 4× buys ~19% of the
+            reducible term — and less of the <em>total</em> loss once the intercept is counted. If a per-doubling
+            number is demanded, derive it on paper in front of them (2<sup>−0.152</sup> ≈ 0.90 → ~10%); never
+            recall it.
+        </div>
+
+        <h2 id="multitask">6 · Multi-task loss — the best answer of the grill, kept sharp</h2>
+        <div class="say">
+            The heads span classification and regression on wildly different scales, so a naive sum lets one
+            task's gradient own the trunk. We used uncertainty weighting — Kendall, Gal &amp; Cipolla — where
+            per-task sigmas are learned on the fly and hard tasks aren't over-penalized. And we verified the
+            trunk wasn't being sacrificed the direct way: single-head specialist models trained at smaller scale
+            as controls, confirming the uncertainty-weighted trunk gave up almost nothing per-task. The heads
+            branch deep off the decoder embedding, which keeps that embedding generic — generic enough that we
+            later shipped it as a standalone product for downstream teams.
+        </div>
+        <p>Know the follow-up: <em>how many heads, which loss per head</em> (BCE for the binary tasks, regression
+        losses for the continuous ones — have the exact count from the paper's 13 dimensions ready). Not having
+        the head count was the only dent in an otherwise winning answer.</p>
+
+        <h2 id="replaced">7 · "Replaced 50+ models" — what replaced means, and the missing number</h2>
+        <div class="say">
+            "Replaced" means the legacy models' consumers were cut over to LUMOS heads or LUMOS embeddings — not
+            that 50 models vanished on day one. Where we had baselines: +0.025 average ROC-AUC on the binary
+            tasks, −4.6% MAPE on the continuous ones. Not everything improved — a handful of regression tasks got
+            worse — and we shipped anyway, because one model in production versus fifty, each with its own
+            feature pipeline and on-call surface, is an enormous operational win. For tasks where the specialist
+            still won, the path was: train on LUMOS embeddings rather than keep the bespoke pipeline.
+        </div>
+        <div class="open-item">
+            <strong>The worst-regression number is still missing, and every serious interviewer asks for it.</strong>
+            "Some regressed" without a name and a magnitude reads as either not knowing your own system or hiding
+            something. 45 minutes with the per-task eval table: pull the two or three worst tasks, their deltas,
+            and what was decided for each. The maintenance-consolidation argument only works <em>after</em> you've
+            shown you know exactly what it cost.
+        </div>
+
+        <h2 id="ab">8 · The A/B — narrate the scope in your FIRST sentence</h2>
+        <p>The design is genuinely good. The risk is entirely in scoping: the resume reads as a platform-wide
+        DAU lift; the truth is a promotion-surface experiment. Interviewers forgive scope; they don't forgive
+        discovering it themselves.</p>
+        <div class="say">
+            Let me scope the +3.15% precisely, because it's a surface-level result, not a platform number.
+            Dream11's promotion system decides discounts from churn risk and pay/deposit propensity. We swapped
+            exactly those input predictions — legacy task-specific models out, LUMOS heads in — and randomized
+            users: ~700K per arm, 18 days, during IPL. Treatment DAU came out +3.15% over control with offer
+            spend −2.47%. IPL is actually the <em>low</em>-variance window — a match every day, DAU extremely
+            stable, so effects this size are unambiguous; p&nbsp;&lt;&nbsp;0.01. What I can't claim: a measured
+            platform-wide lift after full rollout — once you deploy to everyone there's no counterfactual left.
+            The A/B is the evidence; the rollout was the bet on it.
+        </div>
+        <div class="open-item">
+            Memorize the actual confidence interval, not the variance <em>argument</em>. "I don't remember, but
+            it's highly significant" was said in a grill. Pull CI and p-value from the experiment dashboard and
+            have both cold.
+        </div>
+
+        <h2 id="mechanism">9 · Spend down AND DAU up — the mechanism, worded carefully</h2>
+        <p>These normally trade off, so the mechanism question is guaranteed. The answer is good — it just got
+        garbled live (a "30% → 45%" example that inverted mid-sentence). Fixed version, slow on the numbers:</p>
+        <div class="say">
+            You can always buy DAU with more offer spend — the policy sits on that trade-off curve. What moved
+            <em>both</em> in the right direction was churn accuracy improving exactly where the money leaks: the
+            boundary band. Users the old model put around 30–45% churn risk are the decision boundary — that
+            score decides whether they get a promotion. Get it wrong on someone who was coming back anyway, and
+            they take the discount without it changing anything: pure spend, zero incremental DAU. LUMOS, seeing
+            the full raw behavior sequence instead of hand-picked features, got precisely those ambiguous cases
+            right more often. So promotions stopped going to users who didn't need them — spend fell — while
+            true at-risk users kept getting them — DAU rose.
+        </div>
+
+        <h2 id="accio">10 · Accio — reframed around what it actually bought</h2>
+        <p>The old bullet implied a throughput win; under questioning, MFU was 10–15% before <em>and</em> after.
+        That contradiction loses the room. The reframe — which is also just the truth — makes it a
+        build-vs-buy judgment call with a profiled bottleneck:</p>
+        <div class="say">
+            Everything at Dream11 lives in Delta tables, and the existing streaming loaders — Petastorm,
+            Mosaic's — all forced an intermediate converted copy with tighter schema constraints than Delta
+            itself, and gave almost no hook for load-time transforms. So I built Accio: a Delta-native streaming
+            loader that shards directly into the GPUs. Throughput came out comparable to Petastorm, marginally
+            slower than Mosaic — and I took that trade deliberately: no second copy of a 50TB dataset, no schema
+            compromise, and date-indexed enrichment at load time that I couldn't express in either alternative.
+            And throughput genuinely wasn't the critical path: MFU was ~10–15%, bounded by the single-process
+            coupling of loading and training, not by format. Fixing that needs parallel loader workers feeding
+            each GPU process — which is exactly why we were evaluating Ray Data next.
+        </div>
+        <p>Naming the real bottleneck is what turns this from defensive to profiled. "I built" is correct here —
+        keep claiming it; it was the one clean ownership claim in the session.</p>
+        <div class="open-item">
+            <strong>Have a bug story.</strong> "Describe one bug you personally debugged in Accio" got "I can't
+            remember specifically" — fatal for an I-built-this claim. You clearly fought shard-boundary /
+            epoch-repeat / worker-duplication issues (you said so unprompted). Reconstruct ONE: symptom → how you
+            found it → the fix. 60 seconds, rehearsed.
+        </div>
+
+        <h2 id="gems">11 · The lab-facing gems — strongest results, currently unsold</h2>
+        <p>Neither of these is on the resume, and they're what a researcher actually wants to discuss:</p>
+        <div class="card">
+            <p><strong>Appendix B.2 — the embeddings beat the specialists at their own game.</strong> Multi-task
+            LUMOS embeddings outperform single-task specialist models <em>on the specialists' own tasks</em>
+            (+7.8%, +7.4%). That's the transfer-learning claim most multi-task papers wish they had.</p>
+            <p><strong>Appendix B.4 — the event-context ablation is counterintuitive.</strong> Removing past
+            event context <em>or</em> future event context each hurts more than removing <em>both</em>. The two
+            context streams are complements — the model uses them jointly, not additively. A real, mechanistic,
+            slightly weird finding — exactly the thing to volunteer to a lab.</p>
+        </div>
+
+        <h2 id="broke">12 · Questions that broke — each one rebuilt</h2>
+        <details>
+            <summary>"Where do 1.7 trillion tokens come from?"</summary>
+            <p>Ended a grill with "I'll get back to you" — on a resume number. Rebuilt:</p>
+            <div class="say">
+                Token means one user-day, and there are ~90B of those — 250M users by a 360-day window. The 1.7T
+                is the scalar count: each day-token is a ~20-dimensional feature vector, and 90B × ~19–22 dims
+                lands at 1.7–2T values, about 50TB. On the resume I say 90B tokens; I keep 1.7T only as "scalar
+                features," never as tokens.
+            </div>
+        </details>
+        <details>
+            <summary>"What did your fit say the compute-optimal size was?"</summary>
+            <p>Don't produce per-doubling percentages (§5). The shape: state the fitted form with the intercept,
+            give the exponent <em>ratio</em> and its decision ("scale N, not D"), own that the shipped size was a
+            deployment choice below the fit's optimum, and name the caveat (composite loss, learned sigmas,
+            R²&nbsp;0.62) unprompted.</p>
+        </details>
+        <details>
+            <summary>"Which task regressed the most, by how much — and did you ship it regressed?"</summary>
+            <p>Open item (§7). Until the eval table is pulled, the honest bridge:</p>
+            <div class="say">
+                I don't have the per-task deltas memorized and I won't guess them. What I can tell you is the
+                decision rule: a task owner could keep their specialist if it beat the LUMOS head on their
+                holdout — and the migration path we pushed was retraining their model on LUMOS embeddings, which
+                in our ablations beat specialists even on their own tasks.
+            </div>
+            <p>"I don't have that number, here's what I do have" costs far less than answering a different
+            question — which is what happened twice.</p>
+        </details>
+        <details>
+            <summary>"What was the CI on +3.15%?"</summary>
+            <p>Open item (§8). Have the interval and p-value cold; the IPL-stability variance argument is
+            supporting material, not a substitute.</p>
+        </details>
+        <details>
+            <summary>"GPU utilization before and after Accio?" / "One bug you debugged in it?"</summary>
+            <p>Utilization: answer is §10 — same MFU before and after, and that's fine <em>because the loader was
+            never the bottleneck and you profiled it</em>. Bug story: open item, reconstruct one.</p>
+        </details>
+
+        <h2 id="delivery">13 · Delivery rules (from both debriefs)</h2>
+        <div class="card">
+            <p><strong>1 · Structure to drill: claim → number → mechanism → caveat.</strong> Four sentences, then
+            stop and let them ask. Every grill answer arrived at its point 45–60 seconds in; interviewers judge
+            in the first 15.</p>
+            <p><strong>2 · Signs flip under pressure.</strong> "AUC reduction" for improvement; MAE direction
+            inverted; 30→45% garbled. Slow down physically on any sentence with a metric in it.</p>
+            <p><strong>3 · Answer the question that was asked.</strong> Twice a fact question (worst regression,
+            Accio bug) got a rationale answer. If the fact is missing, say so in one clean sentence, then give
+            what you do have.</p>
+            <p><strong>4 · Don't agree with false critiques of your own work.</strong> A grill "corrected" the
+            scaling fit for missing an intercept — it had one — and the concession came instantly. In a real
+            interview that's how a defensible result becomes an indefensible one. If you know your work, defend it.</p>
+            <p><strong>5 · Kill the "right?" tic</strong> — roughly once per 30 seconds in transcripts. It reads
+            as seeking agreement.</p>
+            <p><strong>6 · "I" for what you did.</strong> "I built Accio" landed. The scaling law, the A/B, the
+            multi-task design were all "we" — claim your part in each, one sentence per.</p>
+        </div>
+
+        <div class="open-item">
+            <strong>The full homework list, in priority order:</strong> (1) fix the resume line — 90B tokens /
+            scope the DAU claim — it is circulating <em>now</em>; (2) rehearse the 200M↔7.23M and 50+↔13 bridge
+            lines until automatic; (3) pull the worst-regression table (45 min); (4) memorize the A/B CI;
+            (5) reconstruct one Accio bug story; (6) verify the 1.7T scalar count against the Spark job.
+        </div>
+
+        <footer>
+            Personal explainer · unlisted · sources: resume deep-dive sessions 2026-08-10/11 ·
+            LUMOS tech report arXiv:2512.08957v2 · <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+
+    <script>
+        (function () {
+            var k = document.getElementById('sc-k');
+            if (!k) return;
+            var out = document.getElementById('sc-k-out'),
+                red = document.getElementById('sc-red'),
+                note = document.getElementById('sc-note');
+            var NOTES = {
+                1: "2× params → 2^(−0.152) ≈ 0.90 → ~10% off the reducible term. Not 15. This exact slip happened live.",
+                2: "4× → ~19%. “4× halves the loss” — said in a grill — is off by more than 2×.",
+                3: "8× → ~27%. Two doublings compound multiplicatively (0.90 × 0.90 ≈ 0.81), they don't add.",
+                4: "16× → ~34%. And remember: the TOTAL loss moves less than this — the intercept E doesn't shrink."
+            };
+            function render() {
+                var exp = +k.value;               // slider 1..4 → k = 2^exp
+                var mult = Math.pow(2, exp);
+                var r = 1 - Math.pow(mult, -0.152);
+                out.textContent = mult + "×";
+                red.textContent = Math.round(r * 100) + "%";
+                note.textContent = NOTES[exp] || "";
+            }
+            k.addEventListener('input', render);
+            render();
+        })();
+    </script>
+</body>
+</html>
