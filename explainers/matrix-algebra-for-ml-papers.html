@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>Matrix Algebra for ML Papers</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --accent2: #9333ea;
+            --good: #15803d;
+            --bad: #dc2626;
+            --goodbg: #dcfce7;
+            --badbg: #fee2e2;
+            --hlA: #dbeafe;
+            --hlB: #f3e8ff;
+            --hlC: #dcfce7;
+            --card: #f7f7f8;
+            --radius: 14px;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --accent2: #c084fc;
+                --good: #4ade80;
+                --bad: #f87171;
+                --goodbg: #14351f;
+                --badbg: #3b1a1a;
+                --hlA: #1d3a63;
+                --hlB: #3b2360;
+                --hlC: #14351f;
+                --card: #171a20;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: max(20px, env(safe-area-inset-top)) 20px 80px;
+        }
+        .back {
+            display: inline-block;
+            margin: 8px 0 20px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.3rem; margin: 2em 0 0.5em; }
+        h3 { font-size: 1.05rem; margin: 1.4em 0 0.4em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        code {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.85em;
+        }
+        pre {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            overflow-x: auto;
+            font-size: 0.85em;
+        }
+        pre code { background: none; border: none; padding: 0; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+        }
+        details {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 0 18px;
+            margin: 12px 0;
+            background: var(--card);
+        }
+        summary {
+            cursor: pointer;
+            padding: 16px 0;
+            font-weight: 600;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after { content: "+"; color: var(--muted); font-size: 1.4rem; line-height: 1; }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        button {
+            font: inherit;
+            font-weight: 600;
+            color: #fff;
+            background: var(--accent);
+            border: none;
+            border-radius: 999px;
+            padding: 12px 22px;
+            min-height: 48px;
+            min-width: 48px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        button:active { transform: scale(0.96); }
+        button:disabled { opacity: 0.4; cursor: default; }
+        .ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+        input[type="range"] { width: 100%; height: 44px; accent-color: var(--accent); }
+        footer {
+            margin-top: 3em;
+            padding-top: 1.2em;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+        /* ---- section nav pills ---- */
+        .pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 6px; }
+        .pills a {
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--accent);
+            border: 1px solid var(--line);
+            background: var(--card);
+            border-radius: 999px;
+            padding: 8px 14px;
+        }
+        /* ---- rule lines ---- */
+        .rule {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 1.02em;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-left: 4px solid var(--accent);
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin: 10px 0;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .rule small { color: var(--muted); font-family: inherit; }
+        /* ---- inline matrices ---- */
+        .mx {
+            display: inline-grid;
+            gap: 1px 12px;
+            padding: 5px 10px;
+            border-left: 2px solid var(--muted);
+            border-right: 2px solid var(--muted);
+            border-radius: 8px;
+            vertical-align: middle;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.88em;
+            line-height: 1.35;
+            margin: 2px 2px;
+        }
+        .mx span { text-align: center; min-width: 1.1em; }
+        .mrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+        /* ---- cell grids (widgets) ---- */
+        .mgrid { display: inline-grid; gap: 3px; }
+        .mcell {
+            width: 34px; height: 34px;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid var(--line);
+            border-radius: 7px;
+            background: var(--card);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.85rem;
+            transition: background 0.25s, border-color 0.25s, transform 0.25s;
+        }
+        .dcell { width: 20px; height: 20px; border-radius: 5px; }
+        .tintA { background: var(--hlA); }
+        .tintB { background: var(--hlB); }
+        .tintC { background: var(--hlC); }
+        .hA { background: var(--hlA); border-color: var(--accent); transform: scale(1.06); }
+        .hB { background: var(--hlB); border-color: var(--accent2); transform: scale(1.06); }
+        .hC { background: var(--hlC); border-color: var(--good); transform: scale(1.06); font-weight: 700; }
+        .dim { color: var(--muted); }
+        .mlabel { text-align: center; font-size: 0.82rem; color: var(--muted); margin-top: 6px; font-family: ui-monospace, Menlo, monospace; }
+        .widget {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin: 16px 0;
+            background: var(--bg);
+        }
+        .widget h4 { margin: 0 0 10px; font-size: 0.95rem; }
+        .wtag { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+        .stage { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px; padding: 8px 0; }
+        .opx { font-size: 1.3rem; color: var(--muted); }
+        /* ---- steppers ---- */
+        .steppers { display: flex; flex-wrap: wrap; gap: 10px 18px; justify-content: center; margin-top: 10px; }
+        .stepper { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; }
+        .stepper .lab { color: var(--muted); min-width: 52px; text-align: right; }
+        .mini {
+            min-width: 44px; min-height: 44px; padding: 0;
+            border-radius: 10px; font-size: 1.25rem; line-height: 1;
+            background: var(--card); color: var(--accent); border: 1px solid var(--line);
+        }
+        .stepval { font-family: ui-monospace, Menlo, monospace; font-weight: 700; min-width: 22px; text-align: center; }
+        .status { text-align: center; font-weight: 600; margin-top: 10px; min-height: 1.5em; }
+        .ok { color: var(--good); }
+        .err { color: var(--bad); }
+        .ctlrow { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 12px; }
+        .exp {
+            font-family: ui-monospace, Menlo, monospace;
+            font-size: 0.9rem;
+            text-align: center;
+            min-height: 2.2em;
+            margin-top: 10px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        /* ---- sliders block ---- */
+        .sl { margin: 8px 0; }
+        .sl label { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--muted); }
+        .sl label b { color: var(--fg); font-family: ui-monospace, Menlo, monospace; }
+        /* ---- cost bars ---- */
+        .bars { margin-top: 12px; }
+        .bwrap { margin: 10px 0; }
+        .bname { font-size: 0.82rem; margin-bottom: 4px; display: flex; justify-content: space-between; gap: 10px; }
+        .bname b { font-family: ui-monospace, Menlo, monospace; }
+        .btrack { background: var(--card); border: 1px solid var(--line); border-radius: 999px; height: 22px; overflow: hidden; }
+        .bfill { height: 100%; border-radius: 999px; transition: width 0.4s ease; }
+        .fSlow { background: var(--bad); }
+        .fFast { background: var(--good); }
+        .speedup { text-align: center; font-weight: 700; margin-top: 10px; }
+        /* ---- attention trace ---- */
+        .tracelist { list-style: none; padding: 0; margin: 10px 0; counter-reset: tr; }
+        .tracelist li {
+            border: 1px solid var(--line); border-radius: 10px;
+            padding: 10px 14px; margin: 8px 0; background: var(--card);
+            font-size: 0.92rem; opacity: 0.45; transition: opacity 0.3s, border-color 0.3s;
+        }
+        .tracelist li.done { opacity: 0.8; }
+        .tracelist li.cur { opacity: 1; border-color: var(--accent); box-shadow: 0 0 0 2px var(--hlA); }
+        .shape {
+            font-family: ui-monospace, Menlo, monospace; font-size: 0.82em;
+            background: var(--hlA); border-radius: 6px; padding: 1px 7px; white-space: nowrap;
+        }
+        .shape.b { background: var(--hlB); }
+        .shape.c { background: var(--hlC); }
+        /* ---- notation tables ---- */
+        .tscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table.nt { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+        table.nt th, table.nt td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+        table.nt th { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        table.nt td:first-child { font-family: ui-monospace, Menlo, monospace; white-space: nowrap; font-size: 0.85rem; }
+        /* ---- quiz ---- */
+        .q { border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin: 14px 0; background: var(--card); }
+        .q .qq { font-weight: 600; margin-bottom: 10px; }
+        .qopt {
+            display: block; width: 100%; text-align: left; margin: 8px 0;
+            background: var(--bg); color: var(--fg); border: 1px solid var(--line);
+            border-radius: 10px; padding: 12px 14px; font-weight: 500;
+            font-family: ui-monospace, Menlo, monospace; font-size: 0.9rem;
+        }
+        .qopt.right { background: var(--goodbg); border-color: var(--good); font-weight: 700; }
+        .qopt.wrong { background: var(--badbg); border-color: var(--bad); }
+        .qexp { display: none; font-size: 0.9rem; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+        .q.answered .qexp { display: block; }
+        .scoreline { font-weight: 700; text-align: center; margin: 14px 0; }
+        canvas { display: block; margin: 0 auto; max-width: 100%; touch-action: pan-y; }
+        .canvasreads {
+            display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: center;
+            font-family: ui-monospace, Menlo, monospace; font-size: 0.9rem; margin-top: 8px;
+        }
+        .kq { color: var(--accent); font-weight: 700; }
+        .kk { color: var(--accent2); font-weight: 700; }
+        sub, sup { line-height: 0; }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>Matrix Algebra for ML Papers</h1>
+        <p class="meta">Added 2026-08-26</p>
+
+        <p>Every rule you need to follow the algebra in modern papers — MLA absorption, RoPE,
+        LoRA, attention — with live widgets, a notation decoder table for reading papers, and a
+        quiz at the end. The whole game is: <b>track shapes, and know which regroupings are legal.</b></p>
+
+        <nav class="pills">
+            <a href="#s-shapes">Shapes</a>
+            <a href="#s-entry">Matmul, live</a>
+            <a href="#s-laws">3 laws</a>
+            <a href="#s-transpose">Transpose</a>
+            <a href="#s-vectors">Dot products</a>
+            <a href="#s-rope">Rotations &amp; RoPE</a>
+            <a href="#s-attn">Trace attention</a>
+            <a href="#s-notation">Paper notation</a>
+            <a href="#s-quiz">Quiz</a>
+        </nav>
+
+        <!-- ============ 1. SHAPES ============ -->
+        <h2 id="s-shapes">1 · The one rule of matmul: shapes</h2>
+
+        <div class="rule">(m×n) @ (n×p) &nbsp;&rarr;&nbsp; (m×p) &nbsp;&nbsp;<small>inner dims must match — they “cancel”</small></div>
+
+        <p>Read any product left to right: the <b>columns of the left</b> matrix must equal the
+        <b>rows of the right</b>. Those two inner numbers annihilate; the outer two survive as
+        the result’s shape. If the inner numbers differ, the product simply doesn’t exist.</p>
+
+        <div class="widget">
+            <div class="wtag">Widget · shape machine</div>
+            <h4>Resize A and B. Watch when the product exists.</h4>
+            <div class="stage">
+                <div>
+                    <div class="mgrid" id="dm-a"></div>
+                    <div class="mlabel" id="dm-al"></div>
+                </div>
+                <div class="opx">@</div>
+                <div>
+                    <div class="mgrid" id="dm-b"></div>
+                    <div class="mlabel" id="dm-bl"></div>
+                </div>
+                <div class="opx">=</div>
+                <div>
+                    <div class="mgrid" id="dm-c"></div>
+                    <div class="mlabel" id="dm-cl"></div>
+                </div>
+            </div>
+            <div class="status" id="dm-status"></div>
+            <div class="steppers">
+                <div class="stepper"><span class="lab">A rows</span><button class="mini" data-k="ar" data-d="-1">&minus;</button><span class="stepval" id="dm-v-ar">2</span><button class="mini" data-k="ar" data-d="1">+</button></div>
+                <div class="stepper"><span class="lab">A cols</span><button class="mini" data-k="ac" data-d="-1">&minus;</button><span class="stepval" id="dm-v-ac">3</span><button class="mini" data-k="ac" data-d="1">+</button></div>
+                <div class="stepper"><span class="lab">B rows</span><button class="mini" data-k="br" data-d="-1">&minus;</button><span class="stepval" id="dm-v-br">3</span><button class="mini" data-k="br" data-d="1">+</button></div>
+                <div class="stepper"><span class="lab">B cols</span><button class="mini" data-k="bc" data-d="-1">&minus;</button><span class="stepval" id="dm-v-bc">2</span><button class="mini" data-k="bc" data-d="1">+</button></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <b>Shape-first reading.</b> When a paper writes <code>W_UK &isin; &#8477;<sup>d&times;d_c</sup></code>
+            and <code>c &isin; &#8477;<sup>d_c</sup></code>, you should instantly see that
+            <code>W_UK c</code> is a <code>d</code>-vector — before caring what it <i>means</i>.
+            Shape-checking every product is the fastest way to catch both your own bugs and a
+            paper’s typos.
+        </div>
+
+        <!-- ============ 2. MATMUL ENTRY BY ENTRY ============ -->
+        <h2 id="s-entry">2 · What each entry actually is</h2>
+
+        <p>Entry <code>C[i,j]</code> is the <b>dot product of row i of A with column j of B</b>.
+        That’s all matmul is: every output cell is one dot product. Step through it:</p>
+
+        <div class="widget">
+            <div class="wtag">Widget · matmul, one dot product at a time</div>
+            <div class="stage">
+                <div>
+                    <div class="mgrid" id="mm-a"></div>
+                    <div class="mlabel">A · 2&times;3</div>
+                </div>
+                <div class="opx">@</div>
+                <div>
+                    <div class="mgrid" id="mm-b"></div>
+                    <div class="mlabel">B · 3&times;2</div>
+                </div>
+                <div class="opx">=</div>
+                <div>
+                    <div class="mgrid" id="mm-c"></div>
+                    <div class="mlabel">C · 2&times;2</div>
+                </div>
+            </div>
+            <div class="exp" id="mm-exp">press <b>next</b> to compute C entry by entry</div>
+            <div class="ctlrow">
+                <button class="ghost" id="mm-reset">reset</button>
+                <button id="mm-next">next &rarr;</button>
+                <button class="ghost" id="mm-auto">&#9654; auto</button>
+            </div>
+        </div>
+
+        <p>Why the shape rule exists is now obvious: a dot product needs both vectors the same
+        length — row of A has <code>n</code> entries, column of B has <code>n</code> entries.
+        The inner dims aren’t “cancelling” by magic; they’re the two ends of a dot product.</p>
+
+        <!-- ============ 3. THREE LAWS ============ -->
+        <h2 id="s-laws">3 · The three laws</h2>
+
+        <h3>Not commutative: AB &ne; BA</h3>
+        <p>Usually the shapes don’t even allow both. And when they do (square matrices), the
+        results differ. Watch what one swap matrix does from each side:</p>
+        <div class="mrow">
+            <span class="mx" style="grid-template-columns:repeat(2,auto)"><span>1</span><span>2</span><span>3</span><span>4</span></span>
+            <span class="mx" style="grid-template-columns:repeat(2,auto)"><span>0</span><span>1</span><span>1</span><span>0</span></span>
+            <span>=</span>
+            <span class="mx" style="grid-template-columns:repeat(2,auto)"><span>2</span><span>1</span><span>4</span><span>3</span></span>
+            <span class="dim">&nbsp;&larr; B on the right swaps <b>columns</b></span>
+        </div>
+        <div class="mrow">
+            <span class="mx" style="grid-template-columns:repeat(2,auto)"><span>0</span><span>1</span><span>1</span><span>0</span></span>
+            <span class="mx" style="grid-template-columns:repeat(2,auto)"><span>1</span><span>2</span><span>3</span><span>4</span></span>
+            <span>=</span>
+            <span class="mx" style="grid-template-columns:repeat(2,auto)"><span>3</span><span>4</span><span>1</span><span>2</span></span>
+            <span class="dim">&nbsp;&larr; B on the left swaps <b>rows</b></span>
+        </div>
+
+        <h3>Associative: (AB)C = A(BC) — the absorption trick</h3>
+        <p>You may regroup a chain any way you like; the <b>result is bit-for-bit identical</b>.
+        But the <b>cost is wildly different</b>, and that asymmetry is the entire MLA absorption
+        trick: fold <code>W<sub>q</sub>W<sub>UK</sub></code> together <i>offline</i>, so at decode
+        time you never re-expand the cache.</p>
+
+        <div class="widget">
+            <div class="wtag">Widget · same answer, 1000&times; different cost</div>
+            <h4>Score one query q&nbsp;&isin;&nbsp;&#8477;<sup>d</sup> against T cached latents c<sub>j</sub>&nbsp;&isin;&nbsp;&#8477;<sup>d_c</sup> through W&nbsp;&isin;&nbsp;&#8477;<sup>d&times;d_c</sup></h4>
+            <div class="sl"><label>model dim d <b id="fl-dv">4096</b></label><input type="range" id="fl-d" min="512" max="8192" step="512" value="4096"></div>
+            <div class="sl"><label>compressed dim d_c <b id="fl-cv">512</b></label><input type="range" id="fl-c" min="64" max="2048" step="64" value="512"></div>
+            <div class="sl"><label>cached tokens T <b id="fl-tv">4096</b></label><input type="range" id="fl-t" min="512" max="16384" step="512" value="4096"></div>
+            <div class="bars">
+                <div class="bwrap">
+                    <div class="bname"><span>q<sup>&#7488;</sup>(W c<sub>j</sub>) — re-expand every token</span><b id="fl-slow"></b></div>
+                    <div class="btrack"><div class="bfill fSlow" id="fl-bslow"></div></div>
+                </div>
+                <div class="bwrap">
+                    <div class="bname"><span>(q<sup>&#7488;</sup>W) c<sub>j</sub> — absorb once, then tiny dots</span><b id="fl-fast"></b></div>
+                    <div class="btrack"><div class="bfill fFast" id="fl-bfast"></div></div>
+                </div>
+            </div>
+            <div class="speedup" id="fl-speed"></div>
+            <p class="dim" style="font-size:0.85rem; text-align:center; margin:6px 0 0">bars are log-scaled · multiplies counted, same output either way</p>
+        </div>
+
+        <h3>Distributive: A(B + C) = AB + AC</h3>
+        <p>Products distribute over sums from either side: <code>(B + C)A = BA + CA</code> too.
+        This is why LoRA works at inference: <code>x(W + BA) = xW + xBA</code> — you can keep the
+        adapter separate or merge it into W, identical outputs.</p>
+
+        <!-- ============ 4. TRANSPOSE ============ -->
+        <h2 id="s-transpose">4 · Transpose toolkit</h2>
+
+        <div class="rule">(A<sup>&#7488;</sup>)<sup>&#7488;</sup> = A</div>
+        <div class="rule">(A + B)<sup>&#7488;</sup> = A<sup>&#7488;</sup> + B<sup>&#7488;</sup> &nbsp;&nbsp;<small>and scalars pass through: (cA)&#7488; = cA&#7488;</small></div>
+        <div class="rule">(AB)<sup>&#7488;</sup> = B<sup>&#7488;</sup>A<sup>&#7488;</sup> &nbsp;&nbsp;<small>ORDER FLIPS · chains too: (ABC)&#7488; = C&#7488;B&#7488;A&#7488;</small></div>
+
+        <p>The flip is forced by shapes: if <code>A</code> is m&times;n and <code>B</code> is
+        n&times;p, then <code>(AB)&#7488;</code> is p&times;m — and the only way to build a
+        p&times;m product from the transposes is <code>B&#7488;</code> (p&times;n) times
+        <code>A&#7488;</code> (n&times;m). <code>A&#7488;B&#7488;</code> doesn’t even chain.</p>
+
+        <details>
+            <summary>Numeric check: (AB)&#7488; = B&#7488;A&#7488; (and A&#7488;B&#7488; fails)</summary>
+            <div class="mrow">
+                <span>AB =</span>
+                <span class="mx" style="grid-template-columns:repeat(2,auto)"><span>2</span><span>1</span><span>4</span><span>3</span></span>
+                <span>&nbsp;so&nbsp; (AB)<sup>&#7488;</sup> =</span>
+                <span class="mx" style="grid-template-columns:repeat(2,auto)"><span>2</span><span>4</span><span>1</span><span>3</span></span>
+            </div>
+            <div class="mrow">
+                <span>B<sup>&#7488;</sup>A<sup>&#7488;</sup> =</span>
+                <span class="mx" style="grid-template-columns:repeat(2,auto)"><span>0</span><span>1</span><span>1</span><span>0</span></span>
+                <span class="mx" style="grid-template-columns:repeat(2,auto)"><span>1</span><span>3</span><span>2</span><span>4</span></span>
+                <span>=</span>
+                <span class="mx" style="grid-template-columns:repeat(2,auto)"><span>2</span><span>4</span><span>1</span><span>3</span></span>
+                <span class="ok">&nbsp;&#10003; match</span>
+            </div>
+            <div class="mrow">
+                <span>A<sup>&#7488;</sup>B<sup>&#7488;</sup> =</span>
+                <span class="mx" style="grid-template-columns:repeat(2,auto)"><span>1</span><span>3</span><span>2</span><span>4</span></span>
+                <span class="mx" style="grid-template-columns:repeat(2,auto)"><span>0</span><span>1</span><span>1</span><span>0</span></span>
+                <span>=</span>
+                <span class="mx" style="grid-template-columns:repeat(2,auto)"><span>3</span><span>1</span><span>4</span><span>2</span></span>
+                <span class="err">&nbsp;&#10007; wrong order, wrong answer</span>
+            </div>
+            <p>(Using A = [[1,2],[3,4]], B = [[0,1],[1,0]] from §3.)</p>
+        </details>
+
+        <div class="card">
+            <b>Mnemonic — socks and shoes.</b> To undo “socks then shoes,” you remove shoes first.
+            Transpose (and inverse) of a product unwind in reverse order:
+            <code>(AB)&#7488; = B&#7488;A&#7488;</code>, <code>(AB)&#8315;&sup1; = B&#8315;&sup1;A&#8315;&sup1;</code>.
+        </div>
+
+        <!-- ============ 5. VECTORS ============ -->
+        <h2 id="s-vectors">5 · Vectors &amp; dot products</h2>
+
+        <p>Convention in papers: a vector <code>x &isin; &#8477;<sup>d</sup></code> is a
+        <b>column</b> (d&times;1). So <code>x&#7488;</code> is a row (1&times;d), and:</p>
+
+        <div class="rule">q &middot; k &nbsp;=&nbsp; q<sup>&#7488;</sup>k &nbsp;&nbsp;<small>(1×d)@(d×1) → (1×1) — a scalar</small></div>
+        <div class="rule">q<sup>&#7488;</sup>k = k<sup>&#7488;</sup>q &nbsp;&nbsp;<small>a scalar is its own transpose: (q&#7488;k)&#7488; = k&#7488;q</small></div>
+        <div class="rule">q k<sup>&#7488;</sup> &nbsp;&nbsp;<small>(d×1)@(1×d) → (d×d) — OUTER product, a rank-1 matrix. Order changes everything.</small></div>
+        <div class="rule">&#8214;q&#8214;&sup2; = q<sup>&#7488;</sup>q &nbsp;&nbsp;<small>length squared is a dot with yourself</small></div>
+
+        <p>Example with q = (1, 2, 3), k = (4, 5, 6):
+        <code>q&#7488;k = 1·4 + 2·5 + 3·6 = 32</code> — one number.
+        But <code>q k&#7488;</code> is the full 3&times;3 “times table” of the entries, and its rank is 1.</p>
+
+        <div class="card">
+            <b>Why this matters for attention.</b> An attention logit is exactly
+            <code>q&#7488;k</code>. Because a scalar equals its own transpose,
+            <code>q&#7488;(W_UK c) = (q&#7488;W_UK) c = (W_UK&#7488;q)&#7488; c</code> — all the same
+            number, just regrouped or rewritten. Papers hop between these forms freely; now you
+            can too.
+        </div>
+
+        <!-- ============ 6. ROPE ============ -->
+        <h2 id="s-rope">6 · Rotations &amp; RoPE</h2>
+
+        <div class="rule">R<sup>&#7488;</sup>R = I &nbsp;&nbsp;<small>rotations are orthogonal, so R&#8315;&sup1; = R&#7488;</small></div>
+        <div class="rule">(Ra)&middot;(Rb) = a&middot;b &nbsp;&nbsp;<small>rotating BOTH vectors preserves dot products &amp; norms</small></div>
+        <div class="rule">(R<sub>m</sub>q)<sup>&#7488;</sup>(R<sub>n</sub>k) = q<sup>&#7488;</sup>R<sub>m</sub><sup>&#7488;</sup>R<sub>n</sub>k = q<sup>&#7488;</sup>R<sub>n−m</sub>k &nbsp;&nbsp;<small>only RELATIVE position survives</small></div>
+
+        <p>RoPE rotates <span class="kq">q</span> by its position m and <span class="kk">k</span> by
+        its position n (each 2-D pair of channels by angle m&omega;). The logit then depends only on
+        <code>n&nbsp;&minus;&nbsp;m</code>. Slide the positions and watch the dot product:</p>
+
+        <div class="widget">
+            <div class="wtag">Widget · RoPE — the dot product only sees n − m</div>
+            <canvas id="rp-canvas" width="340" height="240"></canvas>
+            <div class="canvasreads">
+                <span class="kq">q at position m = <span id="rp-mv">0</span></span>
+                <span class="kk">k at position n = <span id="rp-nv">3</span></span>
+                <span>n &minus; m = <b id="rp-diff">3</b></span>
+                <span>q&middot;k = <b id="rp-dot">0.500</b></span>
+            </div>
+            <div class="sl"><label><span class="kq">position m (rotates q)</span></label><input type="range" id="rp-m" min="0" max="17" step="1" value="0"></div>
+            <div class="sl"><label><span class="kk">position n (rotates k)</span></label><input type="range" id="rp-n" min="0" max="17" step="1" value="3"></div>
+            <div class="ctlrow">
+                <button id="rp-shift">slide both +1 &nbsp;(dot won’t move)</button>
+            </div>
+            <div class="status" id="rp-note"></div>
+        </div>
+
+        <p>That’s the whole reason RoPE encodes <i>relative</i> position: shifting the entire
+        sequence rotates every q and k by the same extra angle, and rotations applied to both
+        sides of a dot product cancel (<code>R&#7488;R = I</code>).</p>
+
+        <div class="card">
+            <b>Why R<sub>m</sub> can’t be absorbed like W<sub>UK</sub>.</b> Absorption folds two
+            <i>fixed</i> matrices into one, offline, using associativity. But R<sub>m</sub>
+            depends on the token’s position m — it’s a <i>different</i> matrix for every position,
+            known only at runtime. There is no single static matrix to fold into the weights.
+            (This is exactly why MLA’s decoupled RoPE keys exist: the rotated part is kept
+            separate; the position-free part gets absorbed.)
+        </div>
+
+        <h3>Inverses (for completeness)</h3>
+        <div class="rule">(AB)<sup>&minus;1</sup> = B<sup>&minus;1</sup>A<sup>&minus;1</sup> &nbsp;&nbsp;<small>order flips, like transpose · needs square + full rank</small></div>
+        <p>Rarely computed explicitly in DL — but the socks-and-shoes flip shows up in derivations,
+        and “R&#8315;&sup1; = R&#7488;” is the cheap special case you actually use.</p>
+
+        <!-- ============ 7. ATTENTION TRACE ============ -->
+        <h2 id="s-attn">7 · Put it together: shape-trace attention</h2>
+
+        <p>The best drill for all of the above: trace shapes through one attention head.
+        (Row convention: each of the T tokens is a <b>row</b> of X — this is how code works.)</p>
+
+        <div class="widget">
+            <div class="wtag">Widget · step through one head</div>
+            <ol class="tracelist" id="at-list"></ol>
+            <div class="ctlrow">
+                <button class="ghost" id="at-prev">&larr; back</button>
+                <button id="at-next">next &rarr;</button>
+            </div>
+        </div>
+
+        <!-- ============ 8. NOTATION ============ -->
+        <h2 id="s-notation">8 · Notation decoder — reading papers</h2>
+
+        <p>The symbols that carry 95% of the algebra in ML papers. Skim now, return whenever a
+        paper throws glyphs at you.</p>
+
+        <div class="card" style="border-left: 4px solid var(--bad);">
+            <b>The #1 gotcha: column-math vs row-code.</b><br>
+            <b>Papers (math convention):</b> vectors are columns; a layer is
+            <code>y = Wx</code> with <code>W &isin; &#8477;<sup>out&times;in</sup></code>; chains
+            apply <b>right to left</b> (<code>W&#8322;W&#8321;x</code> = first W&#8321;, then W&#8322;).<br>
+            <b>Code (row convention):</b> each row of a batch is an example; a layer is
+            <code>Y = XW</code> with <code>W &isin; &#8477;<sup>in&times;out</sup></code>; chains
+            read <b>left to right</b>. Everything is the transpose of the paper:
+            <code>(Wx)&#7488; = x&#7488;W&#7488;</code>.<br>
+            PyTorch’s <code>nn.Linear</code> stores weight as <code>(out, in)</code> and computes
+            <code>x W&#7488; + b</code>. When paper shapes and code shapes disagree, this
+            convention flip is almost always why.
+        </div>
+
+        <h3>Objects &amp; shapes</h3>
+        <div class="tscroll"><table class="nt">
+            <tr><th>Notation</th><th>Meaning</th><th>Notes / traps</th></tr>
+            <tr><td>a, &alpha;, &lambda;</td><td>scalars</td><td>lowercase, often Greek for hyperparams</td></tr>
+            <tr><td>x &isin; &#8477;<sup>d</sup></td><td>vector with d entries</td><td>a <b>column</b> (d&times;1) unless stated</td></tr>
+            <tr><td>X &isin; &#8477;<sup>m&times;n</sup></td><td>matrix, m rows &times; n cols</td><td>rows first, always</td></tr>
+            <tr><td>X &isin; &#8477;<sup>B&times;T&times;d</sup></td><td>tensor (batch, seq, hidden)</td><td>matmul acts on the last two dims</td></tr>
+            <tr><td>x<sub>i</sub>, X<sub>ij</sub></td><td>entry i; entry at row i, col j</td><td>X<sub>i,:</sub> = row i, X<sub>:,j</sub> = col j</td></tr>
+            <tr><td>I, I<sub>d</sub></td><td>identity matrix</td><td>IA = AI = A; the “do nothing” matrix</td></tr>
+            <tr><td>diag(x)</td><td>square matrix, x on the diagonal</td><td>diag(x)·v = x &#8857; v (elementwise scale)</td></tr>
+            <tr><td>e<sub>i</sub></td><td>one-hot basis vector</td><td>Ae<sub>i</sub> plucks out column i of A</td></tr>
+            <tr><td>0, 1</td><td>all-zeros / all-ones vector</td><td>1&#7488;x = sum of x’s entries</td></tr>
+        </table></div>
+
+        <h3>Operations</h3>
+        <div class="tscroll"><table class="nt">
+            <tr><th>Notation</th><th>Meaning</th><th>Notes / traps</th></tr>
+            <tr><td>AB, Ax</td><td>matrix product</td><td>shapes must chain; NOT elementwise</td></tr>
+            <tr><td>A<sup>&#7488;</sup></td><td>transpose</td><td>(AB)&#7488; = B&#7488;A&#7488; — order flips</td></tr>
+            <tr><td>A<sup>&minus;1</sup>, A<sup>&dagger;</sup></td><td>inverse; pseudo-inverse</td><td>(AB)&#8315;&sup1; = B&#8315;&sup1;A&#8315;&sup1;; &dagger; works for any shape</td></tr>
+            <tr><td>x<sup>&#7488;</sup>y = &#10216;x, y&#10217; = x&middot;y</td><td>inner (dot) product &rarr; scalar</td><td>x&#7488;y = y&#7488;x</td></tr>
+            <tr><td>x y<sup>&#7488;</sup></td><td>outer product &rarr; matrix</td><td>rank 1; shape (d&times;1)(1&times;d&prime;) = d&times;d&prime;</td></tr>
+            <tr><td>A &#8857; B</td><td>Hadamard / elementwise product</td><td>same shape both sides; what <code>*</code> does in NumPy/PyTorch</td></tr>
+            <tr><td>A &otimes; B</td><td>Kronecker (sometimes outer) product</td><td>context-dependent — check the paper’s definition</td></tr>
+            <tr><td>tr(A)</td><td>trace = sum of diagonal</td><td>tr(AB) = tr(BA) — the cyclic trick in proofs</td></tr>
+            <tr><td>det(A), rank(A)</td><td>determinant; # independent rows/cols</td><td>LoRA: rank(&Delta;W) &le; r by construction (&Delta;W = BA)</td></tr>
+        </table></div>
+
+        <h3>Norms &amp; similarity</h3>
+        <div class="tscroll"><table class="nt">
+            <tr><th>Notation</th><th>Meaning</th><th>Notes / traps</th></tr>
+            <tr><td>&#8214;x&#8214;, &#8214;x&#8214;&#8322;</td><td>Euclidean norm = &radic;(x&#7488;x)</td><td>&#8214;x&#8214;&sup2; = x&#7488;x shows up constantly</td></tr>
+            <tr><td>&#8214;x&#8214;&#8321;</td><td>sum of |entries|</td><td>sparsity-flavored penalties</td></tr>
+            <tr><td>&#8214;A&#8214;<sub>F</sub></td><td>Frobenius norm</td><td>flatten the matrix, take L2</td></tr>
+            <tr><td>cos(x, y)</td><td>x&#7488;y / (&#8214;x&#8214;&#8214;y&#8214;)</td><td>dot product of the unit vectors</td></tr>
+            <tr><td>x&#770; = x/&#8214;x&#8214;</td><td>unit vector</td><td>what normalize() does</td></tr>
+        </table></div>
+
+        <h3>Functions, calculus, probability</h3>
+        <div class="tscroll"><table class="nt">
+            <tr><th>Notation</th><th>Meaning</th><th>Notes / traps</th></tr>
+            <tr><td>softmax(z)<sub>i</sub> = e<sup>z<sub>i</sub></sup>/&Sigma;<sub>j</sub>e<sup>z<sub>j</sub></sup></td><td>scores &rarr; probability distribution</td><td>invariant to adding a constant; that’s why max-subtraction is safe</td></tr>
+            <tr><td>&sigma;(&middot;)</td><td>sigmoid (sometimes “any activation”)</td><td>check the paper’s definition once</td></tr>
+            <tr><td>argmax<sub>i</sub> z<sub>i</sub></td><td>index of largest entry</td><td>returns a position, not a value</td></tr>
+            <tr><td>&#120124;<sub>x&sim;p</sub>[f(x)]</td><td>expectation over p</td><td>in practice: average over sampled batch</td></tr>
+            <tr><td>x &sim; &#119977;(0, I)</td><td>sampled from a distribution</td><td>&#119977;(0, I) = independent unit Gaussians per dim</td></tr>
+            <tr><td>&nabla;<sub>&theta;</sub>L, &part;L/&part;W</td><td>gradient of loss wrt params</td><td>same shape as the thing you differentiate by</td></tr>
+            <tr><td>D<sub>KL</sub>(p&#8214;q)</td><td>KL divergence</td><td>&ge; 0, asymmetric — order matters</td></tr>
+            <tr><td>&#120793;{cond}</td><td>indicator: 1 if true, else 0</td><td>turns logic into algebra</td></tr>
+            <tr><td>x<sub>1:t</sub>, [n]</td><td>prefix x&#8321;…x<sub>t</sub>; the set {1,…,n}</td><td>autoregressive conditioning is always x<sub>&lt;t</sub> or x<sub>1:t−1</sub></td></tr>
+            <tr><td>&#8788; or &#8796;</td><td>“defined as”</td><td>a definition, not an equation to verify</td></tr>
+            <tr><td>&prop;</td><td>proportional to</td><td>“equal up to a constant I’m not writing”</td></tr>
+            <tr><td>O(&middot;)</td><td>cost scaling</td><td>attention is O(T&sup2;d); that 2 is the whole KV-cache story</td></tr>
+        </table></div>
+
+        <div class="card">
+            <b>The two rules doing the most work in MLA / RoPE algebra:</b><br>
+            1. <b>Associativity</b> — you choose where to put the parentheses; absorption is just
+            choosing them offline.<br>
+            2. <b>R<sub>t</sub> depends on t</b> — a position-dependent rotation is not one static
+            matrix, so it can never be folded into fixed weights.
+        </div>
+
+        <!-- ============ 9. QUIZ ============ -->
+        <h2 id="s-quiz">9 · Quiz yourself</h2>
+        <p>Nine questions. Tap an answer — instant feedback, explanation included.</p>
+        <div id="qz"></div>
+        <div class="scoreline" id="qz-score"></div>
+        <div class="ctlrow"><button class="ghost" id="qz-reset">reset quiz</button></div>
+
+        <footer>
+            Personal explainer · unlisted · <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+
+    <script>
+    (function () {
+        "use strict";
+        var $ = function (id) { return document.getElementById(id); };
+
+        /* ================= 1. SHAPE MACHINE ================= */
+        (function () {
+            var st = { ar: 2, ac: 3, br: 3, bc: 2 };
+            var elA = $('dm-a'), elB = $('dm-b'), elC = $('dm-c');
+            if (!elA || !elB || !elC) return;
+
+            function grid(el, rows, cols, tint) {
+                el.innerHTML = '';
+                el.style.gridTemplateColumns = 'repeat(' + cols + ', 20px)';
+                for (var i = 0; i < rows * cols; i++) {
+                    var d = document.createElement('div');
+                    d.className = 'mcell dcell ' + tint;
+                    el.appendChild(d);
+                }
+            }
+            function render() {
+                var ok = st.ac === st.br;
+                grid(elA, st.ar, st.ac, 'tintA');
+                grid(elB, st.br, st.bc, 'tintB');
+                $('dm-al').innerHTML = st.ar + '&times;<b style="color:' + (ok ? 'var(--good)' : 'var(--bad)') + '">' + st.ac + '</b>';
+                $('dm-bl').innerHTML = '<b style="color:' + (ok ? 'var(--good)' : 'var(--bad)') + '">' + st.br + '</b>&times;' + st.bc;
+                var s = $('dm-status');
+                if (ok) {
+                    grid(elC, st.ar, st.bc, 'tintC');
+                    $('dm-cl').innerHTML = st.ar + '&times;' + st.bc;
+                    s.textContent = 'inner dims match (' + st.ac + ' = ' + st.br + ') → result is ' + st.ar + '×' + st.bc;
+                    s.className = 'status ok';
+                } else {
+                    elC.innerHTML = '<div style="font-size:1.6rem;color:var(--bad);padding:4px 10px">✗</div>';
+                    elC.style.gridTemplateColumns = 'auto';
+                    $('dm-cl').innerHTML = 'undefined';
+                    s.textContent = 'A has ' + st.ac + ' cols but B has ' + st.br + ' rows — product does not exist';
+                    s.className = 'status err';
+                }
+                ['ar', 'ac', 'br', 'bc'].forEach(function (k) { $('dm-v-' + k).textContent = st[k]; });
+            }
+            document.querySelectorAll('#dm-a, #dm-b'); // noop guard
+            Array.prototype.forEach.call(document.querySelectorAll('.stepper .mini'), function (b) {
+                b.addEventListener('click', function () {
+                    var k = b.getAttribute('data-k'), d = parseInt(b.getAttribute('data-d'), 10);
+                    if (!k || !(k in st)) return;
+                    st[k] = Math.min(6, Math.max(1, st[k] + d));
+                    render();
+                });
+            });
+            render();
+        })();
+
+        /* ================= 2. MATMUL STEPPER ================= */
+        (function () {
+            var A = [[1, 2, 3], [4, 5, 6]];
+            var B = [[7, 8], [9, 10], [11, 12]];
+            var C = [[58, 64], [139, 154]];
+            var order = [[0, 0], [0, 1], [1, 0], [1, 1]];
+            var step = -1, timer = null;
+            var elA = $('mm-a'), elB = $('mm-b'), elC = $('mm-c'), exp = $('mm-exp');
+            if (!elA || !elB || !elC) return;
+
+            function build(el, M, cols) {
+                el.innerHTML = '';
+                el.style.gridTemplateColumns = 'repeat(' + cols + ', 34px)';
+                M.forEach(function (row, i) {
+                    row.forEach(function (v, j) {
+                        var d = document.createElement('div');
+                        d.className = 'mcell';
+                        d.textContent = v;
+                        d.setAttribute('data-i', i);
+                        d.setAttribute('data-j', j);
+                        el.appendChild(d);
+                    });
+                });
+            }
+            function render() {
+                build(elA, A, 3); build(elB, B, 2);
+                elC.innerHTML = '';
+                elC.style.gridTemplateColumns = 'repeat(2, 44px)';
+                C.forEach(function (row, i) {
+                    row.forEach(function (v, j) {
+                        var d = document.createElement('div');
+                        d.className = 'mcell';
+                        d.style.width = '44px';
+                        var revealed = order.findIndex(function (o) { return o[0] === i && o[1] === j; }) <= step;
+                        d.textContent = revealed ? v : '·';
+                        if (!revealed) d.classList.add('dim');
+                        elC.appendChild(d);
+                    });
+                });
+                if (step >= 0) {
+                    var i = order[step][0], j = order[step][1];
+                    Array.prototype.forEach.call(elA.children, function (c) {
+                        if (+c.getAttribute('data-i') === i) c.classList.add('hA');
+                    });
+                    Array.prototype.forEach.call(elB.children, function (c) {
+                        if (+c.getAttribute('data-j') === j) c.classList.add('hB');
+                    });
+                    elC.children[i * 2 + j].classList.add('hC');
+                    var terms = A[i].map(function (a, t) { return a + '·' + B[t][j]; }).join(' + ');
+                    exp.innerHTML = 'C[' + (i + 1) + ',' + (j + 1) + '] = <b>row ' + (i + 1) + '</b> · <b>col ' + (j + 1) + '</b> = ' + terms + ' = <b>' + C[i][j] + '</b>';
+                } else {
+                    exp.innerHTML = 'press <b>next</b> to compute C entry by entry';
+                }
+                $('mm-next').disabled = step >= order.length - 1;
+            }
+            function next() {
+                if (step < order.length - 1) { step++; render(); }
+                if (step >= order.length - 1) stopAuto();
+            }
+            function stopAuto() {
+                if (timer) { clearInterval(timer); timer = null; $('mm-auto').innerHTML = '▶ auto'; }
+            }
+            $('mm-next').addEventListener('click', function () { stopAuto(); next(); });
+            $('mm-reset').addEventListener('click', function () { stopAuto(); step = -1; render(); });
+            $('mm-auto').addEventListener('click', function () {
+                if (timer) { stopAuto(); return; }
+                if (step >= order.length - 1) step = -1;
+                $('mm-auto').innerHTML = '⏸ stop';
+                next();
+                timer = setInterval(next, 1500);
+            });
+            render();
+        })();
+
+        /* ================= 3. FLOP / ABSORPTION WIDGET ================= */
+        (function () {
+            var sd = $('fl-d'), sc = $('fl-c'), st = $('fl-t');
+            if (!sd || !sc || !st) return;
+            function fmt(x) {
+                if (x >= 1e12) return (x / 1e12).toFixed(2) + ' T';
+                if (x >= 1e9) return (x / 1e9).toFixed(2) + ' B';
+                if (x >= 1e6) return (x / 1e6).toFixed(2) + ' M';
+                if (x >= 1e3) return (x / 1e3).toFixed(1) + ' K';
+                return '' + x;
+            }
+            function upd() {
+                var d = +sd.value, c = +sc.value, T = +st.value;
+                $('fl-dv').textContent = d; $('fl-cv').textContent = c; $('fl-tv').textContent = T;
+                var slow = T * (d * c + d);        // expand W c_j per token, then dot with q
+                var fast = d * c + T * c;          // fold q^T W once, then tiny dots
+                $('fl-slow').textContent = fmt(slow) + ' mults';
+                $('fl-fast').textContent = fmt(fast) + ' mults';
+                var maxLog = Math.log10(slow);
+                $('fl-bslow').style.width = '100%';
+                $('fl-bfast').style.width = Math.max(3, 100 * Math.log10(fast) / maxLog) + '%';
+                $('fl-speed').innerHTML = 'identical output · <span style="color:var(--good)">' + Math.round(slow / fast) + '× fewer multiplies</span> just by moving parentheses';
+            }
+            [sd, sc, st].forEach(function (s) { s.addEventListener('input', upd); });
+            upd();
+        })();
+
+        /* ================= 4. ROPE CANVAS ================= */
+        (function () {
+            var cv = $('rp-canvas');
+            if (!cv || !cv.getContext) return;
+            var ctx = cv.getContext('2d');
+            var TQ0 = 15, TK0 = 75, OMEGA = 20;   // degrees
+            var m = 0, n = 3;
+            var curQ = TQ0, curK = TK0 + 3 * OMEGA;  // displayed angles (deg), animated
+            var raf = null;
+
+            function cssVar(name) {
+                return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+            }
+            function targetQ() { return TQ0 + m * OMEGA; }
+            function targetK() { return TK0 + n * OMEGA; }
+
+            function sizeCanvas() {
+                var w = Math.min(340, cv.parentNode.clientWidth - 8);
+                var h = Math.round(w * 0.7);
+                var dpr = window.devicePixelRatio || 1;
+                cv.style.width = w + 'px'; cv.style.height = h + 'px';
+                cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+
+            function arrow(angDeg, color, label) {
+                var a = angDeg * Math.PI / 180;
+                var R = Math.min(cv.clientWidth, cv.clientHeight) * 0.38;
+                var x = R * Math.cos(a), y = -R * Math.sin(a);
+                ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(x, y); ctx.stroke();
+                var ha = 9;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x - ha * Math.cos(a - 0.42), y + ha * Math.sin(a - 0.42));
+                ctx.lineTo(x - ha * Math.cos(a + 0.42), y + ha * Math.sin(a + 0.42));
+                ctx.closePath(); ctx.fill();
+                ctx.font = '700 15px ui-monospace, Menlo, monospace';
+                ctx.fillText(label, x * 1.16 - 5, y * 1.16 + 5);
+            }
+
+            function draw() {
+                var w = cv.clientWidth, h = cv.clientHeight;
+                ctx.clearRect(0, 0, w, h);
+                ctx.save();
+                ctx.translate(w / 2, h / 2 + 4);
+                var R = Math.min(w, h) * 0.38;
+                var muted = cssVar('--muted') || '#888';
+                var line = cssVar('--line') || '#ddd';
+                // axes + circle
+                ctx.strokeStyle = line; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(-R * 1.15, 0); ctx.lineTo(R * 1.15, 0); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, -R * 1.15); ctx.lineTo(0, R * 1.15); ctx.stroke();
+                ctx.strokeStyle = muted; ctx.setLineDash([3, 4]);
+                ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
+                ctx.setLineDash([]);
+                // wedge between the two vectors
+                var a1 = curQ, a2 = curK, steps = 32;
+                ctx.beginPath(); ctx.moveTo(0, 0);
+                for (var t = 0; t <= steps; t++) {
+                    var ang = (a1 + (a2 - a1) * t / steps) * Math.PI / 180;
+                    ctx.lineTo(0.45 * R * Math.cos(ang), -0.45 * R * Math.sin(ang));
+                }
+                ctx.closePath();
+                ctx.globalAlpha = 0.15;
+                ctx.fillStyle = cssVar('--accent') || '#26e';
+                ctx.fill();
+                ctx.globalAlpha = 1;
+                arrow(curQ, cssVar('--accent') || '#26e', 'q');
+                arrow(curK, cssVar('--accent2') || '#93e', 'k');
+                ctx.restore();
+            }
+
+            function readout() {
+                $('rp-mv').textContent = m;
+                $('rp-nv').textContent = n;
+                $('rp-diff').textContent = (n - m);
+                var dot = Math.cos(((TK0 - TQ0) + (n - m) * OMEGA) * Math.PI / 180);
+                $('rp-dot').textContent = dot.toFixed(3);
+                $('rp-shift').disabled = (m >= 17 || n >= 17);
+            }
+
+            function tick() {
+                var done = true;
+                var dq = targetQ() - curQ, dk = targetK() - curK;
+                if (Math.abs(dq) > 0.1) { curQ += dq * 0.14; done = false; } else curQ = targetQ();
+                if (Math.abs(dk) > 0.1) { curK += dk * 0.14; done = false; } else curK = targetK();
+                draw();
+                raf = done ? null : requestAnimationFrame(tick);
+            }
+            function kick() { readout(); if (!raf) raf = requestAnimationFrame(tick); }
+
+            $('rp-m').addEventListener('input', function () { m = +this.value; $('rp-note').textContent = ''; kick(); });
+            $('rp-n').addEventListener('input', function () { n = +this.value; $('rp-note').textContent = ''; kick(); });
+            $('rp-shift').addEventListener('click', function () {
+                if (m >= 17 || n >= 17) return;
+                m++; n++;
+                $('rp-m').value = m; $('rp-n').value = n;
+                var note = $('rp-note');
+                note.textContent = 'both rotated by ω — n−m unchanged — dot product identical';
+                note.className = 'status ok';
+                kick();
+            });
+            window.addEventListener('resize', function () { sizeCanvas(); draw(); });
+            if (window.matchMedia) {
+                try {
+                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { draw(); });
+                } catch (e) { /* older Safari */ }
+            }
+            sizeCanvas(); readout(); draw();
+        })();
+
+        /* ================= 5. ATTENTION TRACE ================= */
+        (function () {
+            var list = $('at-list');
+            if (!list) return;
+            var steps = [
+                'Start with the sequence: <b>X</b> = <span class="shape">[T×d]</span> — T tokens, one per <b>row</b> (code convention).',
+                'Project queries: <b>Q = X W<sub>Q</sub></b> — <span class="shape">[T×d]</span> @ <span class="shape b">[d×d<sub>k</sub>]</span> = <span class="shape c">[T×d<sub>k</sub>]</span>. The d’s cancel.',
+                'Same for keys and values: <b>K</b> = <span class="shape c">[T×d<sub>k</sub>]</span>, <b>V</b> = <span class="shape c">[T×d<sub>v</sub>]</span>.',
+                'Scores: <b>S = Q K<sup>ᵀ</sup></b> — <span class="shape">[T×d<sub>k</sub>]</span> @ <span class="shape b">[d<sub>k</sub>×T]</span> = <span class="shape c">[T×T]</span>. The transpose exists purely so the shapes chain. Entry S<sub>ij</sub> = q<sub>i</sub><sup>ᵀ</sup>k<sub>j</sub> — every query dotted with every key.',
+                'Normalize: <b>P = softmax(S / √d<sub>k</sub>)</b>, row-wise — shape unchanged, <span class="shape c">[T×T]</span>, each row now sums to 1.',
+                'Mix values: <b>O = P V</b> — <span class="shape">[T×T]</span> @ <span class="shape b">[T×d<sub>v</sub>]</span> = <span class="shape c">[T×d<sub>v</sub>]</span>. Row i of O is a weighted average of value rows.',
+                'Done: one vector per token in, one per token out. Note the T×T in the middle — that’s the O(T²) memory/compute everyone fights (KV cache, MLA, flash attention).'
+            ];
+            var cur = 0;
+            steps.forEach(function (s) {
+                var li = document.createElement('li');
+                li.innerHTML = s;
+                list.appendChild(li);
+            });
+            function render() {
+                Array.prototype.forEach.call(list.children, function (li, i) {
+                    li.className = i < cur ? 'done' : (i === cur ? 'cur' : '');
+                });
+                $('at-prev').disabled = cur === 0;
+                $('at-next').disabled = cur === steps.length - 1;
+            }
+            $('at-prev').addEventListener('click', function () { if (cur > 0) { cur--; render(); } });
+            $('at-next').addEventListener('click', function () { if (cur < steps.length - 1) { cur++; render(); } });
+            render();
+        })();
+
+        /* ================= 6. QUIZ ================= */
+        (function () {
+            var host = $('qz');
+            if (!host) return;
+            var QS = [
+                { q: 'A ∈ ℝ³ˣ⁵, B ∈ ℝ⁵ˣ². What is the shape of AB?',
+                  o: ['3×2', '5×5', '2×3', 'undefined'], a: 0,
+                  e: 'Inner 5s cancel, outer dims survive: (3×5)@(5×2) → 3×2.' },
+                { q: 'Same A (3×5), B (5×2). Which of these products is also defined?',
+                  o: ['BA', 'BᵀAᵀ', 'AᵀBᵀ'], a: 1,
+                  e: 'BᵀAᵀ = (2×5)@(5×3) = 2×3 — it’s exactly (AB)ᵀ. BA is (5×2)@(3×5): 2≠3. AᵀBᵀ is (5×3)@(2×5): 3≠2.' },
+                { q: '(ABC)ᵀ = ?',
+                  o: ['AᵀBᵀCᵀ', 'CᵀBᵀAᵀ', 'CᵀAᵀBᵀ'], a: 1,
+                  e: 'Transpose of a chain reverses the whole chain — socks and shoes: (ABC)ᵀ = CᵀBᵀAᵀ.' },
+                { q: 'q, k ∈ ℝᵈ. How do qᵀk and kᵀq relate?',
+                  o: ['always equal', 'equal only if q = k', 'different in general'], a: 0,
+                  e: 'qᵀk is a scalar, and a scalar is its own transpose: (qᵀk)ᵀ = kᵀq. Same number, always.' },
+                { q: 'q ∈ ℝ³, k ∈ ℝ⁵. What is q kᵀ?',
+                  o: ['a scalar', 'a 3×5 matrix', 'a 5×3 matrix', 'undefined'], a: 1,
+                  e: '(3×1)@(1×5) = 3×5 — the OUTER product, rank 1. Order flipped (qᵀk) would need matching lengths and give a scalar.' },
+                { q: 'Which law lets MLA fold W_q W_UK into one matrix offline?',
+                  o: ['commutativity', 'associativity', 'distributivity'], a: 1,
+                  e: 'qᵀ(W_UK c) = (qᵀW_UK)c — associativity says you pick the parentheses. Absorption = choosing to multiply the two weight matrices once, offline.' },
+                { q: 'Why can’t RoPE’s R_m be absorbed into the weights the same way?',
+                  o: ['rotations aren’t invertible', 'R_m is a different matrix for every position m', 'rotations only work in 2D'], a: 1,
+                  e: 'Absorption needs a FIXED matrix to pre-multiply offline. R_m depends on the runtime position m — there is no single static matrix to fold in. (Hence MLA’s decoupled RoPE keys.)' },
+                { q: 'R is a rotation matrix. RᵀR = ?',
+                  o: ['0', 'R²', 'I'], a: 2,
+                  e: 'Rotations are orthogonal: RᵀR = I, so R⁻¹ = Rᵀ — and dot products/norms survive rotation.' },
+                { q: '(R_m q)ᵀ (R_n k) = ?',
+                  o: ['qᵀ R_{m+n} k', 'qᵀ R_{n−m} k', 'qᵀk, always'], a: 1,
+                  e: 'Transpose flips order: qᵀ R_mᵀ R_n k. Then R_mᵀ = R_{−m} and R_{−m}R_n = R_{n−m}. Only relative position survives — the whole point of RoPE. (qᵀk exactly when m = n.)' }
+            ];
+            var answered = 0, correct = 0;
+            function score() {
+                $('qz-score').textContent = answered === 0
+                    ? ''
+                    : 'Score: ' + correct + ' / ' + answered + (answered === QS.length ? (correct === QS.length ? ' — clean sweep 🎯' : ' — reread the ones you missed') : '');
+            }
+            function build() {
+                host.innerHTML = '';
+                answered = 0; correct = 0; score();
+                QS.forEach(function (item, qi) {
+                    var card = document.createElement('div');
+                    card.className = 'q';
+                    var qq = document.createElement('div');
+                    qq.className = 'qq';
+                    qq.textContent = (qi + 1) + '. ' + item.q;
+                    card.appendChild(qq);
+                    item.o.forEach(function (opt, oi) {
+                        var b = document.createElement('button');
+                        b.className = 'qopt';
+                        b.textContent = opt;
+                        b.addEventListener('click', function () {
+                            if (card.classList.contains('answered')) return;
+                            card.classList.add('answered');
+                            answered++;
+                            var opts = card.querySelectorAll('.qopt');
+                            opts[item.a].classList.add('right');
+                            if (oi === item.a) { correct++; }
+                            else { b.classList.add('wrong'); }
+                            score();
+                        });
+                        card.appendChild(b);
+                    });
+                    var ex = document.createElement('div');
+                    ex.className = 'qexp';
+                    ex.textContent = item.e;
+                    card.appendChild(ex);
+                    host.appendChild(card);
+                });
+            }
+            $('qz-reset').addEventListener('click', build);
+            build();
+        })();
+    })();
+    </script>
+</body>
+</html>

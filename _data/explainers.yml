@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "Matrix Algebra for ML Papers"
+  slug: matrix-algebra-for-ml-papers
+  date: 2026-08-26
+  description: "Every matrix rule behind MLA absorption, RoPE, and attention — interactive shape machine, step-through matmul, absorption FLOP calculator, animated RoPE rotation demo, a paper-notation decoder table, and a 9-question quiz."
+
 - title: "Combining tensors: concat vs stack"
   slug: combining-tensors-numpy-pytorch
   date: 2026-08-26
