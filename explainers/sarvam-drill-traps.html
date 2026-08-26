@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<title>The Traps — Sarvam Depth Drill</title>
+<style>
+  :root {
+    --page:        #f9f9f7;
+    --surface:     #fcfcfb;
+    --ink:         #0b0b0b;
+    --ink-2:       #52514e;
+    --muted:       #898781;
+    --hairline:    rgba(11,11,11,0.10);
+    --accent:      #2a78d6;
+    --accent-track:#cde2fb;
+    --good:        #0ca30c;
+    --good-text:   #006300;
+    --good-tint:   rgba(12,163,12,0.10);
+    --warn:        #fab219;
+    --warn-tint:   rgba(250,178,25,0.18);
+    --crit:        #d03b3b;
+    --crit-tint:   rgba(208,59,59,0.08);
+    --blue-tint:   rgba(42,120,214,0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page:        #0d0d0d;
+      --surface:     #1a1a19;
+      --ink:         #ffffff;
+      --ink-2:       #c3c2b7;
+      --muted:       #898781;
+      --hairline:    rgba(255,255,255,0.10);
+      --accent:      #3987e5;
+      --accent-track:#0d366b;
+      --good:        #23c223;
+      --good-text:   #23c223;
+      --good-tint:   rgba(12,163,12,0.16);
+      --warn:        #fab219;
+      --warn-tint:   rgba(250,178,25,0.14);
+      --crit:        #e05252;
+      --crit-tint:   rgba(208,59,59,0.16);
+      --blue-tint:   rgba(57,135,229,0.14);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.5; font-size: 15px;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 0 20px 90px; }
+  code, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.92em; }
+
+  header.top {
+    position: sticky; top: 0; z-index: 50;
+    background: var(--surface); border-bottom: 1px solid var(--hairline);
+    padding: 10px 20px;
+  }
+  .top-inner { max-width: 940px; margin: 0 auto; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .top h1 { font-size: 16px; font-weight: 700; margin: 0; white-space: nowrap; }
+  .top .sub { font-size: 12px; color: var(--muted); }
+  .top .spacer { flex: 1; }
+  .top .counter { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .top .counter b { color: var(--accent); font-size: 15px; }
+
+  h2.sec {
+    font-size: 13px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); margin: 46px 0 6px; font-weight: 700;
+  }
+  .sec-note { font-size: 13px; color: var(--ink-2); margin: 0 0 18px; }
+
+  /* ---------- trap cards ---------- */
+  .traps { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 720px) { .traps { grid-template-columns: 1fr; } }
+  .card { perspective: 1200px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .card .inner {
+    position: relative; width: 100%; min-height: 172px;
+    transform-style: preserve-3d; transition: transform .5s cubic-bezier(.2,.7,.3,1);
+  }
+  .card.flipped .inner { transform: rotateY(180deg); }
+  .face {
+    position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    border-radius: 12px; padding: 14px 16px; border: 1px solid var(--hairline);
+    display: flex; flex-direction: column; gap: 6px; overflow: hidden;
+  }
+  .face.front { background: var(--crit-tint); border-color: rgba(208,59,59,.35); }
+  .face.back  { background: var(--good-tint); border-color: rgba(12,163,12,.35); transform: rotateY(180deg); }
+  .tag { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; }
+  .front .tag { color: var(--crit); }
+  .back  .tag { color: var(--good-text); }
+  .quote { font-size: 15px; font-weight: 600; line-height: 1.4; }
+  .front .quote::before { content: "✗ "; color: var(--crit); }
+  .back  .quote::before { content: "✓ "; color: var(--good-text); }
+  .truth { font-size: 13.5px; color: var(--ink-2); line-height: 1.5; }
+  .truth b { color: var(--ink); }
+  .flip-hint { margin-top: auto; font-size: 11px; color: var(--muted); }
+  .blockref { font-size: 11px; color: var(--muted); margin-top: auto; }
+  .formula {
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 8px;
+    padding: 6px 10px; font-family: ui-monospace, Menlo, monospace; font-size: 13px;
+    margin: 4px 0; display: inline-block;
+  }
+
+  /* ---------- widgets ---------- */
+  .widget {
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px;
+    padding: 18px 20px; margin: 16px 0;
+  }
+  .widget h3 { margin: 0 0 4px; font-size: 15px; }
+  .widget .wnote { font-size: 12.5px; color: var(--muted); margin: 0 0 14px; }
+  .controls { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .ctl { display: flex; flex-direction: column; gap: 3px; min-width: 180px; flex: 1; }
+  .ctl label { font-size: 12px; color: var(--ink-2); display: flex; justify-content: space-between; }
+  .ctl label b { font-variant-numeric: tabular-nums; color: var(--ink); }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+  button.chip {
+    background: var(--blue-tint); color: var(--ink); border: 1px solid var(--hairline);
+    border-radius: 999px; padding: 5px 14px; font-size: 12.5px; cursor: pointer; font-weight: 600;
+  }
+  button.chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .barrow { display: flex; align-items: center; gap: 10px; margin: 7px 0; }
+  .barlabel { width: 120px; font-size: 12px; color: var(--ink-2); text-align: right; }
+  .bartrack { flex: 1; height: 18px; background: var(--page); border: 1px solid var(--hairline); border-radius: 5px; overflow: hidden; }
+  .barfill { height: 100%; border-radius: 4px; transition: width .3s ease; }
+  .barval { width: 74px; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .verdict {
+    margin-top: 10px; padding: 10px 14px; border-radius: 10px; font-size: 14px; font-weight: 600;
+    border: 1px solid var(--hairline); transition: background .3s;
+  }
+  .verdict.ok   { background: var(--good-tint); }
+  .verdict.trim { background: var(--warn-tint); }
+  .verdict small { display: block; font-weight: 400; font-size: 12.5px; color: var(--ink-2); margin-top: 3px; }
+  svg text { fill: var(--ink-2); font-size: 11px; font-family: ui-monospace, Menlo, monospace; }
+  .readout { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .readout small { font-size: 12px; color: var(--muted); font-weight: 400; }
+
+  /* GRPO group squares */
+  .grpo-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 5px; margin: 12px 0; }
+  .gsq {
+    aspect-ratio: 1; border-radius: 5px; border: 1px solid var(--hairline);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #fff;
+    transition: background .25s ease, transform .25s ease;
+  }
+  .gsq.pass { background: var(--good); }
+  .gsq.fail { background: var(--crit); }
+  .dead { animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+
+  /* ---------- numbers wall ---------- */
+  .numwall { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+  .numtile {
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px;
+    padding: 14px 16px; opacity: 0; transform: translateY(14px);
+    transition: opacity .55s ease, transform .55s ease;
+  }
+  .numtile.show { opacity: 1; transform: none; }
+  .numtile .big { font-size: 21px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .numtile .big .vs { color: var(--muted); font-size: 14px; font-weight: 400; }
+  .numtile .lbl { font-size: 11.5px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+  .numtile.hot { border-color: rgba(208,59,59,.4); }
+  .numtile.hot .big { color: var(--crit); }
+
+  /* ---------- say-this ---------- */
+  .say {
+    background: var(--surface); border-left: 3px solid var(--accent);
+    border-radius: 0 12px 12px 0; padding: 13px 16px; margin: 12px 0;
+  }
+  .say .who { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 4px; }
+  .say p { margin: 0; font-size: 14.5px; line-height: 1.55; }
+  .qgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .qcard { background: var(--blue-tint); border: 1px solid var(--hairline); border-radius: 12px; padding: 13px 15px; font-size: 13.5px; line-height: 1.5; }
+  .qcard b { display: block; font-size: 20px; color: var(--accent); margin-bottom: 4px; }
+
+  footer { margin-top: 60px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--hairline); padding-top: 14px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <h1>The Traps</h1>
+    <span class="sub">Sarvam HM screen · Thu Aug 27 · 15:00 IST</span>
+    <span class="spacer"></span>
+    <span class="counter"><b id="flipcount">0</b>/12 traps seen</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <h2 class="sec">Section 1 — Where you went wrong</h2>
+  <p class="sec-note">Each card: what you said tonight → what's true. Tap to flip. Say the green side out loud.</p>
+
+  <div class="traps" id="traps">
+
+    <div class="card"><div class="inner">
+      <div class="face front">
+        <span class="tag">Trap 1 · PPO · said 3×</span>
+        <div class="quote">"PPO uses a clipped advantage function"</div>
+        <span class="flip-hint">tap → truth</span>
+      </div>
+      <div class="face back">
+        <span class="tag">The ratio is clipped — never the advantage</span>
+        <span class="formula">min( r·A , clip(r, 1−ε, 1+ε)·A )</span>
+        <div class="truth"><b>r = π_new / π_old</b>, on the <b>old</b> policy's samples. Clipping stops the update exploiting samples the new policy has drifted past.</div>
+      </div>
+    </div></div>
+
+    <div class="card"><div class="inner">
+      <div class="face front">
+        <span class="tag">Trap 2 · spec decode</span>
+        <div class="quote">"If p_target ≥ p_draft, keep it. Otherwise chuck it."</div>
+        <span class="flip-hint">tap → truth</span>
+      </div>
+      <div class="face back">
+        <span class="tag">Accept-ratio + residual = lossless</span>
+        <span class="formula">accept w.p. min(1, p_t / p_d)</span>
+        <span class="formula">reject → sample ∝ max(0, p_t − p_d)</span>
+        <div class="truth">"delve": 0.30/0.35 ≈ <b>0.86</b> → net exactly 0.30. Hard threshold <b>bans</b> over-proposed tokens.</div>
+      </div>
+    </div></div>
+
+    <div class="card"><div class="inner">
+      <div class="face front">
+        <span class="tag">Trap 3 · dFlash · invented story</span>
+        <div class="quote">"dFlash tokens are marginal, so acceptance drops"</div>
+        <span class="flip-hint">tap → truth</span>
+      </div>
+      <div class="face back">
+        <span class="tag">Jointly denoised + target-KV injection</span>
+        <div class="truth">Block drafted in <b>one parallel pass, dependencies modeled</b> — that's its edge over Medusa. α stays high because the drafter <b>borrows the target's own features</b> (KV injection). <b>6–15×</b> lossless.</div>
+      </div>
+    </div></div>
+
+    <div class="card"><div class="inner">
+      <div class="face front">
+        <span class="tag">Trap 4 · MTP</span>
+        <div class="quote">"MTP takes the entire KV cache… predicts 3 at once"</div>
+        <span class="flip-hint">tap → truth</span>
+      </div>
+      <div class="face back">
+        <span class="tag">Chained = conditional. Parallel = mush.</span>
+        <span class="formula">input = hidden(t) ⊕ embed(true t+1)</span>
+        <div class="truth">One transformer block per depth, shared embed + head. V3: depth 1. Sarvam: <b>MTP-3</b>. Parallel heads predict the <b>marginal</b> — mush.</div>
+      </div>
+    </div></div>
+
+    <div class="card"><div class="inner">
+      <div class="face front">
+        <span class="tag">Trap 5 · MoE · evaporated 3×</span>
+        <div class="quote">The footnotes that keep vanishing</div>
+        <span class="flip-hint">tap → truth</span>
+      </div>
+      <div class="face back">
+        <span class="tag">Selection ≠ gate · node-limited · no drops</span>
+        <div class="truth">Bias b_i enters <b>top-k selection only</b>, never the gate weight. Selection = load, gate = mix. <b>γ = 0.001</b>. Routing <b>node-limited ≤ 4 nodes</b>/token. <b>No token dropping</b> — the bias does the balancing.</div>
+      </div>
+    </div></div>
+
+    <div class="card"><div class="inner">
+      <div class="face front">
+        <span class="tag">Trap 6 · value network</span>
+        <div class="quote">"The value network reduces variance in the reward model"</div>
+        <span class="flip-hint">tap → truth</span>
+      </div>
+      <div class="face back">
+        <span class="tag">It's a learned baseline</span>
+        <div class="truth">Cuts <b>policy-gradient</b> variance + gives <b>per-token credit</b> (GAE). GRPO swaps it for the <b>group mean</b>. Price: <b>G rollouts/prompt</b> + per-<b>sequence</b> credit only.</div>
+      </div>
+    </div></div>
+
+    <div class="card"><div class="inner">
+      <div class="face front">
+        <span class="tag">Trap 7 · RLVR</span>
+        <div class="quote">"RLVR is good because it's deterministic"</div>
+        <span class="flip-hint">tap → truth</span>
+      </div>
+      <div class="face back">
+        <span class="tag">A unit test can't be Goodharted</span>
+        <div class="truth">Learned RM = <b>proxy</b> → policy finds its blind spots. Verifier → <b>reward hacking structurally impossible</b>. That's sentence #1. (Some runs even drop the KL.)</div>
+      </div>
+    </div></div>
+
+    <div class="card"><div class="inner">
+      <div class="face front">
+        <span class="tag">Trap 8 · GRPO dead zone · half-right</span>
+        <div class="quote">"If all samples fail, no learning happens"</div>
+        <span class="flip-hint">tap → truth</span>
+      </div>
+      <div class="face back">
+        <span class="tag">All-pass is dead too</span>
+        <span class="formula">σ = 0 → A = 0 → zero gradient</span>
+        <div class="truth">Both ends dead. Signal lives where <b>group variance</b> lives → <b>tiered curriculum + dynamic rollout allocation</b> (~2,200 steps, Sarvam-M).</div>
+      </div>
+    </div></div>
+
+    <div class="card"><div class="inner">
+      <div class="face front">
+        <span class="tag">Trap 9 · client tuning · wrong disease</span>
+        <div class="quote">"Narrow client data → entropy collapse"</div>
+        <span class="flip-hint">tap → truth</span>
+      </div>
+      <div class="face back">
+        <span class="tag">Catastrophic forgetting breaks first</span>
+        <div class="truth">Early warning: <b>held-out pretrain val loss</b> (cheap, leading) — not benchmarks (lagging). Knobs: <b>mix-in data · lr↓ · epochs↓ · KL · LoRA</b> (your own move). Entropy collapse = the RL disease: rollouts go identical → variance dies.</div>
+      </div>
+    </div></div>
+
+    <div class="card"><div class="inner">
+      <div class="face front">
+        <span class="tag">Trap 10 · DPO · too thin</span>
+        <div class="quote">"DPO uses preference data directly" — and stopped</div>
+        <span class="flip-hint">tap → truth</span>
+      </div>
+      <div class="face back">
+        <span class="tag">Offline + off-policy — that's the point</span>
+        <span class="formula">implicit reward = β · log(π / π_ref)</span>
+        <div class="truth">Gradient lands on strings your policy <b>never emits</b>. Tell: <b>margin ↑ while chosen-logp ↓</b>. RM + GRPO grades your model's <b>own samples</b>.</div>
+      </div>
+    </div></div>
+
+    <div class="card"><div class="inner">
+      <div class="face front">
+        <span class="tag">Trap 11 · the formula</span>
+        <div class="quote">"(1−α)^γ − 1 … 2–4 tokens per second"</div>
+        <span class="flip-hint">tap → truth</span>
+      </div>
+      <div class="face back">
+        <span class="tag">Per verify PASS, not per second</span>
+        <span class="formula">E[tokens/pass] = (1 − α^(γ+1)) / (1 − α)</span>
+        <div class="truth">γ=4: α .6 → <b>2.3</b> · α .9 → <b>4.1</b>. <b>Convex in α</b>. Words if lost: "truncated geometric, convex, ceiling γ+1."</div>
+      </div>
+    </div></div>
+
+    <div class="card"><div class="inner">
+      <div class="face front">
+        <span class="tag">Trap 12 · the meta-trap</span>
+        <div class="quote">Asked "when each + why GRPO?" — you gave a glossary</div>
+        <span class="flip-hint">tap → truth</span>
+      </div>
+      <div class="face back">
+        <span class="tag">Judgment + war story, not definitions</span>
+        <div class="truth">"Can you do RL?" is answered by <b>decisions you made and what they cost</b>. Lead with the pipeline. And when a detail is gone: <b>say less, not wronger</b> — no invented mechanisms.</div>
+      </div>
+    </div></div>
+
+  </div>
+
+  <h2 class="sec">Section 2 — Play with the three ideas you fumbled</h2>
+
+  <!-- ============ Widget 1: accept rule ============ -->
+  <div class="widget">
+    <h3>1 · The accept rule (Trap 2)</h3>
+    <p class="wnote">Drag the two probabilities. Watch what the hard threshold would have done.</p>
+    <div class="controls">
+      <div class="ctl">
+        <label>p_draft <b id="pdval">0.35</b></label>
+        <input type="range" id="pd" min="1" max="100" value="35">
+      </div>
+      <div class="ctl">
+        <label>p_target <b id="ptval">0.30</b></label>
+        <input type="range" id="pt" min="0" max="100" value="30">
+      </div>
+      <div class="btnrow">
+        <button class="chip" id="preset-delve">"delve" 0.35 / 0.30</button>
+        <button class="chip" id="preset-iterate">"iterate" 0.05 / 0.20</button>
+      </div>
+    </div>
+    <div class="barrow"><span class="barlabel">drafter proposes</span><div class="bartrack"><div class="barfill" id="bar-pd" style="background:var(--accent)"></div></div><span class="barval" id="v-pd"></span></div>
+    <div class="barrow"><span class="barlabel">target wants</span><div class="bartrack"><div class="barfill" id="bar-pt" style="background:var(--good)"></div></div><span class="barval" id="v-pt"></span></div>
+    <div class="barrow"><span class="barlabel">accept prob</span><div class="bartrack"><div class="barfill" id="bar-acc" style="background:var(--warn)"></div></div><span class="barval" id="v-acc"></span></div>
+    <div class="verdict" id="accept-verdict"></div>
+  </div>
+
+  <!-- ============ Widget 2: speedup curve ============ -->
+  <div class="widget">
+    <h3>2 · The speedup curve (Trap 11)</h3>
+    <p class="wnote">E[tokens/pass] = (1 − α^(γ+1)) / (1 − α). Slide α. Watch the convexity — the client-drafter play lives in the right end.</p>
+    <div class="controls">
+      <div class="ctl">
+        <label>α (acceptance) <b id="alphaval">0.60</b></label>
+        <input type="range" id="alpha" min="0" max="99" value="60">
+      </div>
+      <div class="btnrow">
+        γ: <button class="chip" data-g="2">2</button>
+        <button class="chip on" data-g="4">4</button>
+        <button class="chip" data-g="8">8</button>
+      </div>
+      <div class="readout"><span id="speedup">2.26</span>× <small>tokens per verify pass</small></div>
+    </div>
+    <svg id="curve" viewBox="0 0 640 240" width="100%" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="verdict trim" id="convexity-note">α .6 → 2.3 &nbsp;·&nbsp; α .9 → 4.1 &nbsp;—&nbsp; the last 20 points of α are worth more than the first 60. Low-entropy client traffic buys exactly those points.</div>
+  </div>
+
+  <!-- ============ Widget 3: GRPO dead zone ============ -->
+  <div class="widget">
+    <h3>3 · The GRPO dead zone (Trap 8)</h3>
+    <p class="wnote">G = 16 rollouts, binary reward. Slide the pass count. A = (r − μ)/σ.</p>
+    <div class="controls">
+      <div class="ctl">
+        <label>passes in group <b id="kval">8 / 16</b></label>
+        <input type="range" id="k" min="0" max="16" value="8">
+      </div>
+      <div class="readout"><span id="sigval">0.50</span> <small>group σ = gradient fuel</small></div>
+    </div>
+    <div class="grpo-grid" id="ggrid"></div>
+    <div class="barrow"><span class="barlabel">learning signal</span><div class="bartrack"><div class="barfill" id="bar-sig" style="background:var(--accent)"></div></div><span class="barval" id="v-sig"></span></div>
+    <div class="verdict" id="grpo-verdict"></div>
+  </div>
+
+  <h2 class="sec">Section 3 — The numbers wall</h2>
+  <p class="sec-note">If a number appears here, it's load-bearing. Red tiles = ones you dropped or garbled tonight.</p>
+
+  <div class="numwall" id="numwall">
+    <div class="numtile"><div class="big">576 <span class="vs">vs</span> 32,768</div><div class="lbl">KV floats/token/layer — MLA vs MHA → ~57× · ~3.5× vs GQA-8</div></div>
+    <div class="numtile"><div class="big">512 + 64</div><div class="lbl">latent dim + decoupled RoPE key — RoPE breaks absorption, this fixes it</div></div>
+    <div class="numtile"><div class="big">128 + 1 · top-8</div><div class="lbl">Sarvam-105B experts (shared never scored) · 30B: top-6, ~2.4B active</div></div>
+    <div class="numtile"><div class="big">28 <span class="vs">vs</span> ~10¹²</div><div class="lbl">2-of-8 vs 8-of-128 combos — granularity buys combinatorics, not FLOPs</div></div>
+    <div class="numtile hot"><div class="big">γ = 0.001 · ≤4 nodes · 0 drops</div><div class="lbl">bias nudge · node-limited routing · no token dropping — evaporated 3×</div></div>
+    <div class="numtile"><div class="big">MTP-3 <span class="vs">vs</span> depth-1</div><div class="lbl">Sarvam vs V3 · λ = 0.3 → 0.1 · shared embed + head</div></div>
+    <div class="numtile"><div class="big">85–90% · ~1.8×</div><div class="lbl">2nd-token acceptance · decode TPS from self-speculation · 100+ tok/s reasoning</div></div>
+    <div class="numtile"><div class="big">14 GB ÷ 3.3 TB/s ≈ 4.2 ms</div><div class="lbl">7B BF16 on H100 → ~240 tok/s ceiling at batch 1 · compute idle ~99.7%</div></div>
+    <div class="numtile hot"><div class="big">(1 − α^(γ+1)) / (1 − α)</div><div class="lbl">tokens per verify PASS — you garbled this twice · convex in α</div></div>
+    <div class="numtile hot"><div class="big">6–15×</div><div class="lbl">dFlash lossless claim — joint block denoise + anchor sampling + target-KV injection</div></div>
+    <div class="numtile"><div class="big">~2,200 steps</div><div class="lbl">Sarvam-M RLVR curriculum · dynamic rollout allocation at the frontier</div></div>
+    <div class="numtile"><div class="big">+21.6 · +17.6 · +86%</div><div class="lbl">Sarvam-M gains: math · programming · romanized-Indic GSM-8K</div></div>
+    <div class="numtile"><div class="big">1.4–2.1 <span class="vs">vs</span> 4–8</div><div class="lbl">tokens/word Indic — Sarvam vs Llama-family · 3× fertility = ⅓ context, ~3× cost</div></div>
+    <div class="numtile"><div class="big">3 bytes/char</div><div class="lbl">Devanagari in UTF-8 → byte-fallback → 10+ tokens/word on English BPE</div></div>
+    <div class="numtile"><div class="big">68,096 → 262,144</div><div class="lbl">vocab Sarvam-1 → 105B — slots pay across 22 scripts + code; needs vocab-parallel softmax</div></div>
+    <div class="numtile"><div class="big">E4M3 · E5M2</div><div class="lbl">weights/acts (precision) · grads (range) · FP32 promote every 128 accums · 105B native FP8 → L40S</div></div>
+  </div>
+
+  <h2 class="sec">Section 4 — The three closers you never typed</h2>
+  <p class="sec-note">Debt from tonight. Read each out loud twice tomorrow morning. These are the paragraphs the drill was for.</p>
+
+  <div class="say">
+    <div class="who">Block 2 · MoE closer</div>
+    <p>"The bias enters top-k <b>selection</b> only, never the gate weight — selection decides load, the gate decides the output mix. Routing is node-limited to 4 nodes per token, and no tokens are dropped — the bias does the balancing."</p>
+  </div>
+
+  <div class="say">
+    <div class="who">Block 4 · dFlash patch</div>
+    <p>"dFlash drafts the whole block <b>jointly</b> in one denoising pass, and <b>target-KV injection</b> keeps acceptance high — the drafter borrows the target's own features. I know it at the paper level; I haven't trained one — I'd like to."</p>
+  </div>
+
+  <div class="say">
+    <div class="who">Block 5 · "So, can you do RL?"</div>
+    <p>"Yes — I shipped GRPO end to end: engagement data → reward model → GRPO → vLLM → A/B on real users. GRPO over PPO because the RM gave a clean scalar and killing the value net halves memory. Over DPO for three reasons: our signal was <b>cardinal</b>, not pairwise; the data wasn't dialogue-shaped; and DPO is off-policy — its gradient lands on strings my model would never emit, while the GRPO loop grades my model's own samples. KL anchor came free — <b>switch off the LoRA and you are the reference policy</b>. And for verifiable domains like code I'd drop the learned RM entirely — RLVR, because a unit test can't be Goodharted; then curriculum + rollout allocation, because zero-variance groups are dead compute."</p>
+  </div>
+
+  <h2 class="sec">Section 5 — Your three questions for them</h2>
+  <div class="qgrid">
+    <div class="qcard"><b>1</b>Does the enterprise post-training loop feed back into the foundation models — flywheel, or separate track?</div>
+    <div class="qcard"><b>2</b>Are dFlash speculators trained per-client? Who owns that — post-training or inference?</div>
+    <div class="qcard"><b>3</b>For the 1T model, what changes vs the 105B — MTP depth, expert count, or something new?</div>
+  </div>
+
+  <footer>
+    Drill of Aug 26, 2026 · Sarvam HM screen Aug 27, 15:00 IST · Rule of the night: details you fight for stick; details handed to you evaporate. When one is gone — say less, not wronger.
+  </footer>
+</div>
+
+<script>
+(function () {
+  // ---------- trap cards ----------
+  var flipped = {};
+  try { flipped = JSON.parse(localStorage.getItem('sarvam-traps') || '{}'); } catch (e) {}
+  var cards = document.querySelectorAll('#traps .card');
+  var counter = document.getElementById('flipcount');
+  function refreshCount() {
+    var n = 0; for (var k in flipped) if (flipped[k]) n++;
+    counter.textContent = n;
+  }
+  cards.forEach(function (c, i) {
+    if (flipped[i]) c.classList.add('flipped');
+    c.addEventListener('click', function () {
+      c.classList.toggle('flipped');
+      flipped[i] = c.classList.contains('flipped');
+      try { localStorage.setItem('sarvam-traps', JSON.stringify(flipped)); } catch (e) {}
+      refreshCount();
+    });
+  });
+  refreshCount();
+
+  // ---------- widget 1: accept rule ----------
+  var pd = document.getElementById('pd'), pt = document.getElementById('pt');
+  function fmt(x) { return x.toFixed(2); }
+  function updAccept() {
+    var d = pd.value / 100, t = pt.value / 100;
+    document.getElementById('pdval').textContent = fmt(d);
+    document.getElementById('ptval').textContent = fmt(t);
+    var acc = d > 0 ? Math.min(1, t / d) : 1;
+    document.getElementById('bar-pd').style.width = (d * 100) + '%';
+    document.getElementById('bar-pt').style.width = (t * 100) + '%';
+    document.getElementById('bar-acc').style.width = (acc * 100) + '%';
+    document.getElementById('v-pd').textContent = fmt(d);
+    document.getElementById('v-pt').textContent = fmt(t);
+    document.getElementById('v-acc').textContent = Math.round(acc * 100) + '%';
+    var v = document.getElementById('accept-verdict');
+    if (t >= d) {
+      v.className = 'verdict ok';
+      v.innerHTML = 'ALWAYS ACCEPT — ratio ≥ 1. Under-proposed: the missing ' + fmt(t - d) +
+        ' arrives via resampling ∝ max(0, p_t − p_d) after other rejections.<small>Your hard threshold got this case right — by accident.</small>';
+    } else {
+      v.className = 'verdict trim';
+      v.innerHTML = 'ACCEPT ' + Math.round(acc * 100) + '% — trims net rate to exactly ' + fmt(t) +
+        '.<small>Your hard threshold would have BANNED this token: 0% instead of ' + fmt(t) + '. That is why it is not lossless.</small>';
+    }
+  }
+  pd.addEventListener('input', updAccept);
+  pt.addEventListener('input', updAccept);
+  document.getElementById('preset-delve').addEventListener('click', function () { pd.value = 35; pt.value = 30; updAccept(); });
+  document.getElementById('preset-iterate').addEventListener('click', function () { pd.value = 5; pt.value = 20; updAccept(); });
+  updAccept();
+
+  // ---------- widget 2: speedup curve ----------
+  var gamma = 4;
+  var alphaEl = document.getElementById('alpha');
+  var svg = document.getElementById('curve');
+  var W = 640, H = 240, PX = 46, PY = 18;
+  function f(a, g) { return a >= 0.9999 ? g + 1 : (1 - Math.pow(a, g + 1)) / (1 - a); }
+  function drawCurve() {
+    var a0 = alphaEl.value / 100;
+    var ymax = gamma + 1.4;
+    var s = '';
+    // axes + gridlines
+    for (var yy = 1; yy <= gamma + 1; yy++) {
+      var gy = H - PY - (yy / ymax) * (H - 2 * PY);
+      s += '<line x1="' + PX + '" y1="' + gy + '" x2="' + (W - 8) + '" y2="' + gy + '" stroke="currentColor" stroke-opacity="0.08"/>';
+      s += '<text x="' + (PX - 8) + '" y="' + (gy + 4) + '" text-anchor="end">' + yy + '×</text>';
+    }
+    // ceiling
+    var cy = H - PY - ((gamma + 1) / ymax) * (H - 2 * PY);
+    s += '<line x1="' + PX + '" y1="' + cy + '" x2="' + (W - 8) + '" y2="' + cy + '" stroke="#d03b3b" stroke-dasharray="5,4" stroke-opacity="0.6"/>';
+    s += '<text x="' + (W - 12) + '" y="' + (cy - 6) + '" text-anchor="end" fill="#d03b3b">ceiling γ+1 = ' + (gamma + 1) + '</text>';
+    // curve
+    var pts = [];
+    for (var i = 0; i <= 99; i++) {
+      var a = i / 100;
+      var x = PX + a * (W - PX - 8);
+      var y = H - PY - (Math.min(f(a, gamma), ymax) / ymax) * (H - 2 * PY);
+      pts.push((i ? 'L' : 'M') + x.toFixed(1) + ',' + y.toFixed(1));
+    }
+    s += '<path d="' + pts.join(' ') + '" fill="none" stroke="#3987e5" stroke-width="2.5"/>';
+    // x labels
+    [0, 0.5, 0.9].forEach(function (a) {
+      var x = PX + a * (W - PX - 8);
+      s += '<text x="' + x + '" y="' + (H - 2) + '" text-anchor="middle">α=' + a + '</text>';
+    });
+    // marker dot
+    var mx = PX + a0 * (W - PX - 8);
+    var my = H - PY - (Math.min(f(a0, gamma), ymax) / ymax) * (H - 2 * PY);
+    s += '<circle cx="' + mx + '" cy="' + my + '" r="7" fill="#fab219" stroke="#0b0b0b" stroke-width="1.5"/>';
+    svg.innerHTML = s;
+    document.getElementById('alphaval').textContent = a0.toFixed(2);
+    document.getElementById('speedup').textContent = f(a0, gamma).toFixed(2);
+  }
+  alphaEl.addEventListener('input', drawCurve);
+  document.querySelectorAll('button.chip[data-g]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('button.chip[data-g]').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+      gamma = +b.dataset.g;
+      drawCurve();
+    });
+  });
+  drawCurve();
+
+  // ---------- widget 3: GRPO dead zone ----------
+  var kEl = document.getElementById('k');
+  var ggrid = document.getElementById('ggrid');
+  for (var i = 0; i < 16; i++) {
+    var d = document.createElement('div');
+    d.className = 'gsq';
+    ggrid.appendChild(d);
+  }
+  function updGRPO() {
+    var k = +kEl.value, G = 16;
+    var mu = k / G;
+    var sig = Math.sqrt(mu * (1 - mu));
+    document.getElementById('kval').textContent = k + ' / 16';
+    document.getElementById('sigval').textContent = sig.toFixed(2);
+    var sqs = ggrid.children;
+    for (var i = 0; i < G; i++) {
+      var pass = i < k;
+      sqs[i].className = 'gsq ' + (pass ? 'pass' : 'fail');
+      if (sig > 0) {
+        sqs[i].textContent = pass ? '+' + ((1 - mu) / sig).toFixed(1) : '−' + (mu / sig).toFixed(1);
+      } else {
+        sqs[i].textContent = '0';
+        sqs[i].classList.add('dead');
+      }
+    }
+    var rel = sig / 0.5;
+    document.getElementById('bar-sig').style.width = (rel * 100) + '%';
+    document.getElementById('v-sig').textContent = Math.round(rel * 100) + '%';
+    var v = document.getElementById('grpo-verdict');
+    if (sig === 0) {
+      v.className = 'verdict trim';
+      v.innerHTML = (k === 0 ? 'ALL FAIL' : 'ALL PASS') + ' — σ = 0, every advantage = 0, this prompt contributes <b>zero gradient</b>. Dead compute.' +
+        '<small>Both ends are dead — this is why Sarvam-M needed a difficulty curriculum + dynamic rollout allocation.</small>';
+    } else {
+      v.className = 'verdict ok';
+      v.innerHTML = 'LIVE — group variance = gradient fuel. Max signal at 8/16.' +
+        '<small>Dynamic rollout allocation: spend G where the variance is, starve the dead zones.</small>';
+    }
+  }
+  kEl.addEventListener('input', updGRPO);
+  updGRPO();
+
+  // ---------- numbers wall reveal ----------
+  var tiles = document.querySelectorAll('.numtile');
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e, idx) {
+        if (e.isIntersecting) {
+          e.target.style.transitionDelay = (Array.prototype.indexOf.call(tiles, e.target) % 4) * 70 + 'ms';
+          e.target.classList.add('show');
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    tiles.forEach(function (t) { io.observe(t); });
+  } else {
+    tiles.forEach(function (t) { t.classList.add('show'); });
+  }
+})();
+</script>
+</body>
+</html>
