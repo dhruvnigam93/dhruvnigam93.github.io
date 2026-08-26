@@ -151,6 +151,45 @@
   .dead { animation: pulse 1.2s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
 
+  /* ---------- MLA visual ---------- */
+  .cachebars { margin-top: 14px; }
+  .cachebars .barfill { width: 0; transition: width 1.1s cubic-bezier(.2,.7,.3,1); }
+  .mla-stage { padding: 14px 4px 4px; }
+  .mrow { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .mchip {
+    border: 1.5px solid var(--hairline); border-radius: 10px; background: var(--page);
+    padding: 9px 13px; font-family: ui-monospace, Menlo, monospace; font-size: 13px;
+    font-weight: 700; text-align: center; white-space: nowrap;
+    transition: transform .6s cubic-bezier(.2,.7,.3,1), border-color .6s, background .6s;
+  }
+  .mchip small { display: block; font-size: 10px; color: var(--muted); font-weight: 400; }
+  .mchip.cchip { background: var(--good-tint); border-color: rgba(12,163,12,.45); }
+  .dot-op { font-size: 20px; color: var(--muted); }
+  .rdisc {
+    width: 62px; height: 62px; border-radius: 50%; border: 2.5px dashed var(--crit);
+    display: flex; align-items: center; justify-content: center; flex: none;
+    font-size: 10.5px; font-weight: 700; color: var(--crit); background: var(--crit-tint);
+    animation: spin 6s linear infinite;
+    transition: opacity .45s, width .45s, height .45s, border-width .45s;
+  }
+  .rdisc span { display: block; animation: spin 6s linear infinite reverse; }
+  .rdisc.mini { width: 46px; height: 46px; animation-duration: 4s; }
+  .rdisc.mini span { animation-duration: 4s; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes shakeit { 0%,100% { transform: translateX(0); } 30% { transform: translateX(-6px); } 70% { transform: translateX(6px); } }
+  .mla-stage[data-s="1"] .rdisc.main, .mla-stage[data-s="3"] .rdisc.main { width: 0; height: 0; opacity: 0; border-width: 0; overflow: hidden; padding: 0; }
+  .mla-stage[data-s="1"] .mq, .mla-stage[data-s="3"] .mq { transform: translateX(10px); border-color: var(--good); background: var(--good-tint); }
+  .mla-stage[data-s="1"] .muk, .mla-stage[data-s="3"] .muk { transform: translateX(-10px); border-color: var(--good); background: var(--good-tint); }
+  .mla-stage[data-s="2"] .mq, .mla-stage[data-s="2"] .muk { animation: shakeit .55s ease; border-color: var(--crit); }
+  .fusepill {
+    text-align: center; font-size: 12px; color: var(--good-text); font-weight: 700;
+    opacity: 0; transition: opacity .6s .25s; margin-top: 8px;
+  }
+  .mla-stage[data-s="1"] .fusepill, .mla-stage[data-s="3"] .fusepill { opacity: 1; }
+  .rope-lane { max-height: 0; opacity: 0; overflow: hidden; transition: max-height .6s ease, opacity .6s .15s; margin-top: 4px; }
+  .mla-stage[data-s="3"] .rope-lane { max-height: 120px; opacity: 1; }
+  .rot-arrow { transition: transform .12s linear; }
+
   /* ---------- numbers wall ---------- */
   .numwall { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
   .numtile {
@@ -412,7 +451,99 @@
     <div class="verdict" id="grpo-verdict"></div>
   </div>
 
-  <h2 class="sec">Section 3 — The numbers wall</h2>
+  <h2 class="sec">Section 3 — MLA, visually: the latent + RoPE</h2>
+  <p class="sec-note">Block 1 in pictures. Three moving parts: the funnel, the merge, the rotation.</p>
+
+  <!-- ============ MLA 1: the funnel ============ -->
+  <div class="widget">
+    <h3>1 · Down, cache, (never) up</h3>
+    <p class="wnote">A token arrives. Only the latent is ever stored — the up-projections dissolve into the query and output paths.</p>
+    <svg viewBox="0 0 640 210" width="100%" preserveAspectRatio="xMidYMid meet">
+      <text x="38" y="16" text-anchor="middle">h · 7168</text>
+      <rect x="24" y="24" width="28" height="160" rx="4" style="fill:var(--accent)"/>
+      <polygon points="52,24 158,86 158,132 52,184" style="fill:var(--blue-tint);stroke:var(--hairline)"/>
+      <text x="102" y="100" text-anchor="middle">W_DKV</text>
+      <text x="102" y="114" text-anchor="middle" style="font-size:9.5px">7168 → 512</text>
+      <rect x="150" y="76" width="72" height="82" rx="8" fill="none" style="stroke:var(--warn)" stroke-dasharray="5,4" stroke-width="1.5"/>
+      <rect x="158" y="86" width="56" height="28" rx="5" style="fill:var(--good-tint);stroke:var(--good)"/>
+      <text x="186" y="104" text-anchor="middle" style="fill:var(--ink);font-weight:700">c · 512</text>
+      <rect x="158" y="122" width="56" height="20" rx="5" style="fill:var(--warn-tint);stroke:var(--warn)"/>
+      <text x="186" y="136" text-anchor="middle" style="font-size:9.5px;fill:var(--ink)">k_R · 64</text>
+      <text x="186" y="176" text-anchor="middle" style="font-weight:700">cache · 576 / token / layer</text>
+      <line x1="224" y1="94" x2="324" y2="52" style="stroke:var(--muted)" stroke-dasharray="4,4"/>
+      <line x1="224" y1="132" x2="324" y2="156" style="stroke:var(--muted)" stroke-dasharray="4,4"/>
+      <rect x="326" y="28" width="184" height="46" rx="8" fill="none" style="stroke:var(--hairline)" stroke-dasharray="5,4"/>
+      <text x="340" y="47">K (128 heads · W_UK)</text>
+      <text x="340" y="62" style="font-size:9.5px">absorbed → query path</text>
+      <rect x="326" y="134" width="184" height="46" rx="8" fill="none" style="stroke:var(--hairline)" stroke-dasharray="5,4"/>
+      <text x="340" y="153">V (128 heads · W_UV)</text>
+      <text x="340" y="168" style="font-size:9.5px">absorbed → output path</text>
+      <text x="418" y="108" text-anchor="middle" style="fill:var(--crit);font-weight:700">never materialized</text>
+      <circle r="5" style="fill:var(--accent)">
+        <animateMotion dur="2s" repeatCount="indefinite" path="M38,60 C90,66 120,85 186,100"/>
+      </circle>
+    </svg>
+    <div class="cachebars" id="cachebars">
+      <div class="barrow"><span class="barlabel">MHA</span><div class="bartrack"><div class="barfill" data-w="100" style="background:var(--crit)"></div></div><span class="barval">32,768</span></div>
+      <div class="barrow"><span class="barlabel">GQA-8</span><div class="bartrack"><div class="barfill" data-w="6.3" style="background:var(--warn)"></div></div><span class="barval">2,048</span></div>
+      <div class="barrow"><span class="barlabel">MLA</span><div class="bartrack"><div class="barfill" data-w="1.8" style="background:var(--good)"></div></div><span class="barval">576</span></div>
+    </div>
+    <div class="verdict ok">~57× vs MHA · ~3.5× vs GQA-8 — floats per token per layer. At 128K agentic contexts, the cache <b>is</b> the VRAM bill.</div>
+  </div>
+
+  <!-- ============ MLA 2: absorption machine ============ -->
+  <div class="widget">
+    <h3>2 · The absorption machine</h3>
+    <p class="wnote">Why the trick works — and exactly where RoPE jams it.</p>
+    <div class="btnrow" id="mla-states">
+      <button class="chip on" data-st="1">① absorb</button>
+      <button class="chip" data-st="2">② + RoPE</button>
+      <button class="chip" data-st="3">③ decoupled</button>
+      <button class="chip" id="mla-play">▶ play all</button>
+    </div>
+    <div class="mla-stage" id="mstage" data-s="1">
+      <div class="mrow">
+        <div class="mchip">hᵀ<small>1 × 7168</small></div>
+        <span class="dot-op">·</span>
+        <div class="mchip mq">W_q<small>static</small></div>
+        <div class="rdisc main"><span>R(m−n)</span></div>
+        <div class="mchip muk">W_UKᵀ<small>static</small></div>
+        <span class="dot-op">·</span>
+        <div class="mchip cchip">c<small>512 · cached</small></div>
+      </div>
+      <div class="fusepill" id="fusepill">↑ fused: W_q W_UKᵀ = one matrix, computed once — attend straight to the latent</div>
+      <div class="mrow rope-lane">
+        <div class="mchip">q_R = RoPE(W_QR h)<small>64</small></div>
+        <span class="dot-op">·</span>
+        <div class="rdisc mini"><span>R</span></div>
+        <span class="dot-op">·</span>
+        <div class="mchip">k_R<small>64 · cached raw · shared all heads</small></div>
+      </div>
+      <div class="verdict ok" id="mla-caption"></div>
+    </div>
+  </div>
+
+  <!-- ============ MLA 3: the rotation ============ -->
+  <div class="widget">
+    <h3>3 · The rotation itself</h3>
+    <p class="wnote">RoPE rotates each 2-D pair by position × θ. The dot product only sees the gap.</p>
+    <div class="controls">
+      <div class="ctl">
+        <label>query position m <b id="mval">12</b></label>
+        <input type="range" id="mpos" min="0" max="33" value="12">
+      </div>
+      <div class="ctl">
+        <label>key position n <b id="nval">4</b></label>
+        <input type="range" id="npos" min="0" max="33" value="4">
+      </div>
+      <div class="btnrow"><button class="chip" id="shiftboth">shift both +7</button></div>
+      <div class="readout"><span id="delta">72°</span> <small>Δ = (m−n)·θ — all attention sees</small></div>
+    </div>
+    <svg id="ropesvg" viewBox="0 0 320 208" width="100%" style="max-width:400px;display:block;margin:0 auto"></svg>
+    <div class="verdict ok" id="rope-note">Shift both positions equally — the arrows jump, the angle between them doesn't. Absolute rotation, relative attention.</div>
+  </div>
+
+  <h2 class="sec">Section 4 — The numbers wall</h2>
   <p class="sec-note">If a number appears here, it's load-bearing. Red tiles = ones you dropped or garbled tonight.</p>
 
   <div class="numwall" id="numwall">
@@ -434,7 +565,7 @@
     <div class="numtile"><div class="big">E4M3 · E5M2</div><div class="lbl">weights/acts (precision) · grads (range) · FP32 promote every 128 accums · 105B native FP8 → L40S</div></div>
   </div>
 
-  <h2 class="sec">Section 4 — The three closers you never typed</h2>
+  <h2 class="sec">Section 5 — The three closers you never typed</h2>
   <p class="sec-note">Debt from tonight. Read each out loud twice tomorrow morning. These are the paragraphs the drill was for.</p>
 
   <div class="say">
@@ -452,7 +583,7 @@
     <p>"Yes — I shipped GRPO end to end: engagement data → reward model → GRPO → vLLM → A/B on real users. GRPO over PPO because the RM gave a clean scalar and killing the value net halves memory. Over DPO for three reasons: our signal was <b>cardinal</b>, not pairwise; the data wasn't dialogue-shaped; and DPO is off-policy — its gradient lands on strings my model would never emit, while the GRPO loop grades my model's own samples. KL anchor came free — <b>switch off the LoRA and you are the reference policy</b>. And for verifiable domains like code I'd drop the learned RM entirely — RLVR, because a unit test can't be Goodharted; then curriculum + rollout allocation, because zero-variance groups are dead compute."</p>
   </div>
 
-  <h2 class="sec">Section 5 — Your three questions for them</h2>
+  <h2 class="sec">Section 6 — Your three questions for them</h2>
   <div class="qgrid">
     <div class="qcard"><b>1</b>Does the enterprise post-training loop feed back into the foundation models — flywheel, or separate track?</div>
     <div class="qcard"><b>2</b>Are dFlash speculators trained per-client? Who owns that — post-training or inference?</div>
@@ -611,6 +742,107 @@
   }
   kEl.addEventListener('input', updGRPO);
   updGRPO();
+
+  // ---------- MLA 1: cache bars ----------
+  var cb = document.getElementById('cachebars');
+  function fillCacheBars() {
+    cb.querySelectorAll('.barfill').forEach(function (b) { b.style.width = b.dataset.w + '%'; });
+  }
+  if ('IntersectionObserver' in window) {
+    var cio = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { fillCacheBars(); cio.disconnect(); } });
+    }, { threshold: 0.4 });
+    cio.observe(cb);
+  } else { fillCacheBars(); }
+
+  // ---------- MLA 2: absorption machine ----------
+  var mstage = document.getElementById('mstage');
+  var mcap = document.getElementById('mla-caption');
+  var mcaps = {
+    1: ['ok', 'No position term → both matrices static → fold them once. score = hᵀ (W_q W_UKᵀ) c. Keys never exist — you attend straight to the 512-float latent.'],
+    2: ['trim', 'RoPE wedges R(m−n) between the two matrices — different for every query–key pair, so there is nothing to pre-multiply. Absorption dead.'],
+    3: ['ok', 'Split the key: 512 position-free dims keep the fused path; a 64-dim rotary side-channel carries position, cached raw. 512 + 64 = 576.']
+  };
+  function setMLA(s) {
+    mstage.dataset.s = s;
+    mcap.className = 'verdict ' + mcaps[s][0];
+    mcap.textContent = mcaps[s][1];
+    document.querySelectorAll('#mla-states .chip[data-st]').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.st == s);
+    });
+  }
+  document.querySelectorAll('#mla-states .chip[data-st]').forEach(function (b) {
+    b.addEventListener('click', function () { setMLA(+b.dataset.st); });
+  });
+  document.getElementById('mla-play').addEventListener('click', function () {
+    setMLA(1);
+    setTimeout(function () { setMLA(2); }, 2400);
+    setTimeout(function () { setMLA(3); }, 4800);
+  });
+  setMLA(1);
+
+  // ---------- MLA 3: rotation demo ----------
+  var TH = 9, RCX = 160, RCY = 106, RR = 74;
+  var mpos = document.getElementById('mpos'), npos = document.getElementById('npos');
+  var rsvg = document.getElementById('ropesvg');
+  function rpt(deg, r) {
+    var a = deg * Math.PI / 180;
+    return [(RCX + r * Math.sin(a)).toFixed(1), (RCY - r * Math.cos(a)).toFixed(1)];
+  }
+  function drawRope(flash) {
+    var m = +mpos.value, n = +npos.value;
+    var am = m * TH, an = n * TH;
+    var s = '<circle cx="' + RCX + '" cy="' + RCY + '" r="' + RR + '" fill="none" stroke="currentColor" stroke-opacity="0.15"/>';
+    for (var i = 0; i < 40; i++) {
+      var p1 = rpt(i * TH, RR - 3), p2 = rpt(i * TH, RR + 3);
+      s += '<line x1="' + p1[0] + '" y1="' + p1[1] + '" x2="' + p2[0] + '" y2="' + p2[1] + '" stroke="currentColor" stroke-opacity="0.18"/>';
+    }
+    // arc for delta
+    var d = am - an;
+    if (Math.abs(d) > 0.5) {
+      var pa = rpt(an, 44), pb = rpt(am, 44);
+      var large = Math.abs(d) > 180 ? 1 : 0, sweep = d > 0 ? 1 : 0;
+      s += '<path d="M' + pa[0] + ',' + pa[1] + ' A44,44 0 ' + large + ',' + sweep + ' ' + pb[0] + ',' + pb[1] +
+        '" fill="none" style="stroke:var(--warn)" stroke-width="5" stroke-linecap="round"/>';
+    }
+    // arrows
+    var kp = rpt(an, RR), qp = rpt(am, RR);
+    s += '<line x1="' + RCX + '" y1="' + RCY + '" x2="' + kp[0] + '" y2="' + kp[1] + '" style="stroke:var(--good)" stroke-width="3.5" stroke-linecap="round"/>';
+    s += '<circle cx="' + kp[0] + '" cy="' + kp[1] + '" r="5" style="fill:var(--good)"/>';
+    var kl = rpt(an, RR + 16);
+    s += '<text x="' + kl[0] + '" y="' + kl[1] + '" text-anchor="middle" style="fill:var(--good-text);font-weight:700">k·n</text>';
+    s += '<line x1="' + RCX + '" y1="' + RCY + '" x2="' + qp[0] + '" y2="' + qp[1] + '" style="stroke:var(--accent)" stroke-width="3.5" stroke-linecap="round"/>';
+    s += '<circle cx="' + qp[0] + '" cy="' + qp[1] + '" r="5" style="fill:var(--accent)"/>';
+    var ql = rpt(am, RR + 16);
+    s += '<text x="' + ql[0] + '" y="' + ql[1] + '" text-anchor="middle" style="fill:var(--accent);font-weight:700">q·m</text>';
+    rsvg.innerHTML = s;
+    document.getElementById('mval').textContent = m;
+    document.getElementById('nval').textContent = n;
+    var del = document.getElementById('delta');
+    del.textContent = ((m - n) * TH) + '°';
+    if (flash) {
+      del.style.color = 'var(--good-text)';
+      setTimeout(function () { del.style.color = ''; }, 800);
+    }
+  }
+  mpos.addEventListener('input', function () { drawRope(false); });
+  npos.addEventListener('input', function () { drawRope(false); });
+  document.getElementById('shiftboth').addEventListener('click', function () {
+    var m0 = +mpos.value, n0 = +npos.value;
+    var step = (m0 + 7 <= 33 && n0 + 7 <= 33) ? 7 : -7;
+    var t0 = null;
+    function tween(ts) {
+      if (!t0) t0 = ts;
+      var p = Math.min(1, (ts - t0) / 380);
+      var e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      mpos.value = Math.round(m0 + step * e);
+      npos.value = Math.round(n0 + step * e);
+      drawRope(p === 1);
+      if (p < 1) requestAnimationFrame(tween);
+    }
+    requestAnimationFrame(tween);
+  });
+  drawRope(false);
 
   // ---------- numbers wall reveal ----------
   var tiles = document.querySelectorAll('.numtile');
