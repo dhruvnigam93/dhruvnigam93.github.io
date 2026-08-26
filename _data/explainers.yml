@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "Combining tensors: concat vs stack"
+  slug: combining-tensors-numpy-pytorch
+  date: 2026-08-26
+  description: "Visual, interactive guide to combining arrays in NumPy & PyTorch — concat (existing axis) vs stack (new axis), the axis/dim knob, unsqueeze/squeeze, and a full NumPy↔PyTorch cheat sheet with the interview traps."
+
 - title: "LUMOS — Staff-Level Defense Kit"
   slug: lumos-defense-kit
   date: 2026-08-25

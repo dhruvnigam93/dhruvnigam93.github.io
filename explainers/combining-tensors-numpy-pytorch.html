@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>Combining tensors: concat vs stack (NumPy &amp; PyTorch)</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --radius: 14px;
+            --a-bg: #dbeafe; --a-fg: #1d4ed8;
+            --b-bg: #ffedd5; --b-fg: #c2410c;
+            --cellsz: 42px;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                --a-bg: #17304d; --a-fg: #8ec0ff;
+                --b-bg: #3d2712; --b-fg: #fdba74;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap { max-width: 760px; margin: 0 auto; padding: max(20px, env(safe-area-inset-top)) 20px 80px; }
+        .back { display: inline-block; margin: 8px 0 20px; color: var(--muted); text-decoration: none; font-size: 0.95rem; }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.3rem; margin: 2em 0 0.5em; }
+        h3 { font-size: 1.05rem; margin: 1.4em 0 0.4em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        code {
+            background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+            padding: 1px 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85em;
+        }
+        pre {
+            background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+            padding: 14px 16px; overflow-x: auto; font-size: 0.82em;
+        }
+        pre code { background: none; border: none; padding: 0; }
+        .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin: 1em 0; }
+        .card.rule { border-left: 4px solid var(--accent); }
+        .card h3 { margin-top: 0; }
+
+        /* tensor grid visuals */
+        .tgrid { display: inline-grid; gap: 6px; }
+        .cell {
+            width: var(--cellsz); height: var(--cellsz);
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 8px; border: 1.5px solid; font-weight: 600; font-size: 0.9rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        }
+        .cell.a { background: var(--a-bg); color: var(--a-fg); border-color: var(--a-fg); }
+        .cell.b { background: var(--b-bg); color: var(--b-fg); border-color: var(--b-fg); }
+        .rankbox { display: inline-block; border: 2px dashed var(--muted); border-radius: 12px; padding: 8px; }
+        .shape {
+            display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.8rem; background: var(--bg); border: 1px solid var(--line);
+            border-radius: 6px; padding: 2px 8px; color: var(--fg);
+        }
+        .lbl { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.78rem; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+        .demo { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin: 1.2em 0; }
+        .out { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+        .col { display: flex; flex-direction: column; }
+        .cap { margin-top: 12px; color: var(--muted); font-size: 0.92rem; min-height: 1.3em; }
+        .seg { display: inline-flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 4px; }
+        .seg button {
+            font: inherit; font-weight: 600; font-size: 0.9rem; background: transparent; color: var(--accent);
+            border: 1px solid var(--line); border-radius: 999px; padding: 10px 16px; min-height: 44px;
+            cursor: pointer; touch-action: manipulation;
+        }
+        .seg button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .seg button:active { transform: scale(0.96); }
+        .arrow { font-size: 1.6rem; color: var(--muted); align-self: center; }
+        .demo pre { margin: 14px 0 0; }
+
+        /* rosetta table */
+        .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 1em 0; border: 1px solid var(--line); border-radius: var(--radius); }
+        table { border-collapse: collapse; width: 100%; font-size: 0.8rem; }
+        th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+        th { background: var(--card); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); position: sticky; top: 0; }
+        td code { white-space: nowrap; }
+        tbody tr:last-child td { border-bottom: none; }
+        .grp td { background: var(--card); font-weight: 700; font-size: 0.8rem; color: var(--fg); }
+        .warn { color: var(--b-fg); font-weight: 700; }
+
+        details { border: 1px solid var(--line); border-radius: var(--radius); padding: 0 18px; margin: 12px 0; background: var(--card); }
+        summary { cursor: pointer; padding: 16px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        summary::-webkit-details-marker { display: none; }
+        summary::after { content: "+"; color: var(--muted); font-size: 1.4rem; line-height: 1; }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        footer { margin-top: 3em; padding-top: 1.2em; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
+
+        @media (max-width: 480px) { :root { --cellsz: 34px; } h1 { font-size: 1.6rem; } }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>Combining tensors: <span style="color:var(--a-fg)">concat</span> vs <span style="color:var(--b-fg)">stack</span></h1>
+        <p class="meta">Added 2026-08-26 · NumPy &amp; PyTorch · the axis question, visually</p>
+
+        <p>Every "combine these arrays" question is really <strong>one</strong> question:
+        <em>am I growing an axis that already exists, or inventing a new one?</em>
+        Get that right and the API name falls out. Get it wrong and you spend ten minutes
+        fighting shapes. This page is the visual answer, with the NumPy ↔ PyTorch commands side by side.</p>
+
+        <div class="card rule">
+            <h3>The whole idea in two rules</h3>
+            <p><strong style="color:var(--a-fg)">concat / cat</strong> — join along an axis that <em>already exists</em>.
+            Rank stays the same. Inputs must match on every axis <em>except</em> the join axis.
+            The join axis length becomes the <em>sum</em>.</p>
+            <p><strong style="color:var(--b-fg)">stack</strong> — lay the inputs into a <em>brand-new</em> axis.
+            Rank goes up by 1. Inputs must have the <em>exact same</em> shape.
+            The new axis length = <em>how many</em> tensors you passed.</p>
+        </div>
+
+        <h2>1 · concat vs stack (the core toggle)</h2>
+        <p>Two 1-D arrays, <code class="a">a = [1,2,3]</code> and <code>b = [4,5,6]</code>, each shape <code>(3,)</code>.
+        Same inputs, two very different results:</p>
+
+        <div class="demo" id="d1">
+            <div class="out">
+                <div class="col"><div class="lbl">a &nbsp;<span class="shape">(3,)</span></div><div id="d1a"></div></div>
+                <div class="col"><div class="lbl">b &nbsp;<span class="shape">(3,)</span></div><div id="d1b"></div></div>
+            </div>
+            <div class="seg" id="d1seg">
+                <button data-op="concat" class="on">concat &nbsp;→ existing axis</button>
+                <button data-op="stack">stack &nbsp;→ new axis</button>
+            </div>
+            <div class="lbl" style="margin-top:12px">result &nbsp;<span class="shape" id="d1shape"></span></div>
+            <div id="d1out"></div>
+            <div class="cap" id="d1cap"></div>
+            <pre><code id="d1code"></code></pre>
+        </div>
+
+        <p>See it? <strong>concat</strong> glued them end-to-end — still 1-D, just longer.
+        <strong>stack</strong> made each array a <em>row</em> of a new 2-D array. Same data, different rank.</p>
+
+        <h2>2 · Which axis? (the <code>axis</code> / <code>dim</code> knob)</h2>
+        <p>Once you're joining along an existing axis, you pick <em>which</em> one.
+        Here <code class="a">A</code> and <code>B</code> are both <code>(2,2)</code>. Toggle the axis:</p>
+
+        <div class="demo" id="d2">
+            <div class="out">
+                <div class="col"><div class="lbl">A &nbsp;<span class="shape">(2,2)</span></div><div id="d2a"></div></div>
+                <div class="col"><div class="lbl">B &nbsp;<span class="shape">(2,2)</span></div><div id="d2b"></div></div>
+            </div>
+            <div class="seg" id="d2seg">
+                <button data-op="0" class="on">axis=0 · rows grow</button>
+                <button data-op="1">axis=1 · cols grow</button>
+            </div>
+            <div class="lbl" style="margin-top:12px">result &nbsp;<span class="shape" id="d2shape"></span></div>
+            <div id="d2out"></div>
+            <div class="cap" id="d2cap"></div>
+            <pre><code id="d2code"></code></pre>
+        </div>
+
+        <div class="card">
+            <strong>Named shortcuts</strong> for the two common cases (so you don't have to remember which number the axis is):
+            <ul style="margin:8px 0 0">
+                <li><code>vstack</code> = concat along <strong>axis 0</strong> (stack rows on top of each other → taller).</li>
+                <li><code>hstack</code> = concat along <strong>axis 1</strong> for 2-D (place side by side → wider).</li>
+            </ul>
+        </div>
+
+        <h2>3 · Adding a new axis (unsqueeze / expand_dims)</h2>
+        <p>Not combining two tensors — reshaping <em>one</em> so its rank fits (for broadcasting, matmul, batching).
+        A vector <code class="a">v = [1,2,3]</code>, shape <code>(3,)</code>. Where does the new size-1 axis go?</p>
+
+        <div class="demo" id="d3">
+            <div class="seg" id="d3seg">
+                <button data-op="orig" class="on">(3,) original</button>
+                <button data-op="row">axis=0 → (1,3)</button>
+                <button data-op="col">axis=1 / -1 → (3,1)</button>
+            </div>
+            <div class="lbl" style="margin-top:12px">shape &nbsp;<span class="shape" id="d3shape"></span></div>
+            <div id="d3out"></div>
+            <div class="cap" id="d3cap"></div>
+            <pre><code id="d3code"></code></pre>
+        </div>
+
+        <p>The data never changes — only the <em>rank</em>. The dashed box is the new outer axis.
+        <code>(1,3)</code> is a row vector, <code>(3,1)</code> a column vector. This is exactly the trick for
+        turning <code>(N,)</code> into something you can broadcast or matmul.</p>
+
+        <div class="card">
+            <strong>The reverse: <code>squeeze</code></strong> drops size-1 axes.
+            <code>(8,1,1) → squeeze → (8,)</code>. Pass an axis to be surgical: <code>squeeze(1)</code> removes
+            only axis 1. Great for cleaning up after a matmul or a <code>keepdim</code> reduction.
+        </div>
+
+        <h2>4 · The NumPy ↔ PyTorch cheat sheet</h2>
+        <p>Same operation, the two dialects. The big rename: NumPy says <code>axis</code>, PyTorch says <code>dim</code>.</p>
+
+        <div class="tbl-wrap">
+            <table>
+                <thead><tr><th>Goal</th><th>NumPy</th><th>PyTorch</th></tr></thead>
+                <tbody>
+                    <tr class="grp"><td colspan="3">Join along an EXISTING axis — rank unchanged</td></tr>
+                    <tr><td>join along axis you pick</td><td><code>np.concatenate([a,b], axis=0)</code></td><td><code>torch.cat([a,b], dim=0)</code></td></tr>
+                    <tr><td>&nbsp; ↳ 2.0 alias</td><td><code>np.concat([a,b], axis=0)</code></td><td><code>torch.concat([a,b], dim=0)</code></td></tr>
+                    <tr><td>stack rows / vertical</td><td><code>np.vstack([a,b])</code></td><td><code>torch.vstack([a,b])</code></td></tr>
+                    <tr><td>stack cols / horizontal</td><td><code>np.hstack([a,b])</code></td><td><code>torch.hstack([a,b])</code></td></tr>
+                    <tr><td>1-D arrays as columns</td><td><code>np.column_stack([a,b])</code></td><td><code>torch.column_stack([a,b])</code></td></tr>
+                    <tr><td>join along depth (axis 2)</td><td><code>np.dstack([a,b])</code></td><td><code>torch.dstack([a,b])</code></td></tr>
+
+                    <tr class="grp"><td colspan="3">Combine into a NEW axis — rank + 1</td></tr>
+                    <tr><td>stack N tensors</td><td><code>np.stack([a,b], axis=0)</code></td><td><code>torch.stack([a,b], dim=0)</code></td></tr>
+
+                    <tr class="grp"><td colspan="3">Add / remove a single size-1 axis</td></tr>
+                    <tr><td>add an axis</td><td><code>np.expand_dims(a, 0)</code><br><code>a[None]</code> &nbsp;·&nbsp; <code>a[:, None]</code></td><td><code>a.unsqueeze(0)</code><br><code>a[None]</code> &nbsp;·&nbsp; <code>a[:, None]</code></td></tr>
+                    <tr><td>remove size-1 axes</td><td><code>np.squeeze(a)</code> · <code>np.squeeze(a, 0)</code></td><td><code>a.squeeze()</code> · <code>a.squeeze(0)</code></td></tr>
+                    <tr><td>general reshape</td><td><code>a.reshape(2, 3)</code></td><td><code>a.reshape(2, 3)</code> · <code>a.view(2, 3)</code></td></tr>
+
+                    <tr class="grp"><td colspan="3">Repeat / broadcast to line shapes up</td></tr>
+                    <tr><td>tile the whole array</td><td><code>np.tile(a, (2, 3))</code></td><td><code>a.repeat(2, 3)</code> <span class="warn">⚠</span></td></tr>
+                    <tr><td>repeat each element</td><td><code>np.repeat(a, 3, axis=0)</code></td><td><code>torch.repeat_interleave(a, 3, dim=0)</code> <span class="warn">⚠</span></td></tr>
+                    <tr><td>broadcast (view, no copy)</td><td><code>np.broadcast_to(a, shp)</code></td><td><code>a.expand(shp)</code> · <code>torch.broadcast_to(a, shp)</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card rule">
+            <h3>The <span class="warn">⚠</span> naming trap</h3>
+            <p><code>tensor.repeat(...)</code> in PyTorch <strong>= <code>np.tile</code></strong> (tiles the whole block).</p>
+            <p><code>np.repeat(...)</code> <strong>= <code>torch.repeat_interleave</code></strong> (repeats elements in place).</p>
+            <p>Same word, opposite meanings across the two libraries. This one bites everyone.</p>
+        </div>
+
+        <h2>5 · Decision guide</h2>
+        <div class="card">
+            <ol style="margin:0; padding-left:1.2em">
+                <li><strong>Need a brand-new axis?</strong> (e.g. batch N equal-shaped tensors) → <code>stack</code>.</li>
+                <li><strong>Growing an axis that exists?</strong> (longer sequence, more rows/cols) → <code>concat</code>/<code>cat</code>. Rows → <code>axis=0</code>/<code>vstack</code>; cols → <code>axis=1</code>/<code>hstack</code>.</li>
+                <li><strong>Just need <code>(N,)</code> → <code>(1,N)</code> or <code>(N,1)</code>?</strong> → add an axis: <code>unsqueeze</code>/<code>expand_dims</code>/<code>[None]</code>.</li>
+                <li><strong>Stray size-1 axis after an op?</strong> → <code>squeeze</code>.</li>
+                <li><strong>Duplicate data to match shapes?</strong> → <code>expand</code>/<code>broadcast_to</code> (free view) or <code>repeat</code>/<code>tile</code> (copies).</li>
+            </ol>
+        </div>
+
+        <h2>6 · Interview traps</h2>
+        <div class="card">
+            <ul style="margin:0; padding-left:1.2em">
+                <li><strong>cat vs stack.</strong> <code>cat</code> two <code>(3,)</code> → <code>(6,)</code>. <code>stack</code> them → <code>(2,3)</code>. Rank is the tell.</li>
+                <li><strong><code>unsqueeze</code> is PyTorch-only.</strong> NumPy has no <code>unsqueeze</code> — use <code>expand_dims</code> or <code>[None]</code>.</li>
+                <li><strong><code>.T</code> on a 1-D array is a no-op.</strong> To get a column, add an axis (<code>a[:, None]</code>), don't transpose.</li>
+                <li><strong><code>hstack</code> on 1-D</strong> joins along axis 0 (longer 1-D), <em>not</em> a new column. Want columns from 1-D? <code>column_stack</code>.</li>
+                <li><strong>First arg is a list.</strong> <code>np.stack([a, b])</code>, not <code>np.stack(a, b)</code>. Same for <code>cat</code>/<code>concatenate</code>.</li>
+                <li><strong><code>expand</code>/<code>broadcast_to</code> return views</strong> (no copy — don't write into them blindly). <code>repeat</code>/<code>tile</code> allocate real memory.</li>
+            </ul>
+        </div>
+
+        <h2>7 · Quick self-check</h2>
+        <details>
+            <summary><code>a</code> is <code>(4,)</code>, <code>b</code> is <code>(4,)</code>. What is <code>np.stack([a, b], axis=1).shape</code>?</summary>
+            <p><code>(4, 2)</code>. <code>stack</code> adds a new axis; putting it at position 1 makes each of the 4 positions hold a pair → columns.</p>
+        </details>
+        <details>
+            <summary><code>x</code> and <code>y</code> are both <code>(2, 3)</code>. What is <code>torch.cat([x, y], dim=0).shape</code>?</summary>
+            <p><code>(4, 3)</code>. Existing axis 0 grows from 2+2; the other axis must match (both 3) and stays put.</p>
+        </details>
+        <details>
+            <summary>You have an embedding <code>v</code> of shape <code>(128,)</code>. Make it a batch of one, <code>(1, 128)</code>.</summary>
+            <p><code>v[None]</code> · <code>v.unsqueeze(0)</code> (torch) · <code>np.expand_dims(v, 0)</code> (numpy) · <code>v.reshape(1, -1)</code>.</p>
+        </details>
+        <details>
+            <summary>Linear regression: fold a bias column of ones into <code>X</code> of shape <code>(n, d)</code> → <code>(n, d+1)</code>.</summary>
+            <p>You're growing an <em>existing</em> axis (the columns), so it's a concat along axis 1. Cleanest:
+            <code>np.column_stack([X, np.ones(n)])</code> — it promotes the 1-D ones to a column for you.
+            Equivalents: <code>np.hstack([X, np.ones((n, 1))])</code> or <code>np.concatenate([X, np.ones((n, 1))], axis=1)</code>.
+            (This is the bug from the original session: <code>unsqueeze</code> doesn't exist in NumPy.)</p>
+        </details>
+
+        <footer>
+            Personal explainer · unlisted · <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+
+    <script>
+        (function () {
+            function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+            function grid(rows, cols, cellFn) {
+                var g = el('div', 'tgrid');
+                g.style.gridTemplateColumns = 'repeat(' + cols + ', var(--cellsz))';
+                for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) g.appendChild(cellFn(r, c));
+                return g;
+            }
+            function put(id, node) { var host = document.getElementById(id); if (!host) return; host.innerHTML = ''; host.appendChild(node); }
+            function setText(id, t) { var e = document.getElementById(id); if (e) e.textContent = t; }
+            function segWire(segId, onPick) {
+                var seg = document.getElementById(segId); if (!seg) return;
+                seg.addEventListener('click', function (e) {
+                    var btn = e.target.closest('button'); if (!btn) return;
+                    Array.prototype.forEach.call(seg.querySelectorAll('button'), function (b) { b.classList.remove('on'); });
+                    btn.classList.add('on');
+                    onPick(btn.getAttribute('data-op'));
+                });
+            }
+
+            // ---- Demo 1: concat vs stack ----
+            var A1 = [1, 2, 3], B1 = [4, 5, 6];
+            put('d1a', grid(1, 3, function (r, c) { return el('div', 'cell a', A1[c]); }));
+            put('d1b', grid(1, 3, function (r, c) { return el('div', 'cell b', B1[c]); }));
+            function d1(op) {
+                if (op === 'stack') {
+                    put('d1out', grid(2, 3, function (r, c) { return el('div', 'cell ' + (r === 0 ? 'a' : 'b'), (r === 0 ? A1 : B1)[c]); }));
+                    setText('d1shape', '(2, 3)');
+                    setText('d1cap', 'stack invented axis 0. a and b are now the two rows of a 2-D array — rank went 1 → 2.');
+                    setText('d1code', 'np.stack([a, b], axis=0)     # -> (2, 3)\ntorch.stack([a, b], dim=0)    # -> (2, 3)');
+                } else {
+                    var vals = A1.concat(B1);
+                    put('d1out', grid(1, 6, function (r, c) { return el('div', 'cell ' + (c < 3 ? 'a' : 'b'), vals[c]); }));
+                    setText('d1shape', '(6,)');
+                    setText('d1cap', 'concat grew the existing axis 0. Still 1-D — just 3 + 3 = 6 long.');
+                    setText('d1code', 'np.concatenate([a, b], axis=0)   # -> (6,)\ntorch.cat([a, b], dim=0)         # -> (6,)');
+                }
+            }
+            segWire('d1seg', d1); d1('concat');
+
+            // ---- Demo 2: axis for 2-D concat ----
+            var A2 = [[1, 2], [3, 4]], B2 = [[5, 6], [7, 8]];
+            put('d2a', grid(2, 2, function (r, c) { return el('div', 'cell a', A2[r][c]); }));
+            put('d2b', grid(2, 2, function (r, c) { return el('div', 'cell b', B2[r][c]); }));
+            function d2(op) {
+                if (op === '1') {
+                    put('d2out', grid(2, 4, function (r, c) { return c < 2 ? el('div', 'cell a', A2[r][c]) : el('div', 'cell b', B2[r][c - 2]); }));
+                    setText('d2shape', '(2, 4)');
+                    setText('d2cap', 'axis=1 → columns grow. A and B sit side by side. Same as hstack.');
+                    setText('d2code', 'np.concatenate([A, B], axis=1)   # -> (2, 4)  == np.hstack([A, B])\ntorch.cat([A, B], dim=1)         # -> (2, 4)  == torch.hstack([A, B])');
+                } else {
+                    put('d2out', grid(4, 2, function (r, c) { return r < 2 ? el('div', 'cell a', A2[r][c]) : el('div', 'cell b', B2[r - 2][c]); }));
+                    setText('d2shape', '(4, 2)');
+                    setText('d2cap', 'axis=0 → rows grow. A on top, B below. Same as vstack.');
+                    setText('d2code', 'np.concatenate([A, B], axis=0)   # -> (4, 2)  == np.vstack([A, B])\ntorch.cat([A, B], dim=0)         # -> (4, 2)  == torch.vstack([A, B])');
+                }
+            }
+            segWire('d2seg', d2); d2('0');
+
+            // ---- Demo 3: new axis placement ----
+            var V = [1, 2, 3];
+            function d3(op) {
+                if (op === 'row') {
+                    put('d3out', (function () { var box = el('div', 'rankbox'); box.appendChild(grid(1, 3, function (r, c) { return el('div', 'cell a', V[c]); })); return box; })());
+                    setText('d3shape', '(1, 3)');
+                    setText('d3cap', 'New axis at position 0 → a single row inside a 2-D array. A row vector.');
+                    setText('d3code', 'np.expand_dims(v, 0)   # or v[None, :]   -> (1, 3)\nv.unsqueeze(0)         # torch;  or v[None] -> (1, 3)');
+                } else if (op === 'col') {
+                    put('d3out', (function () { var box = el('div', 'rankbox'); box.appendChild(grid(3, 1, function (r, c) { return el('div', 'cell a', V[r]); })); return box; })());
+                    setText('d3shape', '(3, 1)');
+                    setText('d3cap', 'New axis at the end → each element on its own row. A column vector.');
+                    setText('d3code', 'np.expand_dims(v, 1)   # or v[:, None]   -> (3, 1)\nv.unsqueeze(-1)        # torch; or v[:, None] -> (3, 1)');
+                } else {
+                    put('d3out', grid(1, 3, function (r, c) { return el('div', 'cell a', V[c]); }));
+                    setText('d3shape', '(3,)');
+                    setText('d3cap', 'The original 1-D vector. Rank 1 — no outer axis yet.');
+                    setText('d3code', 'v = np.array([1, 2, 3])   # shape (3,)');
+                }
+            }
+            segWire('d3seg', d3); d3('orig');
+        })();
+    </script>
+</body>
+</html>
