@@ -190,6 +190,39 @@
   .mla-stage[data-s="3"] .rope-lane { max-height: 120px; opacity: 1; }
   .rot-arrow { transition: transform .12s linear; }
 
+  /* ---------- fertility ---------- */
+  .sentence { font-size: 17px; text-align: center; margin: 8px 0 12px; font-weight: 600; }
+  .tokbox {
+    display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; align-content: flex-start;
+    min-height: 70px; padding: 12px; background: var(--page);
+    border: 1px solid var(--hairline); border-radius: 10px;
+  }
+  .tok {
+    padding: 3px 9px; border-radius: 6px; font-family: ui-monospace, Menlo, monospace;
+    font-size: 13.5px; font-weight: 600; background: var(--blue-tint);
+    border: 1px solid rgba(42,120,214,.35); animation: popin .22s ease both;
+  }
+  .tok.byte {
+    background: transparent; border: 1px dashed var(--muted); color: var(--muted);
+    font-size: 10px; padding: 3px 5px; letter-spacing: .04em;
+  }
+  @keyframes popin { from { transform: scale(.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .fert-read { display: flex; gap: 30px; justify-content: center; align-items: baseline; margin-top: 12px; flex-wrap: wrap; }
+  .fert-read .big { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .fert-read small { font-size: 11.5px; color: var(--muted); }
+  .fert-good { color: var(--good-text); }
+  .fert-mid  { color: var(--warn); }
+  .fert-bad  { color: var(--crit); }
+  .zone-wrap { position: relative; height: 26px; margin-top: 2px; }
+  .zone { position: absolute; top: 12px; height: 8px; border-radius: 4px; opacity: .85; }
+  .zone-label { position: absolute; top: 0; font-size: 9.5px; color: var(--muted); white-space: nowrap; }
+  .docfit {
+    height: 28px; border: 1px solid var(--hairline); border-radius: 7px;
+    background: var(--page); overflow: hidden; position: relative; margin: 10px 0 4px;
+  }
+  .docfit > div { height: 100%; background: var(--good); opacity: .8; transition: width .3s ease; }
+  .docfit span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; }
+
   /* ---------- numbers wall ---------- */
   .numwall { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
   .numtile {
@@ -543,7 +576,70 @@
     <div class="verdict ok" id="rope-note">Shift both positions equally — the arrows jump, the angle between them doesn't. Absolute rotation, relative attention.</div>
   </div>
 
-  <h2 class="sec">Section 4 — The numbers wall</h2>
+  <h2 class="sec">Section 4 — Fertility: the token tax</h2>
+  <p class="sec-note">Never drilled — from zero. Models read <b>tokens</b>; users write <b>words</b>. <b>Fertility = tokens per word</b> — how many pieces the tokenizer shatters a word into. One ratio sets the cost, speed, and context window of every Indic user, which makes it Sarvam's unit-economics pitch to every Indian enterprise: <i>"your Hindi traffic pays 3× on a Valley tokenizer — before quality even enters."</i></p>
+
+  <!-- ============ fertility 1: tokenizer demo ============ -->
+  <div class="widget">
+    <h3>1 · What the model actually sees</h3>
+    <p class="wnote">Same sentence, two tokenizers. English-trained BPE has no learned merges for Devanagari → falls back to raw UTF-8 bytes, 3 per character (byte chips illustrative).</p>
+    <div class="controls">
+      <div class="btnrow" id="inp-btns">
+        <button class="chip" data-inp="en">English</button>
+        <button class="chip on" data-inp="hi">हिन्दी</button>
+        <button class="chip" data-inp="hing">Hinglish</button>
+      </div>
+      <div class="btnrow" id="tk-btns">
+        <button class="chip on" data-tk="bpe">English-heavy BPE</button>
+        <button class="chip" data-tk="indic">Indic-trained</button>
+      </div>
+    </div>
+    <div class="sentence" id="sent"></div>
+    <div class="tokbox" id="tokbox"></div>
+    <div class="fert-read">
+      <div><span class="big" id="tokcount">0</span> <small>tokens</small></div>
+      <div><span class="big" id="wordcount">5</span> <small>words</small></div>
+      <div><span class="big" id="fertval">–</span> <small>fertility</small></div>
+    </div>
+    <div class="verdict trim" id="tok-verdict"></div>
+  </div>
+
+  <!-- ============ fertility 2: the bill ============ -->
+  <div class="widget">
+    <h3>2 · The bill</h3>
+    <p class="wnote">Slide the fertility. Fixed: a 1,000-word document, an 8,192-token window, one price per token.</p>
+    <div class="controls">
+      <div class="ctl" style="min-width:280px">
+        <label>fertility <b id="fval">5.0</b> tokens/word</label>
+        <input type="range" id="fert" min="10" max="80" value="50">
+        <div class="zone-wrap">
+          <div class="zone" style="left:5.7%;width:10%;background:var(--good)"></div>
+          <div class="zone-label" style="left:2%">Sarvam Indic 1.4–2.1</div>
+          <div class="zone" style="left:42.9%;width:57.1%;background:var(--crit)"></div>
+          <div class="zone-label" style="left:58%">English BPE on Hindi 4–8</div>
+        </div>
+      </div>
+    </div>
+    <div class="barrow"><span class="barlabel">document size</span><div class="bartrack"><div class="barfill" id="bill-tok" style="background:var(--accent)"></div></div><span class="barval" id="v-billtok"></span></div>
+    <div class="docfit"><div id="fitfill"></div><span id="fitlabel"></span></div>
+    <div class="barrow"><span class="barlabel">cost · latency</span><div class="bartrack"><div class="barfill" id="bill-cost" style="background:var(--warn)"></div></div><span class="barval" id="v-billcost"></span></div>
+    <div class="barrow"><span class="barlabel">attention O(n²)</span><div class="bartrack"><div class="barfill" id="bill-comp" style="background:var(--crit)"></div></div><span class="barval" id="v-billcomp"></span></div>
+    <div class="verdict trim" id="bill-verdict"></div>
+  </div>
+
+  <div class="say">
+    <div class="who">The 20-second answer — say this</div>
+    <p>"Fertility is tokens per word. An English-trained BPE has almost no merges for Devanagari, so it falls back to raw UTF-8 — 3 bytes a character — and a Hindi word shatters into 10+ tokens. Sarvam's tokenizers run <b>1.4–2.1</b> on Indic; Llama-family runs <b>4–8</b>. And that's a unit-economics claim, not a benchmark claim: 3× fertility means a third of the effective context, ~3× the cost and latency, and attention is O(n²), so it compounds. Hinglish is a <b>data decision</b>, not a tokenizer feature — train on romanized + Devanagari + English, and measure fertility per script plus round-trip fidelity."</p>
+  </div>
+
+  <div class="qgrid">
+    <div class="qcard"><b style="font-size:13.5px">if they push: BPE vs Unigram?</b>BPE = greedy bottom-up merges, simple, deterministic. Unigram = top-down, keeps the subwords that maximize corpus likelihood — better morphology for agglutinative Indic, plus sampling regularization.</div>
+    <div class="qcard"><b style="font-size:13.5px">if they push: why 262,144 vocab?</b>68,096 (Sarvam-1) → 262,144 (105B). Slots pay across 22 scripts + code; the embedding tax is negligible at 105B scale; the price is vocab-parallel softmax.</div>
+    <div class="qcard"><b style="font-size:13.5px">if they push: why not always huge?</b>Embedding + unembedding params scale linearly, softmax cost grows, rare tokens undertrain. The optimum rises with model size and language coverage.</div>
+    <div class="qcard"><b style="font-size:13.5px">if they push: evaluating Indic LLMs?</b>Not translated MMLU — translationese + cultural mismatch. Native benchmarks, per-script slices, fertility-adjusted cost reporting, human eval for code-mix.</div>
+  </div>
+
+  <h2 class="sec">Section 5 — The numbers wall</h2>
   <p class="sec-note">If a number appears here, it's load-bearing. Red tiles = ones you dropped or garbled tonight.</p>
 
   <div class="numwall" id="numwall">
@@ -565,7 +661,7 @@
     <div class="numtile"><div class="big">E4M3 · E5M2</div><div class="lbl">weights/acts (precision) · grads (range) · FP32 promote every 128 accums · 105B native FP8 → L40S</div></div>
   </div>
 
-  <h2 class="sec">Section 5 — The three closers you never typed</h2>
+  <h2 class="sec">Section 6 — The three closers you never typed</h2>
   <p class="sec-note">Debt from tonight. Read each out loud twice tomorrow morning. These are the paragraphs the drill was for.</p>
 
   <div class="say">
@@ -583,7 +679,7 @@
     <p>"Yes — I shipped GRPO end to end: engagement data → reward model → GRPO → vLLM → A/B on real users. GRPO over PPO because the RM gave a clean scalar and killing the value net halves memory. Over DPO for three reasons: our signal was <b>cardinal</b>, not pairwise; the data wasn't dialogue-shaped; and DPO is off-policy — its gradient lands on strings my model would never emit, while the GRPO loop grades my model's own samples. KL anchor came free — <b>switch off the LoRA and you are the reference policy</b>. And for verifiable domains like code I'd drop the learned RM entirely — RLVR, because a unit test can't be Goodharted; then curriculum + rollout allocation, because zero-variance groups are dead compute."</p>
   </div>
 
-  <h2 class="sec">Section 6 — Your three questions for them</h2>
+  <h2 class="sec">Section 7 — Your three questions for them</h2>
   <div class="qgrid">
     <div class="qcard"><b>1</b>Does the enterprise post-training loop feed back into the foundation models — flywheel, or separate track?</div>
     <div class="qcard"><b>2</b>Are dFlash speculators trained per-client? Who owns that — post-training or inference?</div>
@@ -843,6 +939,109 @@
     requestAnimationFrame(tween);
   });
   drawRope(false);
+
+  // ---------- fertility 1: tokenizer demo ----------
+  var TOK = {
+    en: {
+      label: '"I need to go to the bank tomorrow"', words: 8,
+      bpe:   { t: ['I', ' need', ' to', ' go', ' to', ' the', ' bank', ' tom', 'orrow'], byte: false,
+               v: ['ok', 'English pays ~1 token a word on every tokenizer. The asymmetry only hits non-Latin scripts.'] },
+      indic: { t: ['I', ' need', ' to', ' go', ' to', ' the', ' bank', ' tomorrow'], byte: false,
+               v: ['ok', 'Indic-trained tokenizers keep English cheap too — the 262k vocab has room for both.'] }
+    },
+    hi: {
+      label: '"मुझे कल बैंक जाना है"', words: 5,
+      bpe:   { t: ['e0 a4', 'ae', 'e0 a5', '81', 'e0 a4', '9d', 'e0 a5', '87', 'e0 a4', '95', 'e0 a4', 'b2', 'e0 a4', 'ac', 'e0 a5', '88', 'e0 a4', '82', 'e0 a4', '95', 'e0 a4', '9c', 'e0 a4', 'be', 'e0 a4', 'a8', 'e0 a4', 'be', 'e0 a4', 'b9', 'e0 a5', '88'], byte: true,
+               v: ['trim', '32 byte-shards for 5 words. The model burns capacity reassembling characters before it can think about meaning — and the user pays for every shard.'] },
+      indic: { t: ['मुझे', ' कल', ' बैं', 'क', ' जा', 'ना', ' है'], byte: false,
+               v: ['ok', '7 clean morpheme-level tokens — 1.4 tokens/word. This is the number on Sarvam-1\'s slide.'] }
+    },
+    hing: {
+      label: '"mujhe kal bank jaana hai"', words: 5,
+      bpe:   { t: ['m', 'uj', 'he', ' k', 'al', ' bank', ' ja', 'ana', ' hai'], byte: false,
+               v: ['trim', 'Romanized Hindi is Latin bytes, so English BPE survives — but still fragments unfamiliar words.'] },
+      indic: { t: ['mujhe', ' kal', ' bank', ' jaana', ' hai'], byte: false,
+               v: ['ok', 'Whole words — because romanized Hindi was in the training mix. Hinglish is a data decision, not a tokenizer feature.'] }
+    }
+  };
+  var curInp = 'hi', curTk = 'bpe', tokTimer = null;
+  function fertClass(f) { return f < 2.2 ? 'big fert-good' : (f < 4 ? 'big fert-mid' : 'big fert-bad'); }
+  function renderTok() {
+    var d = TOK[curInp], set = d[curTk];
+    if (tokTimer) clearInterval(tokTimer);
+    document.getElementById('sent').textContent = d.label;
+    document.getElementById('wordcount').textContent = d.words;
+    var box = document.getElementById('tokbox');
+    box.innerHTML = '';
+    var cnt = document.getElementById('tokcount');
+    var fv = document.getElementById('fertval');
+    cnt.textContent = '0';
+    fv.textContent = '–'; fv.className = 'big';
+    var vd = document.getElementById('tok-verdict');
+    vd.style.opacity = '0.3';
+    var i = 0;
+    tokTimer = setInterval(function () {
+      if (i >= set.t.length) {
+        clearInterval(tokTimer);
+        var f = set.t.length / d.words;
+        fv.textContent = f.toFixed(1);
+        fv.className = fertClass(f);
+        vd.className = 'verdict ' + set.v[0];
+        vd.textContent = set.v[1];
+        vd.style.opacity = '1';
+        return;
+      }
+      var sp = document.createElement('span');
+      sp.className = 'tok' + (set.byte ? ' byte' : '');
+      sp.textContent = set.t[i].replace(/^ /, '␣');
+      box.appendChild(sp);
+      i++;
+      cnt.textContent = i;
+    }, set.byte ? 45 : 90);
+  }
+  document.querySelectorAll('#inp-btns .chip').forEach(function (b) {
+    b.addEventListener('click', function () {
+      curInp = b.dataset.inp;
+      document.querySelectorAll('#inp-btns .chip').forEach(function (x) { x.classList.toggle('on', x === b); });
+      renderTok();
+    });
+  });
+  document.querySelectorAll('#tk-btns .chip').forEach(function (b) {
+    b.addEventListener('click', function () {
+      curTk = b.dataset.tk;
+      document.querySelectorAll('#tk-btns .chip').forEach(function (x) { x.classList.toggle('on', x === b); });
+      renderTok();
+    });
+  });
+  renderTok();
+
+  // ---------- fertility 2: the bill ----------
+  var fert = document.getElementById('fert');
+  function updBill() {
+    var f = fert.value / 10;
+    document.getElementById('fval').textContent = f.toFixed(1);
+    var toks = Math.round(1000 * f);
+    var fits = Math.round(8192 / f);
+    document.getElementById('bill-tok').style.width = (f / 8 * 100) + '%';
+    document.getElementById('v-billtok').textContent = toks.toLocaleString() + ' tok';
+    document.getElementById('fitfill').style.width = (1 / f * 100) + '%';
+    document.getElementById('fitlabel').textContent = '8,192-token window holds ' + fits.toLocaleString() + ' words of your language';
+    document.getElementById('bill-cost').style.width = (f / 8 * 100) + '%';
+    document.getElementById('v-billcost').textContent = '×' + f.toFixed(1);
+    document.getElementById('bill-comp').style.width = (f * f / 64 * 100) + '%';
+    document.getElementById('v-billcomp').textContent = '×' + (f * f).toFixed(0);
+    var vsSarvam = f / 1.75;
+    var bv = document.getElementById('bill-verdict');
+    if (f <= 2.2) {
+      bv.className = 'verdict ok';
+      bv.textContent = 'Sarvam zone. Same document, same window — the token tax is gone.';
+    } else {
+      bv.className = 'verdict trim';
+      bv.textContent = 'This user pays ' + vsSarvam.toFixed(1) + '× what a Sarvam-tokenizer user pays for the same words, and reads ' + vsSarvam.toFixed(1) + '× less far into any document — before model quality even enters.';
+    }
+  }
+  fert.addEventListener('input', updBill);
+  updBill();
 
   // ---------- numbers wall reveal ----------
   var tiles = document.querySelectorAll('.numtile');
