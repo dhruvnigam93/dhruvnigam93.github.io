@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "Four ML Classics from Scratch — Cheat Sheet"
+  slug: four-ml-classics-cheatsheet
+  date: 2026-08-27
+  description: "Linear & logistic regression, k-means, KNN: the one trick each, why it works, how to remember, and the gotchas — with four manipulable demos (GD line-fit, sigmoid squasher, Lloyd stepper, KNN voter) and an 8-question quiz."
+
 - title: "The Traps — Sarvam Depth Drill"
   slug: sarvam-drill-traps
   date: 2026-08-26

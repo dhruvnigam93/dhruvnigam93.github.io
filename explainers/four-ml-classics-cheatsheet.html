@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>Four ML Classics from Scratch — Cheat Sheet</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --radius: 14px;
+            --c1: #e0567a;   /* class / cluster 1 */
+            --c2: #10b981;   /* class / cluster 2 */
+            --c3: #d97706;   /* class / cluster 3 */
+            --ink: #1a1a1a;  /* lines on canvas */
+            --grid: #e5e7eb;
+            --ok: #16a34a;
+            --bad: #dc2626;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                --c1: #f28ab0;
+                --c2: #34d399;
+                --c3: #fbbf24;
+                --ink: #e8e8ea;
+                --grid: #262a31;
+                --ok: #4ade80;
+                --bad: #f87171;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: max(20px, env(safe-area-inset-top)) 20px 80px;
+        }
+        .back {
+            display: inline-block;
+            margin: 8px 0 20px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.4rem; margin: 1.8em 0 0.4em; scroll-margin-top: 12px; }
+        h3 { font-size: 1.08rem; margin: 1.3em 0 0.3em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.2em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        strong { font-weight: 700; }
+        code {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.82em;
+        }
+        pre {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            overflow-x: auto;
+            font-size: 0.8em;
+            line-height: 1.5;
+        }
+        pre code { background: none; border: none; padding: 0; font-size: 1em; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 18px;
+            margin: 1em 0;
+        }
+        .card.trick { border-left: 4px solid var(--accent); }
+        .card.why   { border-left: 4px solid var(--c2); }
+        .card.mem   { border-left: 4px solid var(--c3); }
+        .card.gotcha{ border-left: 4px solid var(--c1); }
+        .tag {
+            display: inline-block; font-size: 0.7rem; font-weight: 700;
+            letter-spacing: 0.06em; text-transform: uppercase;
+            padding: 2px 8px; border-radius: 999px; margin-bottom: 6px;
+            font-family: ui-monospace, monospace;
+        }
+        .tag.trick { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+        .tag.why   { color: var(--c2); background: color-mix(in srgb, var(--c2) 16%, transparent); }
+        .tag.mem   { color: var(--c3); background: color-mix(in srgb, var(--c3) 16%, transparent); }
+        .tag.gotcha{ color: var(--c1); background: color-mix(in srgb, var(--c1) 16%, transparent); }
+        /* pill nav */
+        .pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
+        .pills a {
+            text-decoration: none; font-size: 0.85rem; font-weight: 600;
+            padding: 8px 14px; border-radius: 999px;
+            border: 1px solid var(--line); color: var(--fg);
+            background: var(--card); min-height: 40px; display: inline-flex; align-items: center;
+        }
+        .pills a:active { transform: scale(0.96); }
+        /* demo */
+        .demo { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; margin: 1em 0; background: var(--card); }
+        .demo canvas { width: 100%; display: block; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); touch-action: none; }
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+        .controls button { padding: 10px 18px; }
+        .ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+        button {
+            font: inherit; font-weight: 600; color: #fff; background: var(--accent);
+            border: none; border-radius: 999px; padding: 12px 22px;
+            min-height: 48px; min-width: 48px; cursor: pointer; touch-action: manipulation;
+        }
+        button:active { transform: scale(0.96); }
+        .slider-row { margin-top: 12px; }
+        .slider-row label { font-size: 0.85rem; color: var(--muted); font-weight: 600; display:block; margin-bottom: 4px; }
+        input[type="range"] { width: 100%; height: 44px; }
+        .readout { font-family: ui-monospace, monospace; font-size: 0.85rem; margin-top: 10px; display:flex; flex-wrap: wrap; gap: 6px 16px; }
+        .readout b { color: var(--accent); }
+        .hint { font-size: 0.82rem; color: var(--muted); margin-top: 8px; }
+        .status { font-family: ui-monospace, monospace; font-size: 0.85rem; font-weight: 700; }
+        .status.warn { color: var(--bad); }
+        .status.good { color: var(--ok); }
+        /* table */
+        .tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 1em 0; }
+        table { border-collapse: collapse; width: 100%; font-size: 0.82rem; min-width: 620px; }
+        th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+        th { background: var(--card); font-weight: 700; }
+        td code { font-size: 0.9em; }
+        /* quiz */
+        .quiz .q { margin: 18px 0; }
+        .quiz .qtext { font-weight: 600; margin-bottom: 8px; }
+        .quiz .opt {
+            display: block; width: 100%; text-align: left; margin: 6px 0;
+            background: var(--card); color: var(--fg); border: 1px solid var(--line);
+            border-radius: 10px; padding: 12px 14px; font-weight: 500; font-size: 0.92rem;
+        }
+        .quiz .opt.correct { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, var(--card)); }
+        .quiz .opt.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, var(--card)); }
+        .quiz .exp { font-size: 0.85rem; color: var(--muted); margin: 4px 2px 0; display: none; }
+        .quiz .exp.show { display: block; }
+        .scorebar { position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--line); padding: 10px 0; margin-top: 16px; display:flex; align-items:center; justify-content: space-between; gap: 12px; }
+        footer {
+            margin-top: 3em; padding-top: 1.2em; border-top: 1px solid var(--line);
+            color: var(--muted); font-size: 0.85rem;
+        }
+        .k { color: var(--muted); }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>Four ML Classics from Scratch</h1>
+        <p class="meta">Added 2026-08-27 · the tricks, why they work, how to remember — with demos</p>
+
+        <p>Linear regression, logistic regression, k-means, KNN. The four you get asked to code from scratch. This is the cheat sheet: the one trick per algorithm, the reason it works, the mnemonic, and the gotchas — plus a widget for each so the idea sticks.</p>
+
+        <div class="pills">
+            <a href="#map">The map</a>
+            <a href="#grad">The shared gradient</a>
+            <a href="#lin">Linear</a>
+            <a href="#log">Logistic</a>
+            <a href="#km">K-means</a>
+            <a href="#knn">KNN</a>
+            <a href="#table">Compare</a>
+            <a href="#quiz">Quiz</a>
+        </div>
+
+        <!-- ===================================================== MAP -->
+        <h2 id="map">The map: two families</h2>
+        <p>Everything here splits into two ideas. Get this and the rest hangs off it.</p>
+        <div class="card">
+            <p><strong>1 · Fit-then-predict (parametric).</strong> Learn weights <code>w, b</code> by walking downhill on a loss with gradient descent. Training is the work; prediction is a cheap dot product. → <strong>Linear</strong> &amp; <strong>Logistic</strong> regression.</p>
+            <p><strong>2 · Geometry / distance.</strong> No weights — just distances between points. → <strong>KNN</strong> (memorize the data, let neighbors vote) and <strong>K-means</strong> (move cluster centers to the mean, repeat).</p>
+        </div>
+        <p class="hint">Cross-cut: KNN and logistic are <em>supervised</em> (labels). K-means is <em>unsupervised</em> (no labels — it invents the groups). Linear/logistic/KNN <em>predict</em>; k-means <em>clusters</em>.</p>
+
+        <!-- ===================================================== SHARED GRADIENT -->
+        <h2 id="grad">The one gradient that covers two of them</h2>
+        <p>If you remember a single equation from this page, make it this. Linear and logistic regression have the <strong>same gradient shape</strong>:</p>
+        <pre><code>error = prediction - target        # the "residual" / error signal
+dw    = (1/n) * X.T @ error         # error, weighted by each input, averaged
+db    = (1/n) * error.sum()</code></pre>
+        <div class="card why">
+            <span class="tag why">why it works</span>
+            <p>Gradient descent asks: "nudge each weight which way to shrink the loss?" For both losses the answer collapses to the same thing — <strong>the error times the input</strong>. A feature that was large <em>and</em> pushed the prediction the wrong way gets the biggest correction. That's it.</p>
+        </div>
+        <div class="card mem">
+            <span class="tag mem">remember</span>
+            <p><strong>"Residual · input, averaged."</strong> The only difference: linear regression carries a factor of <strong>2</strong> (from the squared loss); logistic does <strong>not</strong> (the sigmoid and log-loss derivatives cancel — see below). Fold the 2 into the learning rate and even that difference vanishes.</p>
+        </div>
+
+        <!-- ===================================================== LINEAR -->
+        <h2 id="lin">1 · Linear regression</h2>
+        <p>Model <code>ŷ = Xw + b</code>. Loss = mean squared error, <code>MSE = mean((ŷ - y)²)</code>.</p>
+
+        <div class="card trick">
+            <span class="tag trick">the trick</span>
+            <p>Two ways to solve it. <strong>Gradient descent:</strong> <code>dw = (2/n)·Xᵀ(ŷ−y)</code>, <code>db = (2/n)·Σ(ŷ−y)</code>. <strong>Closed form (normal equation):</strong> fold the bias in with a column of ones, then <code>w = (XᵀX)⁻¹Xᵀy</code> — exact, no iteration.</p>
+        </div>
+        <div class="card why">
+            <span class="tag why">why it works</span>
+            <p>MSE is a <strong>convex bowl</strong> in <code>(w, b)</code> — one global minimum, no traps. The gradient points uphill, so stepping the opposite way always descends. The closed form is just "set the gradient to zero and solve" — possible only because the bowl is quadratic.</p>
+        </div>
+        <div class="card mem">
+            <span class="tag mem">remember</span>
+            <p>Normal equation ≈ <strong>"X-transpose-X inverse, X-transpose-y."</strong> Say it as a chant. GD ≈ the shared "residual · input, averaged."</p>
+        </div>
+        <div class="card gotcha">
+            <span class="tag gotcha">gotchas</span>
+            <p>① Use <strong>2/n</strong> (mean, not sum) — a raw sum makes the given learning rate effectively <code>n×</code> too big and it diverges. ② <strong>Standardize features</strong> so one big-scale column doesn't dominate and one learning rate fits all. ③ Closed form needs <code>XᵀX</code> invertible — if features are collinear, use <code>np.linalg.lstsq</code> / <code>pinv</code>.</p>
+        </div>
+
+        <div class="demo" id="lin-demo">
+            <strong>Watch gradient descent fit a line.</strong>
+            <canvas id="lin-canvas" height="300" aria-label="Gradient descent line fit"></canvas>
+            <div class="slider-row">
+                <label>learning rate: <span id="lin-lr-val">0.10</span></label>
+                <input type="range" id="lin-lr" min="0.005" max="0.6" step="0.005" value="0.10">
+            </div>
+            <div class="controls">
+                <button id="lin-step">Step</button>
+                <button id="lin-play" class="ghost">Auto-play</button>
+                <button id="lin-reset" class="ghost">Reset</button>
+            </div>
+            <div class="readout">
+                <span>iter <b id="lin-iter">0</b></span>
+                <span>w <b id="lin-w">0.00</b></span>
+                <span>b <b id="lin-b">0.00</b></span>
+                <span>MSE <b id="lin-mse">—</b></span>
+            </div>
+            <div class="status" id="lin-status"></div>
+            <p class="hint">Push the learning rate past ~0.33 and watch the loss <em>explode</em> instead of shrink — the "lr too big → diverge" gotcha, live. True line is <code>y = 1.5x + 2</code>.</p>
+        </div>
+
+        <!-- ===================================================== LOGISTIC -->
+        <h2 id="log">2 · Logistic regression</h2>
+        <p>Model <code>p = sigmoid(Xw + b)</code>, where <code>sigmoid(z) = 1/(1+e⁻ᶻ)</code>. Loss = binary cross-entropy, <code>BCE = −mean(y·log p + (1−y)·log(1−p))</code>.</p>
+
+        <div class="card trick">
+            <span class="tag trick">the trick</span>
+            <p>Take a linear score and squash it through a sigmoid into a probability. The payoff: <code>dL/dz = p − y</code> exactly, so the weight gradient is <strong>identical in shape to linear regression</strong> — <code>dw = Xᵀ(p−y)/n</code>. Learn one gradient, get two algorithms.</p>
+        </div>
+        <div class="card why">
+            <span class="tag why">why the sigmoid derivative vanishes</span>
+            <p>The chain rule multiplies two pieces: <code>sigmoid'(z) = p(1−p)</code> and the BCE derivative <code>∂L/∂p = (p−y)/(p(1−p))</code>. The <code>p(1−p)</code> <strong>cancels</strong>, leaving a clean <code>p − y</code>. This pairing of sigmoid + log-loss is <em>designed</em> to make optimization simple and convex.</p>
+        </div>
+        <div class="card mem">
+            <span class="tag mem">remember</span>
+            <p><strong>"Linear score → sigmoid → probability; gradient is still (p − y)·x."</strong> Sigmoid turns log-odds into a probability; the log-loss is its natural partner.</p>
+        </div>
+        <div class="card gotcha">
+            <span class="tag gotcha">gotchas</span>
+            <p>① <strong>Stable sigmoid:</strong> <code>exp(−z)</code> overflows for very negative <code>z</code> — clip <code>z</code> to <code>[−100,100]</code> or branch on its sign. ② <strong>Clip p</strong> away from 0/1 before <code>log</code> (else <code>log(0) = −inf</code>). ③ <strong>Don't L2-regularize the bias</strong> — it encodes the base rate <code>log(pos/neg)</code>; shrinking it skews every prediction. ④ The L2 term <em>adds</em> <code>+λw</code> to <code>dw</code>; flip that sign and the weights blow up. ⑤ <strong>No closed form</strong> — GD or Newton only.</p>
+        </div>
+
+        <div class="demo" id="log-demo">
+            <strong>Feel the squash.</strong> Drag the logit; watch it map to a probability.
+            <canvas id="log-canvas" height="260" aria-label="Sigmoid curve"></canvas>
+            <div class="slider-row">
+                <label>logit z (the linear score <code>Xw+b</code>): <span id="log-z-val">0.0</span></label>
+                <input type="range" id="log-z" min="-8" max="8" step="0.1" value="0">
+            </div>
+            <div class="readout">
+                <span>p = sigmoid(z) = <b id="log-p">0.500</b></span>
+                <span>slope p(1−p) = <b id="log-slope">0.250</b></span>
+                <span>predict <b id="log-cls">?</b></span>
+            </div>
+            <p class="hint">The slope <code>p(1−p)</code> is biggest at <code>z=0</code> (max uncertainty, p=0.5) and near-zero at the tails — that's why confident points barely move the weights, and why the sigmoid derivative shows up (then cancels) in the gradient.</p>
+        </div>
+
+        <!-- ===================================================== KMEANS -->
+        <h2 id="km">3 · K-means</h2>
+        <p>Unsupervised. Split data into <code>k</code> clusters minimizing <strong>inertia</strong> <code>= Σ ‖x − centroid(x)‖²</code> (total squared distance to each point's own center).</p>
+
+        <div class="card trick">
+            <span class="tag trick">the trick — Lloyd's algorithm</span>
+            <p>Alternate two cheap half-steps until nothing changes:</p>
+            <pre><code># ASSIGN: each point -> nearest centroid
+d = ((X[:,None,:] - C[None,:,:])**2).sum(-1)   # (n,k)
+labels = d.argmin(1)
+# UPDATE: each centroid -> mean of its members
+for j in range(k):
+    if (labels==j).any():
+        C[j] = X[labels==j].mean(0)</code></pre>
+        </div>
+        <div class="card why">
+            <span class="tag why">why it converges</span>
+            <p>Each half-step can only <strong>lower inertia</strong>: <em>assign</em> sends every point to its closest center (shrinks its term), and <em>update</em> moves each center to its members' mean — and the mean is exactly the point that minimizes summed squared distance. Monotonically decreasing + bounded below ⇒ it converges. To a <strong>local</strong> min, not necessarily the global one.</p>
+        </div>
+        <div class="card mem">
+            <span class="tag mem">remember</span>
+            <p><strong>"Assign, Average, Repeat"</strong> (A-A-R). It's EM-lite: guess groups, recompute centers, re-guess.</p>
+        </div>
+        <div class="card gotcha">
+            <span class="tag gotcha">gotchas</span>
+            <p>① <strong>Empty cluster</strong> → mean of nothing = <code>NaN</code>. Guard it (skip, or reseed that centroid to the farthest point). ② <strong>Local minima</strong> → run several random restarts, keep the lowest inertia; seed with <strong>k-means++</strong>. ③ Labels are <strong>permutation-invariant</strong> — compare the partition, not raw ids. ④ You must <strong>choose k</strong> (elbow on inertia, silhouette). ⑤ Euclidean ⇒ <strong>standardize</strong> features.</p>
+        </div>
+        <div class="card trick">
+            <span class="tag trick">vectorize the update</span>
+            <p>Drop the <code>k</code>-loop with a scatter-add: <code>sums = np.zeros((k,d)); np.add.at(sums, labels, X)</code> then divide by <code>np.bincount(labels, minlength=k)</code>. In PyTorch it's <code>sums.index_add_(0, labels, X)</code> — one atomic-add kernel instead of <code>k</code> masked reductions.</p>
+        </div>
+
+        <div class="demo" id="km-demo">
+            <strong>Step Lloyd's algorithm.</strong> Centroids start clumped in the middle; watch them snap to the blobs.
+            <canvas id="km-canvas" height="320" aria-label="K-means iterations"></canvas>
+            <div class="controls">
+                <button id="km-step">Next step</button>
+                <button id="km-play" class="ghost">Auto-play</button>
+                <button id="km-reset" class="ghost">Reset</button>
+            </div>
+            <div class="readout">
+                <span>phase <b id="km-phase">assign</b></span>
+                <span>iter <b id="km-iter">0</b></span>
+                <span>inertia <b id="km-inertia">—</b></span>
+            </div>
+            <p class="hint">Big rings = centroids. Each "Next step" toggles <b>assign</b> (points recolor to nearest center) ↔ <b>update</b> (centers jump to the mean). Inertia only ever goes down.</p>
+        </div>
+
+        <!-- ===================================================== KNN -->
+        <h2 id="knn">4 · K-nearest neighbors</h2>
+        <p>Supervised, and <strong>lazy</strong>: there is no training. Store the data; at query time find the <code>k</code> closest points and let them vote (classification) or average (regression).</p>
+
+        <div class="card trick">
+            <span class="tag trick">the trick</span>
+            <pre><code>d = pairwise_sq_dists(X_query, X_train)   # (nq, nt)
+nn = np.argpartition(d, k, axis=1)[:, :k] # k nearest indices
+preds = [np.bincount(y[row]).argmax()     # majority vote per row
+         for row in nn]</code></pre>
+        </div>
+        <div class="card why">
+            <span class="tag why">why it works</span>
+            <p>Pure <strong>local smoothness</strong>: things close together tend to share a label (or value). No global model, no assumptions about the shape of the boundary — the boundary is whatever the data draws.</p>
+        </div>
+        <div class="card mem">
+            <span class="tag mem">remember</span>
+            <p><strong>"No fit. Ask the k closest to vote."</strong> All the cost is at query time: <code>O(n·d)</code> per query.</p>
+        </div>
+        <div class="card trick">
+            <span class="tag trick">the two follow-up tricks interviewers want</span>
+            <p><strong>① Memory-efficient distances.</strong> The naive <code>(nq, nt, d)</code> broadcast OOMs. Use the identity <code>‖a−b‖² = ‖a‖² + ‖b‖² − 2·a·b</code> → <code>a2[:,None] + b2[None,:] − 2·A@Bᵀ</code>, memory <code>O(nq·nt)</code>, not <code>×d</code>. Clip tiny negatives before <code>sqrt</code>. <strong>② argpartition, not argsort.</strong> You need the k-nearest <em>set</em>, not sorted — <code>O(n)</code> beats <code>O(n log n)</code>.</p>
+        </div>
+        <div class="card gotcha">
+            <span class="tag gotcha">gotchas</span>
+            <p>① <code>np.bincount</code> is <strong>1-D only</strong> — loop the rows (k is tiny) and pass <code>minlength=C</code>. ② <strong>Ties:</strong> <code>argmax</code> returns the first max ⇒ smallest class id wins; use <strong>odd k</strong> for binary. ③ <strong>Standardize</strong> — distance is scale-sensitive. ④ <strong>Curse of dimensionality:</strong> in high <code>d</code> all points look equidistant and KNN degrades. ⑤ small k = noisy/overfit; big k = washes out local structure. ⑥ Scale it with KD-/ball-trees (low d) or approximate NN (FAISS/HNSW).</p>
+        </div>
+
+        <div class="demo" id="knn-demo">
+            <strong>Tap anywhere to drop a query point.</strong> Its <code>k</code> nearest neighbors light up and vote.
+            <canvas id="knn-canvas" height="320" aria-label="KNN classification"></canvas>
+            <div class="slider-row">
+                <label>k (neighbors that vote): <span id="knn-k-val">5</span></label>
+                <input type="range" id="knn-k" min="1" max="15" step="2" value="5">
+            </div>
+            <div class="readout">
+                <span>votes → <span style="color:var(--c1)">pink</span> <b id="knn-va">0</b></span>
+                <span><span style="color:var(--c2)">green</span> <b id="knn-vb">0</b></span>
+                <span>predict <b id="knn-pred">—</b></span>
+            </div>
+            <p class="hint">Slide k and watch the prediction flip near the boundary — that's the bias/variance dial. Lines connect the query to its voting neighbors.</p>
+        </div>
+
+        <!-- ===================================================== TABLE -->
+        <h2 id="table">One-screen comparison</h2>
+        <div class="tablewrap">
+        <table>
+            <thead>
+                <tr><th>Algo</th><th>Supervised?</th><th>Trains?</th><th>Objective</th><th>Core trick</th><th>#1 gotcha</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>Linear reg</strong></td><td>yes</td><td>yes (GD / closed form)</td><td>min MSE</td><td><code>Xᵀ(ŷ−y)</code>; normal eqn</td><td>use 2/n or diverge</td></tr>
+                <tr><td><strong>Logistic reg</strong></td><td>yes</td><td>yes (GD)</td><td>min BCE</td><td>same grad <code>(p−y)·x</code></td><td>stable sigmoid; no closed form</td></tr>
+                <tr><td><strong>K-means</strong></td><td>no</td><td>yes (Lloyd)</td><td>min inertia</td><td>assign ↔ average</td><td>empty cluster → NaN; local min</td></tr>
+                <tr><td><strong>KNN</strong></td><td>yes</td><td>no (lazy)</td><td>local vote</td><td>top-k + <code>a²+b²−2ab</code></td><td>curse of dim.; standardize</td></tr>
+            </tbody>
+        </table>
+        </div>
+        <p class="hint">The whole page in one sentence: <strong>two learn weights by "residual·input" descent (linear, logistic), two work by distance (k-means clusters, KNN votes).</strong></p>
+
+        <!-- ===================================================== QUIZ -->
+        <h2 id="quiz">Quiz yourself</h2>
+        <p class="hint">Eight questions. Tap an answer for instant feedback.</p>
+        <div class="quiz" id="quiz"></div>
+        <div class="scorebar">
+            <span class="status">Score: <b id="score">0</b> / <b id="total">0</b></span>
+            <button class="ghost" id="quiz-reset">Reset quiz</button>
+        </div>
+
+        <footer>
+            Personal explainer · unlisted · <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+
+    <script>
+    (function () {
+        "use strict";
+
+        // ---------- shared helpers ----------
+        function cssVar(name) {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888";
+        }
+        function fitCanvas(cv) {
+            var dpr = window.devicePixelRatio || 1;
+            var cssW = cv.clientWidth || 320;
+            var cssH = parseInt(cv.getAttribute("height"), 10) || 300;
+            cv.width = Math.round(cssW * dpr);
+            cv.height = Math.round(cssH * dpr);
+            var ctx = cv.getContext("2d");
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            return { ctx: ctx, w: cssW, h: cssH };
+        }
+        // deterministic RNG (mulberry32)
+        function rng(seed) {
+            return function () {
+                seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+                var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+                t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            };
+        }
+        function gauss(r) { // Box-Muller-ish from uniform
+            return (r() + r() + r() + r() - 2) * 1.05;
+        }
+        var redrawers = [];
+        function onTheme() { redrawers.forEach(function (f) { try { f(); } catch (e) {} }); }
+        if (window.matchMedia) {
+            var mq = window.matchMedia("(prefers-color-scheme: dark)");
+            if (mq.addEventListener) mq.addEventListener("change", onTheme);
+            else if (mq.addListener) mq.addListener(onTheme);
+        }
+        window.addEventListener("resize", function () { onTheme(); });
+
+        // ================================================= LINEAR: GD line fit
+        (function () {
+            var cv = document.getElementById("lin-canvas");
+            if (!cv) return;
+            var r = rng(7);
+            var N = 24, xs = [], ys = [];
+            for (var i = 0; i < N; i++) {
+                var x = -3 + 6 * (i / (N - 1)) + (r() - 0.5) * 0.15;
+                xs.push(x);
+                ys.push(1.5 * x + 2 + gauss(r) * 1.1);
+            }
+            var w = 0, b = 0, iter = 0, playing = false, diverged = false, raf = null;
+            var lrEl = document.getElementById("lin-lr");
+            function lr() { return parseFloat(lrEl.value); }
+
+            function mse() {
+                var s = 0;
+                for (var i = 0; i < N; i++) { var e = (w * xs[i] + b) - ys[i]; s += e * e; }
+                return s / N;
+            }
+            function step() {
+                if (diverged) return;
+                var dw = 0, db = 0;
+                for (var i = 0; i < N; i++) {
+                    var e = (w * xs[i] + b) - ys[i];
+                    dw += e * xs[i]; db += e;
+                }
+                dw = (2 / N) * dw; db = (2 / N) * db;
+                w -= lr() * dw; b -= lr() * db;
+                iter++;
+                if (!isFinite(w) || !isFinite(b) || mse() > 1e6) { diverged = true; }
+                draw();
+            }
+            function reset() { w = 0; b = 0; iter = 0; diverged = false; stop(); draw(); }
+            function stop() { playing = false; if (raf) cancelAnimationFrame(raf); raf = null; document.getElementById("lin-play").textContent = "Auto-play"; }
+
+            function draw() {
+                var f = fitCanvas(cv), ctx = f.ctx, W = f.w, H = f.h;
+                var pad = 34;
+                var xmin = -3.4, xmax = 3.4, ymin = -4, ymax = 9;
+                function sx(x) { return pad + (x - xmin) / (xmax - xmin) * (W - 2 * pad); }
+                function sy(y) { return H - pad - (y - ymin) / (ymax - ymin) * (H - 2 * pad); }
+                ctx.clearRect(0, 0, W, H);
+                // axes
+                ctx.strokeStyle = cssVar("--grid"); ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(pad, sy(0)); ctx.lineTo(W - pad, sy(0)); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(sx(0), pad); ctx.lineTo(sx(0), H - pad); ctx.stroke();
+                // points
+                ctx.fillStyle = cssVar("--accent");
+                for (var i = 0; i < N; i++) { ctx.beginPath(); ctx.arc(sx(xs[i]), sy(ys[i]), 4, 0, 7); ctx.fill(); }
+                // true line
+                ctx.strokeStyle = cssVar("--muted"); ctx.setLineDash([5, 5]); ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.moveTo(sx(xmin), sy(1.5 * xmin + 2)); ctx.lineTo(sx(xmax), sy(1.5 * xmax + 2)); ctx.stroke();
+                ctx.setLineDash([]);
+                // fitted line
+                if (!diverged) {
+                    ctx.strokeStyle = cssVar("--c1"); ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.moveTo(sx(xmin), sy(w * xmin + b)); ctx.lineTo(sx(xmax), sy(w * xmax + b)); ctx.stroke();
+                }
+                // labels
+                document.getElementById("lin-iter").textContent = iter;
+                document.getElementById("lin-w").textContent = diverged ? "∞" : w.toFixed(2);
+                document.getElementById("lin-b").textContent = diverged ? "∞" : b.toFixed(2);
+                document.getElementById("lin-mse").textContent = diverged ? "NaN" : mse().toFixed(3);
+                document.getElementById("lin-lr-val").textContent = lr().toFixed(3);
+                var st = document.getElementById("lin-status");
+                if (diverged) { st.textContent = "✗ diverged — learning rate too high. Reset and lower it."; st.className = "status warn"; }
+                else if (mse() < 1.4) { st.textContent = "✓ converged (dashed = truth)"; st.className = "status good"; }
+                else { st.textContent = ""; st.className = "status"; }
+            }
+            function loop() { if (!playing) return; step(); if (diverged || mse() < 1.35) { stop(); return; } raf = requestAnimationFrame(function () { setTimeout(loop, 120); }); }
+
+            document.getElementById("lin-step").addEventListener("click", function () { stop(); step(); });
+            document.getElementById("lin-reset").addEventListener("click", reset);
+            document.getElementById("lin-play").addEventListener("click", function () {
+                if (playing) { stop(); } else { if (diverged) reset(); playing = true; this.textContent = "Pause"; loop(); }
+            });
+            lrEl.addEventListener("input", function () { document.getElementById("lin-lr-val").textContent = lr().toFixed(3); if (diverged) reset(); else draw(); });
+            redrawers.push(draw);
+            draw();
+        })();
+
+        // ================================================= LOGISTIC: sigmoid
+        (function () {
+            var cv = document.getElementById("log-canvas");
+            if (!cv) return;
+            var zEl = document.getElementById("log-z");
+            function sig(z) { return 1 / (1 + Math.exp(-z)); }
+            function draw() {
+                var f = fitCanvas(cv), ctx = f.ctx, W = f.w, H = f.h;
+                var pad = 30, zmin = -8, zmax = 8;
+                function sx(z) { return pad + (z - zmin) / (zmax - zmin) * (W - 2 * pad); }
+                function sy(p) { return H - pad - p * (H - 2 * pad); }
+                ctx.clearRect(0, 0, W, H);
+                ctx.strokeStyle = cssVar("--grid"); ctx.lineWidth = 1;
+                [0, 0.5, 1].forEach(function (p) { ctx.beginPath(); ctx.moveTo(pad, sy(p)); ctx.lineTo(W - pad, sy(p)); ctx.stroke(); });
+                ctx.beginPath(); ctx.moveTo(sx(0), pad); ctx.lineTo(sx(0), H - pad); ctx.stroke();
+                // curve
+                ctx.strokeStyle = cssVar("--accent"); ctx.lineWidth = 3; ctx.beginPath();
+                for (var i = 0; i <= 200; i++) { var z = zmin + (zmax - zmin) * i / 200; var X = sx(z), Y = sy(sig(z)); if (i === 0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y); }
+                ctx.stroke();
+                // marker
+                var z0 = parseFloat(zEl.value), p0 = sig(z0);
+                ctx.strokeStyle = cssVar("--muted"); ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.moveTo(sx(z0), H - pad); ctx.lineTo(sx(z0), sy(p0)); ctx.lineTo(pad, sy(p0)); ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = p0 >= 0.5 ? cssVar("--c2") : cssVar("--c1");
+                ctx.beginPath(); ctx.arc(sx(z0), sy(p0), 7, 0, 7); ctx.fill();
+                document.getElementById("log-p").textContent = p0.toFixed(3);
+                document.getElementById("log-slope").textContent = (p0 * (1 - p0)).toFixed(3);
+                document.getElementById("log-z-val").textContent = z0.toFixed(1);
+                var cls = document.getElementById("log-cls");
+                cls.textContent = p0 >= 0.5 ? "class 1" : "class 0";
+                cls.style.color = p0 >= 0.5 ? cssVar("--c2") : cssVar("--c1");
+            }
+            zEl.addEventListener("input", draw);
+            redrawers.push(draw);
+            draw();
+        })();
+
+        // ================================================= K-MEANS
+        (function () {
+            var cv = document.getElementById("km-canvas");
+            if (!cv) return;
+            var r = rng(21), K = 3;
+            var centers = [[2.2, 2.4], [7.8, 3.0], [5.0, 8.0]];
+            var pts = [];
+            centers.forEach(function (c) { for (var i = 0; i < 14; i++) pts.push([c[0] + gauss(r) * 0.7, c[1] + gauss(r) * 0.7]); });
+            var C, labels, phase, iter, playing, timer;
+            function reset() {
+                C = [[4.4, 4.6], [5.0, 5.2], [5.6, 4.8]]; // clumped in the middle on purpose
+                labels = pts.map(function () { return -1; });
+                phase = "assign"; iter = 0; stop(); draw();
+            }
+            function assign() {
+                for (var i = 0; i < pts.length; i++) {
+                    var best = 0, bd = Infinity;
+                    for (var j = 0; j < K; j++) {
+                        var dx = pts[i][0] - C[j][0], dy = pts[i][1] - C[j][1], d = dx * dx + dy * dy;
+                        if (d < bd) { bd = d; best = j; }
+                    }
+                    labels[i] = best;
+                }
+            }
+            function update() {
+                for (var j = 0; j < K; j++) {
+                    var sx = 0, sy = 0, n = 0;
+                    for (var i = 0; i < pts.length; i++) if (labels[i] === j) { sx += pts[i][0]; sy += pts[i][1]; n++; }
+                    if (n > 0) { C[j] = [sx / n, sy / n]; } // guard empty cluster
+                }
+            }
+            function inertia() {
+                var s = 0;
+                for (var i = 0; i < pts.length; i++) { if (labels[i] < 0) return null; var dx = pts[i][0] - C[labels[i]][0], dy = pts[i][1] - C[labels[i]][1]; s += dx * dx + dy * dy; }
+                return s;
+            }
+            function step() {
+                if (phase === "assign") { assign(); phase = "update"; }
+                else { update(); phase = "assign"; iter++; }
+                draw();
+            }
+            function stop() { playing = false; if (timer) clearTimeout(timer); timer = null; var b = document.getElementById("km-play"); if (b) b.textContent = "Auto-play"; }
+            function loop() { if (!playing) return; step(); timer = setTimeout(loop, 650); }
+
+            function draw() {
+                var f = fitCanvas(cv), ctx = f.ctx, W = f.w, H = f.h, pad = 24;
+                function sx(x) { return pad + x / 10 * (W - 2 * pad); }
+                function sy(y) { return H - pad - y / 10 * (H - 2 * pad); }
+                var cols = [cssVar("--c1"), cssVar("--c2"), cssVar("--c3")];
+                ctx.clearRect(0, 0, W, H);
+                for (var i = 0; i < pts.length; i++) {
+                    ctx.fillStyle = labels[i] < 0 ? cssVar("--muted") : cols[labels[i]];
+                    ctx.beginPath(); ctx.arc(sx(pts[i][0]), sy(pts[i][1]), 4.5, 0, 7); ctx.fill();
+                }
+                for (var j = 0; j < K; j++) {
+                    ctx.strokeStyle = cols[j]; ctx.fillStyle = cssVar("--bg"); ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.arc(sx(C[j][0]), sy(C[j][1]), 11, 0, 7); ctx.fill(); ctx.stroke();
+                    ctx.fillStyle = cols[j]; ctx.beginPath(); ctx.arc(sx(C[j][0]), sy(C[j][1]), 4, 0, 7); ctx.fill();
+                }
+                document.getElementById("km-phase").textContent = phase;
+                document.getElementById("km-iter").textContent = iter;
+                var inr = inertia();
+                document.getElementById("km-inertia").textContent = inr == null ? "—" : inr.toFixed(1);
+            }
+            document.getElementById("km-step").addEventListener("click", function () { stop(); step(); });
+            document.getElementById("km-reset").addEventListener("click", reset);
+            document.getElementById("km-play").addEventListener("click", function () { if (playing) stop(); else { playing = true; this.textContent = "Pause"; loop(); } });
+            redrawers.push(draw);
+            reset();
+        })();
+
+        // ================================================= KNN
+        (function () {
+            var cv = document.getElementById("knn-canvas");
+            if (!cv) return;
+            var r = rng(5);
+            var pts = [], lab = [];
+            var cen = [[3.0, 3.2, 0], [7.2, 7.0, 1], [6.8, 2.8, 1]];
+            cen.forEach(function (c) { for (var i = 0; i < 14; i++) { pts.push([c[0] + gauss(r) * 0.9, c[1] + gauss(r) * 0.9]); lab.push(c[2]); } });
+            var query = [5.0, 5.0];
+            var kEl = document.getElementById("knn-k");
+            function K() { return parseInt(kEl.value, 10); }
+
+            function compute() {
+                var idx = pts.map(function (p, i) { var dx = p[0] - query[0], dy = p[1] - query[1]; return { i: i, d: dx * dx + dy * dy }; });
+                idx.sort(function (a, b) { return a.d - b.d; });
+                var k = Math.min(K(), idx.length), va = 0, vb = 0, nn = [];
+                for (var t = 0; t < k; t++) { nn.push(idx[t].i); if (lab[idx[t].i] === 0) va++; else vb++; }
+                return { nn: nn, va: va, vb: vb, pred: va >= vb ? 0 : 1 };
+            }
+            function draw() {
+                var f = fitCanvas(cv), ctx = f.ctx, W = f.w, H = f.h, pad = 24;
+                function sx(x) { return pad + x / 10 * (W - 2 * pad); }
+                function sy(y) { return H - pad - y / 10 * (H - 2 * pad); }
+                var res = compute(), nnset = {};
+                res.nn.forEach(function (i) { nnset[i] = true; });
+                ctx.clearRect(0, 0, W, H);
+                // lines to neighbors
+                ctx.strokeStyle = cssVar("--muted"); ctx.lineWidth = 1;
+                res.nn.forEach(function (i) { ctx.beginPath(); ctx.moveTo(sx(query[0]), sy(query[1])); ctx.lineTo(sx(pts[i][0]), sy(pts[i][1])); ctx.stroke(); });
+                // points
+                for (var i = 0; i < pts.length; i++) {
+                    var col = lab[i] === 0 ? cssVar("--c1") : cssVar("--c2");
+                    ctx.fillStyle = col;
+                    ctx.beginPath(); ctx.arc(sx(pts[i][0]), sy(pts[i][1]), nnset[i] ? 6.5 : 4.5, 0, 7); ctx.fill();
+                    if (nnset[i]) { ctx.strokeStyle = cssVar("--ink"); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(sx(pts[i][0]), sy(pts[i][1]), 9.5, 0, 7); ctx.stroke(); }
+                }
+                // query
+                var qc = res.pred === 0 ? cssVar("--c1") : cssVar("--c2");
+                ctx.fillStyle = qc; ctx.strokeStyle = cssVar("--ink"); ctx.lineWidth = 2.5;
+                ctx.beginPath(); ctx.rect(sx(query[0]) - 7, sy(query[1]) - 7, 14, 14); ctx.fill(); ctx.stroke();
+                document.getElementById("knn-va").textContent = res.va;
+                document.getElementById("knn-vb").textContent = res.vb;
+                document.getElementById("knn-k-val").textContent = K();
+                var pe = document.getElementById("knn-pred");
+                pe.textContent = res.pred === 0 ? "pink" : "green";
+                pe.style.color = qc;
+            }
+            function setFromEvent(ev) {
+                var rect = cv.getBoundingClientRect(), pad = 24;
+                var cx = (ev.touches ? ev.touches[0].clientX : ev.clientX) - rect.left;
+                var cy = (ev.touches ? ev.touches[0].clientY : ev.clientY) - rect.top;
+                var W = cv.clientWidth, H = parseInt(cv.getAttribute("height"), 10);
+                query = [ (cx - pad) / (W - 2 * pad) * 10, (1 - (cy - pad) / (H - 2 * pad)) * 10 ];
+                query[0] = Math.max(0, Math.min(10, query[0]));
+                query[1] = Math.max(0, Math.min(10, query[1]));
+                draw();
+            }
+            cv.addEventListener("click", setFromEvent);
+            cv.addEventListener("touchstart", function (e) { e.preventDefault(); setFromEvent(e); }, { passive: false });
+            kEl.addEventListener("input", draw);
+            redrawers.push(draw);
+            draw();
+        })();
+
+        // ================================================= QUIZ
+        (function () {
+            var qs = [
+                { q: "Which two algorithms share the gradient form Xᵀ(pred − y)/n?",
+                  opts: ["Linear & logistic regression", "K-means & KNN", "Logistic regression & KNN", "Linear regression & k-means"],
+                  a: 0, e: "Both minimize a loss whose gradient reduces to error·input, averaged. Linear just carries an extra factor of 2." },
+                { q: "Why doesn't logistic regression's gradient carry the sigmoid derivative?",
+                  opts: ["It's ignored for speed", "sigmoid'(z)=p(1−p) cancels with the BCE derivative, leaving p−y", "Sigmoid has no derivative", "It only matters with L2"],
+                  a: 1, e: "The p(1−p) from the sigmoid cancels the 1/(p(1−p)) from the log-loss — that pairing is the whole point of sigmoid + BCE." },
+                { q: "In k-means, what produces a NaN centroid?",
+                  opts: ["Too many iterations", "A learning rate that's too high", "An empty cluster (mean of zero points)", "Unnormalized features"],
+                  a: 2, e: "A centroid that wins no points has nothing to average → 0/0. Guard it: skip, or reseed to the farthest point." },
+                { q: "For memory-efficient pairwise distances in KNN, which identity do you use?",
+                  opts: ["a·b = |a||b|cosθ", "‖a−b‖² = ‖a‖² + ‖b‖² − 2·a·b", "‖a−b‖ = ‖a‖ − ‖b‖", "softmax(a) = eᵃ/Σeᵃ"],
+                  a: 1, e: "It turns the O(nq·nt·d) broadcast into a matmul with O(nq·nt) memory. Clip tiny negatives before sqrt." },
+                { q: "Why prefer np.argpartition over np.argsort for finding the k nearest?",
+                  opts: ["It sorts more accurately", "You only need the k-nearest set, not sorted → O(n) beats O(n log n)", "argsort can't take an axis", "It handles ties better"],
+                  a: 1, e: "You want the *set* of k closest, order within it doesn't matter — so a partial partition is enough and cheaper." },
+                { q: "Which of these is a 'lazy' learner with no training phase?",
+                  opts: ["Linear regression", "Logistic regression", "K-means", "KNN"],
+                  a: 3, e: "KNN just stores the data; all the work (distances + vote) happens at query time, O(n·d) per query." },
+                { q: "Why should you NOT L2-regularize the bias in logistic regression?",
+                  opts: ["It makes the math harder", "The bias encodes the base rate log(pos/neg); shrinking it skews every prediction", "Bias has no gradient", "It causes overflow"],
+                  a: 1, e: "Weights control feature influence (fine to shrink); the bias sets the default log-odds and shouldn't be pulled toward 0." },
+                { q: "What does each Lloyd (k-means) step guarantee about inertia?",
+                  opts: ["It reaches the global minimum", "It is non-increasing → converges to a local min", "It stays constant", "It increases then decreases"],
+                  a: 1, e: "Assign and update each can only lower inertia, so it monotonically decreases to a local (not necessarily global) optimum." }
+            ];
+            var box = document.getElementById("quiz");
+            if (!box) return;
+            var answered = [], score = 0;
+            document.getElementById("total").textContent = qs.length;
+            function render() {
+                box.innerHTML = ""; answered = []; score = 0;
+                document.getElementById("score").textContent = 0;
+                qs.forEach(function (item, qi) {
+                    answered.push(false);
+                    var d = document.createElement("div"); d.className = "q";
+                    var t = document.createElement("div"); t.className = "qtext"; t.textContent = (qi + 1) + ". " + item.q; d.appendChild(t);
+                    item.opts.forEach(function (opt, oi) {
+                        var btn = document.createElement("button"); btn.className = "opt"; btn.type = "button"; btn.textContent = opt;
+                        btn.addEventListener("click", function () {
+                            if (answered[qi]) return;
+                            answered[qi] = true;
+                            var kids = d.querySelectorAll(".opt");
+                            kids.forEach(function (k, ki) { if (ki === item.a) k.classList.add("correct"); });
+                            if (oi === item.a) { score++; document.getElementById("score").textContent = score; }
+                            else { btn.classList.add("wrong"); }
+                            var ex = d.querySelector(".exp"); if (ex) ex.classList.add("show");
+                        });
+                        d.appendChild(btn);
+                    });
+                    var e = document.createElement("div"); e.className = "exp"; e.textContent = item.e; d.appendChild(e);
+                    box.appendChild(d);
+                });
+            }
+            document.getElementById("quiz-reset").addEventListener("click", render);
+            render();
+        })();
+
+    })();
+    </script>
+</body>
+</html>
