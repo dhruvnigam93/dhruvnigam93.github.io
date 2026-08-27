@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "The backtracking template (choose / explore / un-choose)"
+  slug: backtracking-subsets
+  date: 2026-08-27
+  description: "Why the append → recurse → pop skeleton works — step through the subsets trace with a synced code panel, live path whiteboard, filling result, and a highlighting recursion tree; a with-pop vs without-pop bug toggle; the i+1/i/visited retarget table; and a 6-question quiz."
+
 - title: "Four ML Classics from Scratch — Cheat Sheet"
   slug: four-ml-classics-cheatsheet
   date: 2026-08-27
