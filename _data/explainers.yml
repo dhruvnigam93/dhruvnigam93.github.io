@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "The Voice-Agent Coding Round, at Staff Level"
+  slug: staff-voice-agent-coding-round
+  date: 2026-08-29
+  description: "Weave-style GenAI live-coding rounds: the 8 staff patterns (policy-as-code, schema-locked extraction, non-differential refusals, confirm-before-write), a reference router, an interactive privacy-oracle demo, a turn-latency budget widget, a model staff+ transcript, and an 8-question quiz."
+
 - title: "The backtracking template (choose / explore / un-choose)"
   slug: backtracking-subsets
   date: 2026-08-27

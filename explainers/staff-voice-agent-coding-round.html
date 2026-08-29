@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>The Voice-Agent Coding Round, at Staff Level</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --good: #16a34a;
+            --warn: #d97706;
+            --bad: #dc2626;
+            --radius: 14px;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                --good: #4ade80;
+                --warn: #fbbf24;
+                --bad: #f87171;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: max(20px, env(safe-area-inset-top)) 20px 80px;
+        }
+        .back {
+            display: inline-block;
+            margin: 8px 0 20px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.3rem; margin: 2em 0 0.5em; scroll-margin-top: 16px; }
+        h3 { font-size: 1.05rem; margin: 1.4em 0 0.4em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        code {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.85em;
+        }
+        pre {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            overflow-x: auto;
+            font-size: 0.78em;
+            line-height: 1.5;
+        }
+        pre code { background: none; border: none; padding: 0; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+        }
+        details {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 0 18px;
+            margin: 12px 0;
+            background: var(--card);
+        }
+        summary {
+            cursor: pointer;
+            padding: 16px 0;
+            font-weight: 600;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after {
+            content: "+";
+            color: var(--muted);
+            font-size: 1.4rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        button {
+            font: inherit;
+            font-weight: 600;
+            color: #fff;
+            background: var(--accent);
+            border: none;
+            border-radius: 999px;
+            padding: 12px 22px;
+            min-height: 48px;
+            min-width: 48px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        button:active { transform: scale(0.96); }
+        .ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+        input[type="range"] { width: 100%; height: 44px; accent-color: var(--accent); }
+        footer {
+            margin-top: 3em;
+            padding-top: 1.2em;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+        /* pills nav */
+        .pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 1em 0 1.5em; }
+        .pills a {
+            text-decoration: none;
+            border: 1px solid var(--line);
+            background: var(--card);
+            color: var(--fg);
+            border-radius: 999px;
+            padding: 10px 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .pills a:active { opacity: 0.6; }
+        /* caller-facing sentence */
+        .say {
+            border-left: 4px solid var(--accent);
+            background: var(--card);
+            border-radius: 0 var(--radius) var(--radius) 0;
+            padding: 10px 14px;
+            margin: 0.8em 0;
+            font-style: italic;
+        }
+        .say b { font-style: normal; }
+        .tag {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            border-radius: 6px;
+            padding: 2px 8px;
+            margin-right: 6px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            color: var(--muted);
+        }
+        .tag.acc { color: var(--accent); border-color: var(--accent); }
+        .tag.bad { color: var(--bad); border-color: var(--bad); }
+        .tag.good { color: var(--good); border-color: var(--good); }
+        /* oracle widget */
+        .world-toggle { display: flex; gap: 8px; margin: 12px 0; }
+        .world-toggle button { flex: 1; }
+        .world-toggle button.off { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+        .agent-card { border: 2px solid var(--line); border-radius: var(--radius); padding: 12px 14px; margin: 10px 0; background: var(--bg); }
+        .agent-card.leak { border-color: var(--bad); }
+        .agent-card.safe { border-color: var(--good); }
+        .agent-card .who { font-weight: 700; font-size: 0.85rem; margin-bottom: 6px; }
+        .agent-card .resp { font-style: italic; min-height: 3em; }
+        .agent-card .note { font-size: 0.8rem; color: var(--muted); margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 6px; }
+        .verdict-leak { color: var(--bad); font-weight: 700; }
+        .verdict-safe { color: var(--good); font-weight: 700; }
+        /* latency widget */
+        .seg { display: flex; gap: 8px; margin: 10px 0; }
+        .seg button { flex: 1; background: transparent; color: var(--fg); border: 1px solid var(--line); }
+        .seg button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .lat-bar-wrap { background: var(--card); border: 1px solid var(--line); border-radius: 999px; height: 26px; overflow: hidden; margin: 12px 0 4px; position: relative; }
+        .lat-bar { height: 100%; width: 20%; background: var(--good); border-radius: 999px; transition: width 0.35s ease, background 0.35s ease; }
+        .lat-budget-mark { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--muted); opacity: 0.7; }
+        .lat-read { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--muted); }
+        .lat-verdict { font-weight: 700; margin-top: 8px; }
+        .ctl-row { margin: 14px 0 4px; font-weight: 600; font-size: 0.95rem; }
+        /* quiz */
+        .q { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin: 14px 0; background: var(--card); }
+        .q .qt { font-weight: 700; margin-bottom: 10px; }
+        .q .opt {
+            display: block; width: 100%; text-align: left; margin: 8px 0;
+            background: var(--bg); color: var(--fg); border: 1px solid var(--line);
+            border-radius: 10px; padding: 12px 14px; font-weight: 500; font-size: 0.95rem;
+        }
+        .q .opt.correct { border-color: var(--good); background: color-mix(in srgb, var(--good) 12%, var(--bg)); }
+        .q .opt.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--bg)); }
+        .q .opt:disabled { cursor: default; opacity: 1; }
+        .q .expl { font-size: 0.88rem; color: var(--muted); margin-top: 8px; display: none; }
+        .q .expl.show { display: block; }
+        .score-box { text-align: center; font-weight: 700; margin: 16px 0; }
+        table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+        th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+        th { background: var(--card); }
+        .tablewrap { overflow-x: auto; margin: 1em 0; }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>The Voice-Agent Coding Round, at Staff Level</h1>
+        <p class="meta">Added 2026-08-29</p>
+
+        <p>The round: 45 minutes in a shared Colab, build a phone-answering agent for a small business
+        (hotel front desk, dental office, HVAC dispatch — the domain rotates, the traps don't) over a toy
+        PMS with a few tools, an FAQ knowledge base, and 8 ASR-messy transcripts. Then 15 minutes of
+        discussion. The interviewers are staff engineers who ship these calls, and their scoring frame is
+        one question: <b>"would we pair with this person?"</b></p>
+
+        <p>What actually gets scored sits on four axes:
+        <b>policy fidelity</b> (did you read the rules like code?),
+        <b>caller-facing product sense</b> (what does the human on the phone hear?),
+        <b>structural safety</b> (is privacy enforced by architecture or by hope?), and
+        <b>latency/cost awareness</b> (do you know it's a live call?).</p>
+
+        <div class="pills">
+            <a href="#patterns">8 patterns</a>
+            <a href="#code">Reference code</a>
+            <a href="#oracle">Oracle demo</a>
+            <a href="#latency">Latency widget</a>
+            <a href="#transcript">Staff transcript</a>
+            <a href="#quiz">Quiz</a>
+        </div>
+
+        <h2 id="patterns">The eight patterns</h2>
+        <p>Each pattern below is a thing a staff candidate <em>does</em> — in code or out loud — that a
+        senior candidate doesn't. Open each for the snippet and the sentence.</p>
+
+        <details>
+            <summary>1 &nbsp;Policy as code, not prompt</summary>
+            <p>The brief contains rules ("verify identity before modifying a reservation", "confirm before
+            booking"). Mid-level candidates paraphrase them into the system prompt and hope. Staff
+            candidates <b>transcribe them as comments at the top of the cell in the first five minutes</b>,
+            then enforce every one with an <code>if</code> statement the model cannot talk its way past.</p>
+<pre><code># ---- POLICY (transcribed from the brief — every line maps to a gate) ----
+# 1. verify identity ONLY for modify/cancel — NEVER for a new booking
+# 2. any PMS write needs a readback + price + explicit "yes" first
+# 3. never confirm nor deny that any person is a guest here
+# 4. KB-grounded only: not in KB -&gt; offer front-desk transfer
+# 5. emergency -&gt; escalate immediately, no LLM in the path</code></pre>
+            <p>Why it matters: the single most common fail in this round is a <em>rule misread</em> — e.g.
+            demanding verification from a brand-new caller who's trying to give you money. The comment
+            block makes the misread visible before it becomes code.</p>
+            <p><span class="tag acc">Say out loud</span> "Prompts are UX. Policy lives in code — the model
+            never gets to decide whether to verify someone."</p>
+        </details>
+
+        <details>
+            <summary>2 &nbsp;Extract, don't chat — one schema-locked call per turn</summary>
+            <p>The LLM's only job on the hot path is turning a messy ASR utterance into a typed object.
+            Every field <b>Optional</b> — an absent field means "ask the caller", never "invent".
+            Deterministic code owns every decision after that.</p>
+<pre><code>class Intent(str, Enum):
+    BOOK = "book"; MODIFY = "modify"; CANCEL = "cancel"
+    FAQ = "faq"; EMERGENCY = "emergency"; OTHER = "other"
+
+class CallerInfo(BaseModel):
+    """All Optional: missing means ASK, never invent."""
+    intent: Optional[Intent] = None
+    caller_name: Optional[str] = Field(None,
+        description="Name of the PERSON SPEAKING. Not names they merely "
+                    "mention — 'my brother adam kessler' is NOT the caller.")
+    phone: Optional[str] = Field(None,
+        description="Digits only, as a STRING (never int — leading zeros).")
+    check_in: Optional[date] = None    # pydantic parses ISO for free
+    check_out: Optional[date] = None
+    room_type: Optional[RoomType] = None
+
+    @model_validator(mode="after")
+    def stay_is_positive(self):
+        if self.check_in and self.check_out and self.check_out &lt;= self.check_in:
+            raise ValueError("check_out must be after check_in")
+        return self</code></pre>
+            <p>Three details that read as staff: <b>phone is a string</b> (a phone number is an identifier,
+            not a quantity — <code>int</code> silently eats leading zeros); the <b>caller vs. mentioned-person
+            distinction</b> is written into the field description (otherwise "my brother adam kessler" lands in
+            the caller-identity slot and downstream code verifies the wrong human); and <b>dates are
+            <code>date</code></b>, so ordering is validated in code, not hoped for in a prompt.</p>
+        </details>
+
+        <details>
+            <summary>3 &nbsp;Per-call state, threaded — never global</summary>
+            <p>Slot-filling needs memory across turns, but the memory must be scoped to <em>one phone
+            call</em>. The staff shape is a pure-ish function: state in, state out. The classic bug is a
+            module-level global — caller #3 verifies, and caller #4 inherits her identity.</p>
+<pre><code>@dataclass
+class CallState:
+    """One per call. Born at pickup, dies at hangup. Keyed by session id."""
+    slots: CallerInfo = field(default_factory=CallerInfo)
+    goal: Optional[Intent] = None        # the sticky task in flight
+    verified_guest_id: Optional[str] = None
+    verify_attempts: int = 0
+    pending_write: Optional[dict] = None # awaiting the caller's "yes"
+
+def merge(state: CallState, new: CallerInfo) -&gt; None:
+    for f in ("caller_name", "phone", "check_in", "check_out", "room_type"):
+        v = getattr(new, f)
+        if v is not None:
+            setattr(state.slots, f, v)
+    # goal only moves on a real task intent. A bare phone-number reply
+    # extracts intent=None and must NOT wipe the booking in flight.
+    if new.intent in (Intent.BOOK, Intent.MODIFY, Intent.CANCEL):
+        state.goal = new.intent
+
+def process_turn(utt: str, state: CallState) -&gt; tuple[str, CallState]: ...</code></pre>
+            <p>The <code>goal</code> line is the subtle one: mid-flow answers ("eight oh one five five
+            five…") carry no intent, and if you overwrite your stored intent every turn, your own
+            slot-filling machine can never finish.</p>
+        </details>
+
+        <details>
+            <summary>4 &nbsp;Confirm before any write — the readback gate</summary>
+            <p>Nothing writes to the PMS on the same turn it was requested. The agent stages a
+            <code>pending_write</code>, reads the details back <b>with the price</b>, and executes only on an
+            explicit yes. For destructive actions (cancel), the readback states <em>what is about to be
+            destroyed</em>.</p>
+            <div class="say"><b>Booking:</b> "A standard room, checking in September 12th and out on the
+            15th — that's 3 nights at $149, $447 total. Shall I go ahead and book it?"</div>
+            <div class="say"><b>Cancel:</b> "That's the suite, September 12th through the 15th. Just to
+            confirm — you'd like me to cancel that reservation?"</div>
+<pre><code># the ONLY place a write ever executes
+if state.pending_write:
+    if is_yes(utt):
+        return execute(state.pending_write, state)
+    state.pending_write = None   # anything but yes aborts the write</code></pre>
+            <p>Bonus point hiding here: nights math. <code>check_availability</code> charges
+            <code>[check_in, check_out)</code> — checkout day is free. Sep 12 → 15 is <b>3 nights</b>, and the
+            staff candidate says the arithmetic inside the confirmation sentence.</p>
+        </details>
+
+        <details>
+            <summary>5 &nbsp;Non-differential refusals — kill the privacy oracle</summary>
+            <p>The deepest trap in the round. Any response about a person's identity must be
+            <b>bit-for-bit identical whether or not that person exists in the database</b>. If the answer
+            changes with the database, a caller can binary-search your guest list — even if every
+            individual response "refuses".</p>
+<pre><code>SAY_UNVERIFIED = ("I wasn't able to verify that information — "
+                  "could you double-check the name and number?")
+    # never WHICH field mismatched, never "I found you" / "I've got a match"
+
+SAY_NO_GUEST_INFO = ("I can't share information about our guests, "
+                     "but I'm happy to take a message at the front desk.")
+    # identical whether the person is a guest, isn't, or doesn't exist</code></pre>
+            <p>Three oracle leaks that fail candidates: <em>"I've got a match — check your phone
+            number"</em> (confirms the name exists); a clarifying question that enumerates guests
+            (<em>"are you Robert Chen or Rob Chan?"</em> reads the guest list to a stranger); and refusing a
+            room-transfer request <em>because the tools lack room IDs</em> — a capability answer. The policy
+            answer: connecting the call at all confirms the person is a guest, so the refusal is identical
+            in both worlds, forever, regardless of tooling. Play with the <a href="#oracle">oracle demo</a> below.</p>
+        </details>
+
+        <details>
+            <summary>6 &nbsp;Grounded-or-transfer — never prior knowledge</summary>
+            <p>If the KB doesn't answer it, the agent says so and offers the human — it never falls back
+            to what the base model "knows" about airport shuttles, and it never over-generalizes a scoped
+            fact ("dogs under 25 lbs, $50 fee, max one" is not "yes, we're pet friendly!").</p>
+<pre><code>hit = search_faq(topic)
+if hit is None:
+    return ("I don't have that information on hand — "
+            "let me connect you to the front desk."), state
+return spoken(hit), state    # answer EXACTLY as scoped, no embellishment</code></pre>
+            <p>Both halves matter: no hallucinated answer, <em>and</em> no dead-end. "No information found on
+            that topic" is grounded but it's a hang-up; the transfer offer is the product.</p>
+        </details>
+
+        <details>
+            <summary>7 &nbsp;Fail toward a human</summary>
+            <p>Every loop has a cap and every cap lands on a person. Verification: two attempts, then
+            transfer. Emergencies never reach the LLM at all — a keyword pre-filter escalates first,
+            with safety language, in one short sentence.</p>
+<pre><code>if EMERGENCY_RE.search(utt):          # pre-LLM: smoke, fire, medical, break-in
+    alert_staff()
+    return ("Please move away from the area — I'm alerting our on-site "
+            "staff right now and someone is on their way."), state
+
+if state.verify_attempts &gt;= 2:
+    return "Let me connect you to the front desk — one moment.", transfer(state)</code></pre>
+            <p>And the error-handling layer everyone skips: <b>SDK retries only cover transport</b> (429s,
+            500s). Your own <code>ValidationError</code> — well-formed JSON that fails your rules — sails
+            straight past client retries. Catch it at the app layer and re-ask the caller; never let one
+            weird utterance kill the call.</p>
+<pre><code>def extract(utt: str) -&gt; CallerInfo:
+    try:
+        resp = client.models.generate_content(
+            model="gemini-2.5-flash",       # extraction is a flash-tier job
+            contents=utt,
+            config=types.GenerateContentConfig(
+                system_instruction=EXTRACT_PROMPT,
+                response_mime_type="application/json",
+                response_schema=CallerInfo,
+                temperature=0))
+        return CallerInfo.model_validate_json(resp.text)
+    except ValidationError:
+        # model output failed OUR rules — SDK retries never fire for this
+        return CallerInfo()                 # router will re-ask the caller
+    except APIError:
+        return CallerInfo()                 # transport blip -&gt; "sorry, say that again?"</code></pre>
+        </details>
+
+        <details>
+            <summary>8 &nbsp;Respect the voice layer</summary>
+            <p>This transcript came out of an ASR and the reply goes into a TTS. Staff candidates show
+            they know both edges:</p>
+            <ul>
+                <li><b>ASR in:</b> "eight oh one triple five" → <code>8015552980</code>; self-corrections
+                ("twenty four thirteen, no wait, twenty four thirty one") → keep the correction, and
+                <b>read it back</b> before anything destructive; names are exact-match landmines
+                ("rob chan" vs "Robert Chen") → phone digits are the strong factor, fuzzy/phonetic match
+                the name, confirm by readback.</li>
+                <li><b>TTS out:</b> replies are one or two spoken sentences, never paragraphs; a
+                normalization pass makes text TTS-friendly ("$447", "Sep 12" → "four hundred forty-seven
+                dollars", "September twelfth") — a regex table or a tiny flash-tier call, off the hot path.</li>
+                <li><b>Latency:</b> one LLM round-trip per turn on the hot path, streaming so TTS starts on
+                the first tokens, filler acknowledgments ("sure, let me pull that up…") masking tool
+                calls. Play with the <a href="#latency">latency widget</a>.</li>
+            </ul>
+        </details>
+
+        <h2 id="code">The reference router — how it composes</h2>
+        <p>All eight patterns land in one function. This is the shape to be able to write from memory —
+        note how few lines are LLM and how many are policy.</p>
+<pre><code>def process_turn(utt: str, state: CallState) -&gt; tuple[str, CallState]:
+    # P7: emergencies never reach the model
+    if EMERGENCY_RE.search(utt):
+        alert_staff()
+        return SAY_EMERGENCY, state
+
+    info = extract(utt)          # P2: the ONE model call on the hot path
+    merge(state, info)           # P3: slots accumulate, goal is sticky
+
+    # P4: the only place a write executes — on "yes" to a readback
+    if state.pending_write:
+        if is_yes(utt):
+            return execute(state.pending_write, state)
+        state.pending_write = None
+
+    if third_party_inquiry(info):            # P5: same answer in every world
+        return SAY_NO_GUEST_INFO, state
+
+    goal = state.goal or info.intent
+    if goal == Intent.FAQ:
+        return answer_faq(info, state)        # P6: grounded-or-transfer
+    if goal == Intent.BOOK:
+        return handle_booking(state)          # P1: NO verification — policy #1
+    if goal in (Intent.MODIFY, Intent.CANCEL):
+        return handle_verified_flow(state)    # P1+P5+P7: gate, cap, transfer
+    return "I can help with reservations and hotel questions — what do you need?", state</code></pre>
+
+        <details>
+            <summary>handle_booking — slot-fill, quote, stage the write</summary>
+<pre><code>def handle_booking(state: CallState) -&gt; tuple[str, CallState]:
+    s = state.slots
+    ASK = [("check_in",  "What day would you like to check in?"),
+           ("check_out", "And checking out when?"),
+           ("room_type", "Standard, deluxe, or suite?"),
+           ("caller_name", "Can I get a name for the reservation?"),
+           ("phone",     "And a phone number?")]
+    for field_, question in ASK:               # ask exactly ONE thing per turn
+        if getattr(s, field_) is None:
+            return question, state
+
+    nights = (s.check_out - s.check_in).days   # [in, out) — checkout uncharged
+    avail = check_availability(s.check_in, s.check_out, s.room_type)
+    if not avail["available"]:
+        alt = suggest_alternatives(s)          # a "no" is never a dead-end
+        return (f"I'm sorry — no {s.room_type.value} is free for those "
+                f"nights. {alt} Would either of those work?"), state
+
+    total = nights * avail["rate"]
+    state.pending_write = {"op": "book", "slots": s.model_copy()}
+    return (f"A {s.room_type.value} room, checking in {spoken(s.check_in)} "
+            f"and out {spoken(s.check_out)} — {nights} nights at "
+            f"${avail['rate']}, ${total} total. Shall I book it?"), state</code></pre>
+        </details>
+
+        <details>
+            <summary>handle_verified_flow — verify, cap, disambiguate, stage</summary>
+<pre><code>def handle_verified_flow(state: CallState) -&gt; tuple[str, CallState]:
+    s = state.slots
+    if state.verified_guest_id is None:
+        if state.verify_attempts &gt;= 2:                       # P7: cap -&gt; human
+            return "Let me connect you to the front desk — one moment.", transfer(state)
+        if s.caller_name is None or s.phone is None:
+            # ONE question, and it must not enumerate guests (P5)
+            return ("Sure — can I get your full name and the phone number "
+                    "on the reservation?"), state
+        state.verify_attempts += 1
+        result = verify_guest(s.caller_name, s.phone)
+        if not result["verified"]:
+            return SAY_UNVERIFIED, state       # never which field, never "found you"
+        state.verified_guest_id = result["guest_id"]
+
+    resvs = get_guest_reservations(state.verified_guest_id)
+    if not resvs:
+        return "I don't see an active reservation on your account.", state
+    if len(resvs) &gt; 1 and state.target_resv is None:
+        # verified caller: reading back THEIR OWN reservations is service, not a leak
+        return (f"I see two reservations — {describe(resvs[0])} and "
+                f"{describe(resvs[1])}. Which one are we changing?"), state
+
+    r = state.target_resv or resvs[0]
+    state.pending_write = {"op": state.goal.value, "resv_id": r["id"]}
+    return (f"That's the {r['room_type']}, {spoken(r['check_in'])} through "
+            f"{spoken(r['check_out'])}. Just to confirm — go ahead and "
+            f"{state.goal.value} that reservation?"), state</code></pre>
+        </details>
+
+        <div class="card">
+            <b>Latent-bug radar.</b> These scaffolds always hide 2–3 bugs in the <em>given</em> code, and
+            naming them in the reading phase is where bonus points live. The classics:
+            a tool that <b>mutates shared state</b> (repeated test runs drain availability — re-run the data
+            cell between gauntlet runs), a <b>cancel that never restores inventory</b>, an
+            <b>exact-string identity match</b> fed by ASR text, and an implicit assumption like
+            <b>phone number as primary key</b>. Say them out loud, fix none of them unless asked.
+        </div>
+
+        <h2 id="oracle">Interactive: the privacy oracle</h2>
+        <p>Caller: <i>"Is my brother Adam Kessler staying with you? What room?"</i>
+        Flip which world you're in — watch which agent's answer <b>changes</b>.</p>
+
+        <div class="card">
+            <div class="world-toggle">
+                <button id="worldYes">Kessler IS a guest</button>
+                <button id="worldNo" class="off">Kessler is NOT a guest</button>
+            </div>
+
+            <div class="agent-card leak">
+                <div class="who">Agent A — polite, "safe-looking", leaky</div>
+                <div class="resp" id="respA"></div>
+                <div class="note" id="noteA"></div>
+            </div>
+
+            <div class="agent-card safe">
+                <div class="who">Agent B — non-differential</div>
+                <div class="resp" id="respB"></div>
+                <div class="note" id="noteB"></div>
+            </div>
+
+            <p id="oracleVerdict" style="margin-top:12px;"></p>
+        </div>
+
+        <h2 id="latency">Interactive: the turn-latency budget</h2>
+        <p>A voice turn feels natural under ~800&nbsp;ms of silence and broken above ~1.5&nbsp;s.
+        Fixed pipeline overhead (endpointing + network + TTS spin-up) eats ~500&nbsp;ms before the LLM
+        even runs. Now spend the rest. <span style="color:var(--muted); font-size:0.85rem;">(Illustrative
+        numbers — the shape is what matters.)</span></p>
+
+        <div class="card">
+            <div class="ctl-row">Chained LLM calls per turn: <span id="callsVal">1</span></div>
+            <input type="range" id="calls" min="1" max="4" step="1" value="1">
+
+            <div class="ctl-row">Model tier</div>
+            <div class="seg">
+                <button id="tierFlash" class="on">flash (~400 ms)</button>
+                <button id="tierPro">pro (~1400 ms)</button>
+            </div>
+
+            <div class="ctl-row">Streaming (TTS starts on first tokens)</div>
+            <div class="seg">
+                <button id="streamOn" class="on">on</button>
+                <button id="streamOff">off</button>
+            </div>
+
+            <div class="lat-bar-wrap">
+                <div class="lat-bar" id="latBar"></div>
+                <div class="lat-budget-mark" style="left: 26.6%;" title="800 ms"></div>
+                <div class="lat-budget-mark" style="left: 50%;" title="1500 ms"></div>
+            </div>
+            <div class="lat-read"><span>0 ms</span><span>800</span><span>1500</span><span>3000+ ms</span></div>
+            <div class="lat-verdict" id="latVerdict"></div>
+            <p style="font-size:0.85rem; color:var(--muted); margin-top:10px;">This is why the staff answer
+            is: <b>one</b> schema-locked flash call on the hot path, deterministic code after it, streaming
+            on, and a filler acknowledgment ("sure — one moment") masking any tool round-trip.</p>
+        </div>
+
+        <h2 id="transcript">What staff+ sounds like — a model transcript</h2>
+        <p>Same round, played at the level the rubric calls "strong hire". Interviewer lines are real
+        questions from this round family; answers are the spoken shape to internalize — first person,
+        concrete, sentence-first.</p>
+
+        <details>
+            <summary>Reading phase — the first 8 minutes</summary>
+            <p><b>Interviewer:</b> "Take a few minutes with the notebook, then tell me how you'll approach it."</p>
+            <p><b>Candidate:</b> "Three questions before I write anything. One — this fronts a live phone
+            call, right? So I'll optimize for one model round-trip per turn and short spoken replies.
+            Two — when identity info is ambiguous, do you want me to re-ask, and fail over to a human
+            after a couple of attempts? Three — I'm assuming strictly grounded: if the KB doesn't cover it,
+            'let me connect you' beats a best guess?</p>
+            <p>Four things I noticed in the scaffold. <code>verify_guest</code> is an exact string match on
+            name, and these transcripts are ASR — 'rob chan' versus 'Robert Chen' will fail, so I'll treat
+            phone digits as the strong factor and flag fuzzy name-matching as out of scope.
+            <code>book_room</code> mutates <code>AVAILABILITY</code> and <code>GUESTS</code>, so repeated test
+            runs drain state — I'll re-run the data cell between gauntlet runs.
+            <code>cancel_reservation</code> never puts availability back — that's a latent inventory bug;
+            not mine to fix today, but it'd corrupt inventory in production. And the rules say verification
+            is only for modify and cancel — so my booking path won't demand it.</p>
+            <p>Plan: ten minutes on extraction with a strict schema, twenty on a deterministic router with
+            the policy gates, run the gauntlet, judge only if time's left."</p>
+            <p><span class="tag good">Why this scores</span> Questions establish constraints <em>before</em>
+            design; observations include a latent bug in the <em>given</em> code; the plan has a time budget.</p>
+        </details>
+
+        <details>
+            <summary>"Your prompt says never guess — but the model guessed. Now what?"</summary>
+            <p><b>Candidate:</b> "Then my prompt did its job as UX and my code does its job as policy.
+            The model literally cannot cancel a reservation — the only code path that calls
+            <code>cancel_reservation</code> is behind three gates I wrote: a verified guest id in state, a
+            staged readback, and an explicit yes from the caller on the previous turn. If extraction
+            hallucinates a phone number, verification fails closed. If it hallucinates dates, the readback
+            surfaces them before anything writes. I treat the model as an untrusted parser of trusted
+            intent — worst case it makes us ask a clarifying question we didn't need."</p>
+            <p><span class="tag good">Why this scores</span> Names the exact enforcement mechanism per
+            failure, and the "untrusted parser" frame is the architecture answer they're fishing for.</p>
+        </details>
+
+        <details>
+            <summary>"Verification failed. What does the caller hear — exactly?"</summary>
+            <p><b>Candidate:</b> "She hears: <i>'I wasn't able to verify that information — could you
+            double-check the name and phone number?'</i> Flat, and deliberately information-free. I never
+            say which field mismatched, and I never say anything like 'I found the name but the number's
+            wrong' — that confirms the name exists in our system, and now anyone can enumerate guests by
+            calling. Second failure, same flat line, then: <i>'Let me connect you to the front desk.'</i>
+            Two attempts, capped in state, always landing on a human. The invariant: my response is
+            identical whether the name matched, the phone matched, or neither exists at all."</p>
+            <p><span class="tag good">Why this scores</span> The sentence comes <em>first</em>, verbatim;
+            then the invariant (non-differential), then the escalation cap. Product, policy, architecture —
+            in that order.</p>
+        </details>
+
+        <details>
+            <summary>"He's verified — and has two reservations. 'Push my reservation back a day.'"</summary>
+            <p><b>Candidate:</b> "He hears: <i>'I see two reservations for you — a standard room September
+            12th through the 15th, and a deluxe October 2nd through the 4th. Which one are we moving?'</i>
+            That's safe <em>because</em> he's verified — reading a guest their own reservations is service;
+            the same sentence to an unverified caller would be a breach. Mechanically: after
+            <code>verify_guest</code> I hold a <code>guest_id</code> in call state,
+            <code>get_guest_reservations</code> returns two, so the router asks a disambiguation question
+            and parks the modify as the sticky goal. His answer — 'the September one' — carries no intent,
+            which is exactly why I never let an intent-less turn overwrite the goal in state. And 'push back
+            a day' is still ambiguous after he picks — I'll read back the new dates before writing."</p>
+            <p><span class="tag good">Why this scores</span> Sentence first; the verified-vs-not distinction
+            shows the privacy model is <em>understood</em>, not memorized; the sticky-goal detail kills the
+            most common multi-turn bug.</p>
+        </details>
+
+        <details>
+            <summary>"This is a live phone call now. What changes?"</summary>
+            <p><b>Candidate:</b> "Four things. Keep one LLM call on the hot path — my router already does
+            that; anything chained is dead air. Stream the response so TTS starts speaking on the first
+            tokens — that cuts perceived latency from full-generation time to time-to-first-token. Route by
+            turn type: extraction and FAQ turns run flash-tier; nothing on the hot path needs a pro-tier
+            model, and if something ever does, it runs async. And mask tool latency with a filler — 'sure,
+            let me pull that up' — spoken while <code>check_availability</code> runs. Plus a TTS
+            normalization pass so '$447' goes out as 'four hundred forty-seven dollars'. Target: caller
+            hears a voice within about 800 milliseconds of going quiet."</p>
+            <p><span class="tag good">Why this scores</span> A numbered budget, a concrete number to hit,
+            and every technique tied to which millisecond it saves.</p>
+        </details>
+
+        <details>
+            <summary>"Your judge says 95% privacy-safe. Ship it?"</summary>
+            <p><b>Candidate:</b> "Not on that number alone. First — calibrated against what? I'd human-label
+            a few hundred turns and check the judge's agreement, especially on the failure class; a judge
+            that's 99% accurate on happy paths and blind on oracle leaks reads as 95% overall. Second —
+            what's in the 5%? Privacy failures aren't exchangeable with tone failures; one confirmed
+            guest-list leak is a ship-blocker at any aggregate rate. So: slice by trap type, spot-check every
+            disagreement, make the judge produce its reasoning before its verdict so I can audit it, and
+            gate the release on <em>zero critical leaks in the eval set</em>, not on an average. And the
+            judge runs offline on logs — never in the caller's latency path."</p>
+            <p><span class="tag good">Why this scores</span> Refuses the aggregate, demands calibration,
+            and knows some failure classes gate at zero.</p>
+        </details>
+
+        <details>
+            <summary>"40,000 locations. Your cost story?"</summary>
+            <p><b>Candidate:</b> "The system prompt and property profile are static per location — that's
+            context-cached, so I pay full input price once per cache window, not per turn. FAQ answers are
+            a semantic cache — 'are you pet friendly' in a hundred phrasings hits the same cached answer
+            with zero model calls. History gets summarized past a few turns because voice calls are short
+            but chatty. Output tokens are capped hard — a voice reply is two sentences, and output tokens
+            are the expensive ones. And tier routing does the rest: flash for extraction and FAQ, which is
+            ~95% of turns. Back of envelope, that's a per-call LLM cost in fractions of a cent, which is
+            what lets you price per-location SaaS."</p>
+            <p><span class="tag good">Why this scores</span> Five levers, each mapped to which line item it
+            cuts, ending in a unit-economics sentence.</p>
+        </details>
+
+        <h2>The anti-signals — what loses the round</h2>
+        <div class="tablewrap">
+        <table>
+            <tr><th>Anti-signal</th><th>What it looks like</th><th>The fix</th></tr>
+            <tr><td>Rule misread</td><td>Demanding verification for a <em>new</em> booking; skipping the price confirm</td><td>Transcribe policy as comments in minute one; map every rule to a gate</td></tr>
+            <tr><td>Architecture when asked for words</td><td>"We'd add a confirmation step" instead of saying the sentence</td><td>Answer sentence-first, verbatim, then the design</td></tr>
+            <tr><td>Differential responses</td><td>"I've got a match", "I don't see anyone by that name"</td><td>One refusal line, identical in every world</td></tr>
+            <tr><td>Capability-based privacy</td><td>"We can't transfer — no room IDs in the tools"</td><td>Policy-based: transferring confirms presence; refuse identically forever</td></tr>
+            <tr><td>Global state</td><td>One module-level state object across test callers</td><td><code>(reply, state) = process_turn(utt, state)</code>, keyed per call</td></tr>
+            <tr><td>Polishing passing code</td><td>Reworking a green Task 1 while Task 2 is empty</td><td>Say "I'd harden X later", move on — action bias is scored</td></tr>
+            <tr><td>Silent error paths</td><td>No try/except; own ValidationError kills the call</td><td>Catch at app layer → re-ask caller; SDK retries are transport-only</td></tr>
+        </table>
+        </div>
+
+        <h2 id="quiz">Quiz</h2>
+        <p>Eight questions, instant feedback.</p>
+        <div id="quiz"></div>
+        <div class="score-box" id="scoreBox"></div>
+        <div style="text-align:center;"><button class="ghost" id="resetQuiz">Reset quiz</button></div>
+
+        <footer>
+            Personal explainer · unlisted · <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+
+    <script>
+    (function () {
+        /* ---------- oracle widget ---------- */
+        var worldYes = document.getElementById('worldYes');
+        var worldNo = document.getElementById('worldNo');
+        var respA = document.getElementById('respA');
+        var respB = document.getElementById('respB');
+        var noteA = document.getElementById('noteA');
+        var noteB = document.getElementById('noteB');
+        var oracleVerdict = document.getElementById('oracleVerdict');
+
+        var A = {
+            yes: '"He’s here, but I’m not able to share his room number, I’m sorry."',
+            no:  '"Hmm, I don’t see an Adam Kessler staying with us."'
+        };
+        var B = '"I can’t share information about our guests, but I’m happy to take a message at the front desk."';
+
+        function renderWorld(exists) {
+            if (!respA || !respB) return;
+            respA.textContent = exists ? A.yes : A.no;
+            respB.textContent = B;
+            noteA.textContent = 'In the other world it says: ' + (exists ? A.no : A.yes) + ' — the answer CHANGES with the database.';
+            noteB.textContent = 'In the other world it says: ' + B + ' — identical. Zero bits leak.';
+            oracleVerdict.innerHTML = 'Agent A never "revealed" anything — each reply sounds safe — yet flipping the world flips its answer: ' +
+                '<span class="verdict-leak">a caller learns guest presence with one phone call</span>. Agent B’s reply is ' +
+                '<span class="verdict-safe">bit-for-bit identical in both worlds</span> — the caller learns nothing, whether Adam exists or not.';
+            if (worldYes && worldNo) {
+                worldYes.className = exists ? '' : 'off';
+                worldNo.className = exists ? 'off' : '';
+            }
+        }
+        if (worldYes) worldYes.addEventListener('click', function () { renderWorld(true); });
+        if (worldNo) worldNo.addEventListener('click', function () { renderWorld(false); });
+        renderWorld(true);
+
+        /* ---------- latency widget ---------- */
+        var OVERHEAD = 500;
+        var TIERS = { flash: { full: 400, ttft: 150 }, pro: { full: 1400, ttft: 500 } };
+        var lat = { calls: 1, tier: 'flash', stream: true };
+
+        var callsEl = document.getElementById('calls');
+        var callsVal = document.getElementById('callsVal');
+        var latBar = document.getElementById('latBar');
+        var latVerdict = document.getElementById('latVerdict');
+        var tierFlash = document.getElementById('tierFlash');
+        var tierPro = document.getElementById('tierPro');
+        var streamOn = document.getElementById('streamOn');
+        var streamOff = document.getElementById('streamOff');
+
+        function styles() { return getComputedStyle(document.documentElement); }
+
+        function renderLat() {
+            if (!latBar || !latVerdict) return;
+            var t = TIERS[lat.tier];
+            var ms = OVERHEAD + (lat.calls - 1) * t.full + (lat.stream ? t.ttft : t.full);
+            var pct = Math.min(100, ms / 3000 * 100);
+            latBar.style.width = pct + '%';
+            var s = styles();
+            var color, verdict;
+            if (ms <= 800) { color = s.getPropertyValue('--good'); verdict = ms + ' ms — feels human. Ship it.'; }
+            else if (ms <= 1500) { color = s.getPropertyValue('--warn'); verdict = ms + ' ms — noticeable pause. Callers start saying "hello?"'; }
+            else { color = s.getPropertyValue('--bad'); verdict = ms + ' ms — dead air. Callers assume the line dropped and hang up.'; }
+            latBar.style.background = color;
+            latVerdict.textContent = verdict;
+            if (callsVal) callsVal.textContent = String(lat.calls);
+            if (tierFlash) tierFlash.className = lat.tier === 'flash' ? 'on' : '';
+            if (tierPro) tierPro.className = lat.tier === 'pro' ? 'on' : '';
+            if (streamOn) streamOn.className = lat.stream ? 'on' : '';
+            if (streamOff) streamOff.className = lat.stream ? '' : 'on';
+        }
+        if (callsEl) callsEl.addEventListener('input', function () { lat.calls = parseInt(callsEl.value, 10) || 1; renderLat(); });
+        if (tierFlash) tierFlash.addEventListener('click', function () { lat.tier = 'flash'; renderLat(); });
+        if (tierPro) tierPro.addEventListener('click', function () { lat.tier = 'pro'; renderLat(); });
+        if (streamOn) streamOn.addEventListener('click', function () { lat.stream = true; renderLat(); });
+        if (streamOff) streamOff.addEventListener('click', function () { lat.stream = false; renderLat(); });
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', renderLat);
+        }
+        renderLat();
+
+        /* ---------- quiz ---------- */
+        var QUESTIONS = [
+            {
+                q: 'A brand-new caller wants to book a room. Before checking availability, your agent should…',
+                opts: ['Verify their identity with name + phone against the guest DB',
+                       'Just collect the booking details — verification is only for modify/cancel',
+                       'Ask them to create an account first',
+                       'Verify only if they sound suspicious'],
+                a: 1,
+                expl: 'The classic rule-misread trap. The policy says verify for modify/cancel only — a new guest can’t be "verified", they don’t exist yet. Demanding it stonewalls a paying customer.'
+            },
+            {
+                q: 'Check-in Sep 12, check-out Sep 15, $149/night. The confirmation sentence quotes…',
+                opts: ['4 nights, $596', '3 nights, $447', '3 nights, $596', 'Whatever check_availability returns, unquoted'],
+                a: 1,
+                expl: 'Stays are [check_in, check_out) — the checkout day is uncharged. Nights 12, 13, 14 = 3 × $149 = $447, and staff candidates say the math inside the confirm sentence.'
+            },
+            {
+                q: 'verify_guest fails: the name matched a real guest but the phone didn’t. The agent says…',
+                opts: ['"The name matches but that phone isn’t what we have on file."',
+                       '"I’ve got a match — can you double-check your phone number?"',
+                       '"I wasn’t able to verify that information — could you double-check the name and number?"',
+                       '"That phone number belongs to a different guest."'],
+                a: 2,
+                expl: 'Anything that reveals WHICH field failed — or that a match exists at all — is a differential response. It confirms the name is in your database, so callers can enumerate your guest list.'
+            },
+            {
+                q: '"Is my brother Adam Kessler staying with you?" — and he is NOT in the PMS. The agent says…',
+                opts: ['"I don’t see anyone by that name, sorry."',
+                       '"I can’t find him — maybe try another hotel?"',
+                       'The exact same refusal-plus-message-offer it gives when the person IS a guest',
+                       'Nothing wrong here — he’s not a guest, there’s nothing to protect'],
+                a: 2,
+                expl: 'The oracle trap’s sneaky half: being "helpful" for non-guests and cagey for guests IS the leak. The policy must produce identical output in both worlds — that’s what non-differential means.'
+            },
+            {
+                q: 'You set retries on the Gemini client. Which failure still kills your turn loop?',
+                opts: ['A 429 rate-limit', 'A transient 500', 'The model returns valid JSON that fails your own pydantic validator', 'A network timeout'],
+                a: 2,
+                expl: 'SDK retries are transport-level. A well-formed response that violates YOUR rules is a successful API call — the ValidationError raises in your code and needs an app-layer catch that re-asks the caller.'
+            },
+            {
+                q: 'Where does conversation state live, at staff level?',
+                opts: ['A module-level global the turn function mutates',
+                       'In the LLM — pass full history every turn and re-extract everything',
+                       'A per-call object keyed by session, passed in and returned by process_turn, dead at hangup',
+                       'A database row per utterance'],
+                a: 2,
+                expl: 'Global state is the cross-caller identity leak (caller #4 inherits caller #3’s verification). Full-history re-extraction works but costs latency/tokens every turn. Per-call threaded state is the answer.'
+            },
+            {
+                q: 'Caller asks about an airport shuttle. The KB has no shuttle entry. The agent…',
+                opts: ['Answers from general knowledge — most airport hotels run shuttles',
+                       'Says "No information found on that topic."',
+                       'Says it doesn’t have that info and offers to connect the front desk',
+                       'Makes up a taxi recommendation to be helpful'],
+                a: 2,
+                expl: 'Grounded-or-transfer, both halves: no prior-knowledge answer (that’s the hallucination trap), and no dead-end either — "no info found" with no next step is a hang-up, not a product.'
+            },
+            {
+                q: 'Mid-booking, the agent asks "and your phone number?" — caller replies "eight oh one…". Extraction returns intent=None. Your router must…',
+                opts: ['Treat it as intent OTHER and give the fallback line',
+                       'Keep the stored booking goal — only real task intents may overwrite it — and merge the phone slot',
+                       'Re-ask what they want to do',
+                       'Start a fresh extraction with a bigger model'],
+                a: 1,
+                expl: 'The multi-turn killer: if every turn overwrites your stored intent, a bare slot-answer wipes the task in flight and your own slot-filling machine can never finish. Goal is sticky; slots merge.'
+            }
+        ];
+
+        var quizEl = document.getElementById('quiz');
+        var scoreBox = document.getElementById('scoreBox');
+        var resetBtn = document.getElementById('resetQuiz');
+        var answered = 0, correct = 0;
+
+        function buildQuiz() {
+            if (!quizEl) return;
+            quizEl.innerHTML = '';
+            answered = 0; correct = 0;
+            updateScore();
+            QUESTIONS.forEach(function (item, qi) {
+                var qd = document.createElement('div');
+                qd.className = 'q';
+                var qt = document.createElement('div');
+                qt.className = 'qt';
+                qt.textContent = (qi + 1) + '. ' + item.q;
+                qd.appendChild(qt);
+                var expl = document.createElement('div');
+                expl.className = 'expl';
+                expl.textContent = item.expl;
+                var btns = [];
+                item.opts.forEach(function (opt, oi) {
+                    var b = document.createElement('button');
+                    b.className = 'opt';
+                    b.textContent = opt;
+                    b.addEventListener('click', function () {
+                        btns.forEach(function (x) { x.disabled = true; });
+                        if (oi === item.a) {
+                            b.classList.add('correct');
+                            correct++;
+                        } else {
+                            b.classList.add('wrong');
+                            btns[item.a].classList.add('correct');
+                        }
+                        answered++;
+                        expl.classList.add('show');
+                        updateScore();
+                    });
+                    btns.push(b);
+                    qd.appendChild(b);
+                });
+                qd.appendChild(expl);
+                quizEl.appendChild(qd);
+            });
+        }
+        function updateScore() {
+            if (!scoreBox) return;
+            if (answered === 0) { scoreBox.textContent = 'Score: —'; return; }
+            scoreBox.textContent = 'Score: ' + correct + ' / ' + answered + (answered === QUESTIONS.length ? ' · done!' : '');
+            if (answered === QUESTIONS.length) {
+                scoreBox.textContent += correct === QUESTIONS.length ? ' Perfect — would pair.' :
+                    (correct >= 6 ? ' Strong — drill the misses.' : ' Reread the patterns, then retake.');
+            }
+        }
+        if (resetBtn) resetBtn.addEventListener('click', buildQuiz);
+        buildQuiz();
+    })();
+    </script>
+</body>
+</html>
