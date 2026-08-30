@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "HLD: The Six-Stage Flow, Debugged"
+  slug: hld-six-stage-flow-debugged
+  date: 2026-08-30
+  description: "The six-stage HLD protocol reinforced with real failure points from four mocks — tap-through stage timeline (target vs Aug 30 underrun), score-plateau chart, streak counters, seven do/don't cards with live cost-threshold, route-EV and QPS widgets, a pre-wrap checklist, and an 8-question quiz from your own tape."
+
 - title: "The Voice-Agent Coding Round, at Staff Level"
   slug: staff-voice-agent-coding-round
   date: 2026-08-29

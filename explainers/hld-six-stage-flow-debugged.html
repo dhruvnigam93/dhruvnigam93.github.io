@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>HLD: The Six-Stage Flow, Debugged</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --radius: 14px;
+            /* validated viz palette (light) */
+            --s1: #2a78d6; --s2: #1baf7a; --s3: #eda100; --s4: #008300; --s5: #4a3aa7; --s6: #e34948;
+            --good: #0ca30c; --crit: #d03b3b;
+            --goodbg: rgba(12,163,12,0.08); --critbg: rgba(208,59,59,0.07);
+            --grid: #e1e0d9;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                /* dark-stepped viz palette */
+                --s1: #3987e5; --s2: #199e70; --s3: #c98500; --s4: #008300; --s5: #9085e9; --s6: #e66767;
+                --good: #0ca30c; --crit: #d03b3b;
+                --goodbg: rgba(12,163,12,0.12); --critbg: rgba(208,59,59,0.13);
+                --grid: #2c2c2a;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            margin: 0; background: var(--bg); color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; font-size: 18px;
+        }
+        .wrap { max-width: 720px; margin: 0 auto; padding: max(20px, env(safe-area-inset-top)) 20px 80px; }
+        .back { display: inline-block; margin: 8px 0 20px; color: var(--muted); text-decoration: none; font-size: 0.95rem; }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.3rem; margin: 2em 0 0.5em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        code { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px;
+               font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85em; }
+        .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin: 1em 0; }
+        details { border: 1px solid var(--line); border-radius: var(--radius); padding: 0 18px; margin: 12px 0; background: var(--card); }
+        summary { cursor: pointer; padding: 16px 0; font-weight: 600; list-style: none;
+                  display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        summary::-webkit-details-marker { display: none; }
+        summary::after { content: "+"; color: var(--muted); font-size: 1.4rem; line-height: 1; flex: none; }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        button { font: inherit; font-weight: 600; color: #fff; background: var(--accent); border: none; border-radius: 999px;
+                 padding: 12px 22px; min-height: 48px; min-width: 48px; cursor: pointer; touch-action: manipulation; }
+        button:active { transform: scale(0.96); }
+        .ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+        input[type="range"] { width: 100%; height: 44px; accent-color: var(--accent); }
+        footer { margin-top: 3em; padding-top: 1.2em; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
+
+        /* pills nav */
+        .pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
+        .pills a { text-decoration: none; font-size: 0.85rem; font-weight: 600; color: var(--accent);
+                   border: 1px solid var(--line); border-radius: 999px; padding: 9px 14px; min-height: 40px; display: inline-flex; align-items: center; }
+        .lead { color: var(--muted); font-size: 0.98rem; }
+
+        /* chips */
+        .chip { display: inline-block; font-size: 0.75rem; font-weight: 700; border-radius: 999px; padding: 2px 10px;
+                border: 1px solid var(--line); color: var(--muted); vertical-align: middle; }
+        .chip.hot { color: var(--crit); border-color: var(--crit); }
+
+        /* trajectory chart */
+        .chart { width: 100%; height: auto; display: block; margin: 6px 0 0; }
+        .chart .gridline { stroke: var(--grid); stroke-width: 1; }
+        .chart .refline { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 5; opacity: 0.75; }
+        .chart .series { stroke: var(--s1); stroke-width: 2.5; fill: none; }
+        .chart .dot { fill: var(--s1); stroke: var(--bg); stroke-width: 2; cursor: pointer; }
+        .chart .dot.sel { r: 9; }
+        .chart text { font-family: inherit; font-size: 13px; fill: var(--muted); }
+        .chart .vlabel { fill: var(--fg); font-weight: 700; }
+        .chart .annot { fill: var(--crit); font-weight: 700; }
+        #trajNote { min-height: 3.2em; font-size: 0.92rem; }
+        #trajNote b { color: var(--fg); }
+
+        /* stage timeline */
+        .tl { display: flex; width: 100%; border-radius: 10px; overflow: hidden; height: 48px; margin-top: 6px; }
+        .tl .seg { position: relative; border: none; border-radius: 0; min-width: 0; min-height: 48px; padding: 0; margin: 0;
+                   margin-right: 2px; cursor: pointer; opacity: 0.92; }
+        .tl .seg:last-child { margin-right: 0; }
+        .tl .seg.on { opacity: 1; outline: 3px solid var(--fg); outline-offset: -3px; }
+        .tl.actual { height: 30px; }
+        .tl.actual .seg { min-height: 30px; }
+        .tl .unused { background: transparent; border: 2px dashed var(--line); cursor: default; }
+        .tlrow { display: flex; width: 100%; font-size: 0.66rem; letter-spacing: -0.01em; color: var(--muted); font-weight: 700; }
+        .tlrow span { min-width: 0; margin-right: 2px; text-align: center; overflow: hidden; white-space: nowrap; }
+        .tlrow span:last-child { margin-right: 0; }
+        .tllab { font-size: 0.8rem; color: var(--muted); margin: 4px 0 2px; }
+        .bar-s1 { background: var(--s1); } .bar-s2 { background: var(--s2); } .bar-s3 { background: var(--s3); }
+        .bar-s4 { background: var(--s4); } .bar-s5 { background: var(--s5); } .bar-s6 { background: var(--s6); }
+
+        /* stage detail panel */
+        #stagePanel h3 { margin: 0 0 4px; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .rowline { display: flex; gap: 10px; margin: 10px 0; align-items: flex-start; font-size: 0.95rem; }
+        .rowline .ico { flex: none; font-weight: 800; width: 1.4em; text-align: center; }
+        .rowline.bar .ico { color: var(--muted); }
+        .rowline.you .ico { color: var(--crit); }
+        .rowline.fix .ico { color: var(--good); }
+        .rowline .lab { font-weight: 700; }
+
+        /* streaks */
+        .streaks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 1em 0; }
+        @media (min-width: 560px) { .streaks { grid-template-columns: repeat(4, 1fr); } }
+        .streak { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 10px; text-align: center; }
+        .streak .n { font-size: 1.7rem; font-weight: 800; line-height: 1.15; }
+        .streak.badS .n { color: var(--crit); } .streak.goodS .n { color: var(--good); }
+        .streak .t { font-size: 0.8rem; color: var(--muted); line-height: 1.35; margin-top: 2px; }
+        .streak.badS { background: var(--critbg); } .streak.goodS { background: var(--goodbg); }
+
+        /* do / don't */
+        .dd { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        @media (min-width: 560px) { .dd { grid-template-columns: 1fr 1fr; } }
+        .dd .no, .dd .yes { border-radius: 10px; padding: 12px 14px; font-size: 0.92rem; line-height: 1.5; }
+        .dd .no { background: var(--critbg); border: 1px solid var(--crit); }
+        .dd .yes { background: var(--goodbg); border: 1px solid var(--good); }
+        .dd .hd { font-weight: 800; font-size: 0.8rem; letter-spacing: 0.04em; margin-bottom: 6px; }
+        .dd .no .hd { color: var(--crit); } .dd .yes .hd { color: var(--good); }
+        .dd em { font-style: italic; }
+
+        /* widgets */
+        .w { border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-top: 12px; background: var(--bg); }
+        .w .wt { font-weight: 700; font-size: 0.9rem; margin-bottom: 8px; }
+        .srow { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; }
+        .srow label { flex: none; width: 8.5em; color: var(--muted); }
+        .srow output { flex: none; width: 5.5em; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .bigout { font-size: 1.35rem; font-weight: 800; margin: 8px 0 2px; font-variant-numeric: tabular-nums; }
+        .subout { font-size: 0.85rem; color: var(--muted); min-height: 2.6em; }
+        .presets { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+        .presets button { padding: 8px 14px; min-height: 40px; font-size: 0.85rem; }
+        .tbar { position: relative; height: 14px; border-radius: 999px; background: linear-gradient(90deg, var(--goodbg), var(--critbg)); border: 1px solid var(--line); margin: 10px 0 4px; }
+        .tbar .mark { position: absolute; top: -5px; width: 4px; height: 24px; border-radius: 2px; background: var(--fg); }
+        .evrow { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 0.88rem; }
+        .evrow .nm { flex: none; width: 9.5em; }
+        .evrow .barwrap { flex: 1; height: 16px; background: var(--card); border-radius: 6px; overflow: hidden; }
+        .evrow .evbar { height: 100%; border-radius: 6px; transition: width 0.25s ease; }
+        .evrow .val { flex: none; width: 5.5em; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .evrow.win .nm { font-weight: 800; }
+
+        /* checklist */
+        .ck { list-style: none; padding: 0; margin: 0.5em 0; }
+        .ck li { margin: 8px 0; }
+        .ck label { display: flex; gap: 12px; align-items: flex-start; background: var(--card); border: 1px solid var(--line);
+                    border-radius: 10px; padding: 12px 14px; cursor: pointer; font-size: 0.95rem; min-height: 48px; }
+        .ck input { width: 22px; height: 22px; margin-top: 2px; flex: none; accent-color: var(--good); }
+        .ck label.done { border-color: var(--good); background: var(--goodbg); }
+        #ckCount { font-weight: 800; }
+
+        /* quiz */
+        .q { margin: 1.2em 0; }
+        .q .qq { font-weight: 700; margin-bottom: 8px; }
+        .q .opts { display: grid; gap: 8px; }
+        .q .opts button { text-align: left; width: 100%; background: var(--card); color: var(--fg);
+                          border: 1px solid var(--line); border-radius: 10px; font-weight: 500; padding: 12px 14px; }
+        .q .opts button.right { border-color: var(--good); background: var(--goodbg); font-weight: 700; }
+        .q .opts button.wrong { border-color: var(--crit); background: var(--critbg); }
+        .q .expl { font-size: 0.88rem; color: var(--muted); margin-top: 6px; display: none; }
+        .q .expl.show { display: block; }
+        #quizScore { font-weight: 800; }
+        .small { font-size: 0.85rem; color: var(--muted); }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>HLD: The Six-Stage Flow, Debugged</h1>
+        <p class="meta">Added 2026-08-30</p>
+
+        <p class="lead">Four mocks, four No-Hires at Staff — twice at exactly <b>2.49</b>, 0.01 under Lean Hire.
+        The ML knowledge isn't the problem. The flow below is annotated with the exact moments that cost points. Tap everything.</p>
+
+        <nav class="pills">
+            <a href="#score">Scoreboard</a><a href="#flow">The flow</a><a href="#streaks">Streaks</a>
+            <a href="#fails">Failure points</a><a href="#checklist">Pre-wrap</a><a href="#quiz">Quiz</a>
+        </nav>
+
+        <h2 id="score">Scoreboard — the plateau</h2>
+        <svg class="chart" viewBox="0 0 640 250" role="img" aria-label="Score trajectory across four mock sessions">
+            <line class="gridline" x1="40" y1="210" x2="620" y2="210"></line>
+            <line class="refline" x1="40" y1="115" x2="620" y2="115"></line>
+            <text x="44" y="110">Lean Hire 2.5</text>
+            <line class="refline" x1="40" y1="39" x2="620" y2="39"></line>
+            <text x="44" y="34">Hire 2.9</text>
+            <polyline class="series" points="90,192.9 250,116.9 410,156.8 570,116.9"></polyline>
+            <circle class="dot" data-i="0" cx="90" cy="192.9" r="7"></circle>
+            <circle class="dot" data-i="1" cx="250" cy="116.9" r="7"></circle>
+            <circle class="dot" data-i="2" cx="410" cy="156.8" r="7"></circle>
+            <circle class="dot" data-i="3" cx="570" cy="116.9" r="7"></circle>
+            <text class="vlabel" x="90" y="215" text-anchor="middle" dy="-32">2.09</text>
+            <text class="vlabel" x="250" y="139" text-anchor="middle" dy="-32">2.49</text>
+            <text class="vlabel" x="410" y="179" text-anchor="middle" dy="-32">2.28</text>
+            <text class="vlabel" x="570" y="139" text-anchor="middle" dy="-32">2.49</text>
+            <text x="90" y="232" text-anchor="middle">Aug 17</text>
+            <text x="250" y="232" text-anchor="middle">Aug 18</text>
+            <text x="410" y="232" text-anchor="middle">Aug 29</text>
+            <text x="570" y="232" text-anchor="middle">Aug 30</text>
+            <text class="annot" x="570" y="98" text-anchor="end">0.01 short — twice</text>
+        </svg>
+        <div class="card" id="trajNote">Tap a dot for that session's one-line autopsy. Pattern: the missing pillar rotates — the <b>$ pillar</b> is the constant.</div>
+
+        <h2 id="flow">The flow — six stages, 45 minutes</h2>
+        <p class="small">Tap a stage. Widths = time budget. S4 alone is worth 30% of the score.</p>
+
+        <div class="tllab">Target</div>
+        <div class="tl" id="tlTarget"></div>
+        <div class="tlrow" id="tlLabels"></div>
+
+        <div class="tllab">Aug 30 actual (reconstructed) — done at min 25, wrapped at 29</div>
+        <div class="tl actual" id="tlActual"></div>
+
+        <div class="card" id="stagePanel"></div>
+
+        <div class="card">
+            <b>X · Clarity &amp; time (15%)</b> — cross-cutting, scored on top of the stages.
+            Transitions are <i>yours</i> to call, roughly on time. You've failed it in both directions:
+            a 23-minute monologue (Aug 29) and a 16-minute underrun (Aug 30) — S5 ran 160% of target while S3+S4 got ~50%.
+            <b>If a stage feels comfortable, you're probably hiding in it.</b>
+        </div>
+
+        <h2 id="streaks">Streaks</h2>
+        <p class="small">Things you've never done unprompted vs. things now reliable. The red column is the next 0.3–0.5 of score.</p>
+        <div class="streaks">
+            <div class="streak badS"><div class="n">&#10007; 0/4</div><div class="t">Cold start addressed unprompted</div></div>
+            <div class="streak badS"><div class="n">&#10007; 0/4</div><div class="t">QPS + $ said aloud</div></div>
+            <div class="streak badS"><div class="n">&#10007; 0/4</div><div class="t">Metric-gaming reflex unprompted</div></div>
+            <div class="streak badS"><div class="n">&#10007; 0/2</div><div class="t">Decision monetized (rematch trigger)</div></div>
+            <div class="streak goodS"><div class="n">&#10003; 4/4</div><div class="t">Zero rigidity on corrections</div></div>
+            <div class="streak goodS"><div class="n">&#10003; 3/3</div><div class="t">Board discipline (proactive updates)</div></div>
+            <div class="streak goodS"><div class="n">&#10003; 2/2</div><div class="t">Shadow launch + disagreement slice</div></div>
+            <div class="streak goodS"><div class="n">&#10003; new</div><div class="t">Right problem family unprompted (bandit)</div></div>
+        </div>
+
+        <h2 id="fails">Seven failure points — what happened vs. what to do</h2>
+
+        <details open>
+            <summary>1 &middot; Anchors asserted, wrong <span class="chip hot">S1 &middot; 3 sessions</span></summary>
+            <div class="dd">
+                <div class="no"><div class="hd">&#10007; ON TAPE</div>
+                    <em>"100M DAU"</em> — it was 500M. <em>"~1s latency"</em> — it was 200ms.
+                    Aug 29: ballparks off <b>30&times;</b>. Aug 30: 100M vs 450M msgs/day. Confident numbers, wrong numbers.</div>
+                <div class="yes"><div class="hd">&#10003; DO INSTEAD</div>
+                    Assume-and-confirm from a <b>memorized anchor table</b>:
+                    "I'll assume ~500M DAU and a ~200ms budget — stop me if that's off."
+                    Assumptions beat questions <i>only</i> when the numbers are sane.</div>
+            </div>
+            <div class="w">
+                <div class="wt">Anchors &rarr; QPS in one breath (the sentence you've never said aloud)</div>
+                <div class="srow"><label>DAU</label><input type="range" id="qDau" min="50" max="1000" step="50" value="500"><output id="qDauO">500M</output></div>
+                <div class="srow"><label>Sessions/day</label><input type="range" id="qSes" min="1" max="10" step="1" value="5"><output id="qSesO">5</output></div>
+                <div class="srow"><label>Fetches/session</label><input type="range" id="qFet" min="1" max="10" step="1" value="3"><output id="qFetO">3</output></div>
+                <div class="srow"><label>Peak factor</label><input type="range" id="qPk" min="1.5" max="3" step="0.1" value="2.3"><output id="qPkO">2.3&times;</output></div>
+                <div class="bigout" id="qOut">~87K avg &rarr; ~200K peak QPS</div>
+                <div class="subout">DAU &times; sessions &times; fetches &divide; 86,400 &times; peak. Say this derivation in S1 or S5 — it's a 20-second Staff signal, missed 4/4 times.</div>
+            </div>
+        </details>
+
+        <details>
+            <summary>2 &middot; Architecture before the attack model <span class="chip hot">S1 &middot; Aug 29</span></summary>
+            <div class="dd">
+                <div class="no"><div class="hd">&#10007; ON TAPE</div>
+                    Built a <b>spam detector</b> for an SMS-pumping question — misread who gets robbed (<em>"block at client level"</em>)
+                    even though it was in the prompt. Pattern-matched to the comfort zone: text embeddings, content moderation.</div>
+                <div class="yes"><div class="hd">&#10003; DO INSTEAD</div>
+                    Unfamiliar domain &rarr; 60 seconds on three questions before any box:
+                    <b>who profits? what do they control? what can't they fake?</b>
+                    AIT: fraudster splits carrier termination revenue &middot; controls source traffic &middot; can't fake OTP conversion.</div>
+            </div>
+        </details>
+
+        <details>
+            <summary>3 &middot; Labels assumed instant, complete, honest <span class="chip hot">S3 &middot; Aug 29 + 30</span></summary>
+            <div class="dd">
+                <div class="no"><div class="hd">&#10007; ON TAPE</div>
+                    <em>"Let's say we get some delivery confirmation"</em> — the entire label design,
+                    on a question where DLRs arrive <b>2s–6h late</b>, are <b>missing 15–20%</b> of the time, and grey routes <b>spoof</b> them.
+                    Aug 29: 1M fraud labels assumed into existence.</div>
+                <div class="yes"><div class="hd">&#10003; DO INSTEAD</div>
+                    Three questions for <i>every</i> label: <b>How late? How complete? Can it lie?</b>
+                    One S1 question — "how fast and honest are DLRs?" — flips Aug 30 to Lean Hire.
+                    Unspoofable backup: OTP conversion — a route can fake a receipt, not the user typing the code.</div>
+            </div>
+        </details>
+
+        <details>
+            <summary>4 &middot; The $ pillar never lands <span class="chip hot">S4 &middot; 4/4 sessions</span></summary>
+            <div class="dd">
+                <div class="no"><div class="hd">&#10007; ON TAPE</div>
+                    Reward = delivered &minus; <em>1.2</em>&times;cost — a coefficient, not a dollar.
+                    Precision-vs-recall flip-flop never resolved by cost. A fraud question <i>literally about money</i>: zero $ figures in 45 minutes.</div>
+                <div class="yes"><div class="hd">&#10003; DO INSTEAD</div>
+                    Monetize the confusion matrix: <b>t* = C<sub>FP</sub> / (C<sub>FP</sub> + C<sub>FN</sub>)</b>.
+                    Decisions: <b>argmax P&times;V<sub>tier</sub> &minus; cost</b>. One &beta; for OTP and marketing is a category error.</div>
+            </div>
+            <div class="w">
+                <div class="wt">Widget A — the threshold falls out of two dollar figures</div>
+                <div class="srow"><label>FP cost</label><input type="range" id="tFp" min="0.5" max="100" step="0.5" value="20"><output id="tFpO">$20.00</output></div>
+                <div class="srow"><label>FN cost</label><input type="range" id="tFn" min="0.01" max="10" step="0.01" value="0.10"><output id="tFnO">$0.10</output></div>
+                <div class="bigout" id="tOut">Block when p &gt; 0.995</div>
+                <div class="tbar"><div class="mark" id="tMark" style="left:99.5%"></div></div>
+                <div class="subout" id="tSub">FPs are 200&times; costlier &rarr; block only when near-certain. This is why Fraud Guard ships tunable modes, not one threshold.</div>
+                <div class="presets">
+                    <button class="ghost" id="tPre1">OTP guard (FP hurts)</button>
+                    <button class="ghost" id="tPre2">Fraud bleed (FN hurts)</button>
+                </div>
+            </div>
+            <div class="w">
+                <div class="wt">Widget B — same two routes, opposite answers</div>
+                <div class="srow"><label>Value/delivered</label><input type="range" id="rV" min="0" max="100" step="1" value="85"><output id="rVO">$2.00</output></div>
+                <div class="evrow" id="rowA"><span class="nm">A: 97% @ $0.008</span><div class="barwrap"><div class="evbar bar-s1" id="barA"></div></div><span class="val" id="valA"></span></div>
+                <div class="evrow" id="rowB"><span class="nm">B: 90% @ $0.001</span><div class="barwrap"><div class="evbar bar-s2" id="barB"></div></div><span class="val" id="valB"></span></div>
+                <div class="subout" id="rSub"></div>
+                <div class="presets">
+                    <button class="ghost" id="rPre1">OTP ($2.00)</button>
+                    <button class="ghost" id="rPre2">Marketing ($0.02)</button>
+                </div>
+            </div>
+        </details>
+
+        <details>
+            <summary>5 &middot; Cold start — 0 for 4 <span class="chip hot">S3/S4 &middot; every session</span></summary>
+            <div class="dd">
+                <div class="no"><div class="hd">&#10007; ON TAPE</div>
+                    Aug 29 handed you per-tenant baselines <i>on a plate</i> — untouched.
+                    Aug 30: brand-new routes with zero history, never mentioned. Fourth consecutive miss; it's now a guaranteed probe.</div>
+                <div class="yes"><div class="hd">&#10003; DO INSTEAD</div>
+                    The 20-second recipe, verbatim: <b>prior from cohort stats &rarr; capped exploration on low-value traffic &rarr; graduation criteria</b>
+                    (min volume + quality bar). Never expose OTP traffic to unproven routes.</div>
+            </div>
+        </details>
+
+        <details>
+            <summary>6 &middot; Gaming reflex fires late or never <span class="chip hot">S4 &middot; 0/4 unprompted</span></summary>
+            <div class="dd">
+                <div class="no"><div class="hd">&#10007; ON TAPE</div>
+                    <em>"There is no other way to game this"</em> (Aug 18, min 21) — while 5-second clips auto-cross a 50%-completion label on autoplay.
+                    Aug 17: a gameable session-length objective went unexamined for 44 minutes.</div>
+                <div class="yes"><div class="hd">&#10003; DO INSTEAD</div>
+                    The moment you name a metric or label, ask: <b>who profits from gaming it, and what's the cheapest exploit?</b>
+                    Then attach the guardrail (length-conditional thresholds; length-controlled RM eval) to label <i>and</i> metric.</div>
+            </div>
+        </details>
+
+        <details>
+            <summary>7 &middot; The clock cuts both ways <span class="chip hot">X &middot; Aug 29 + 30</span></summary>
+            <div class="dd">
+                <div class="no"><div class="hd">&#10007; ON TAPE</div>
+                    Aug 29: one 23-minute S3/S4 monologue. Aug 30: declared <b>done at min 25 of 45</b> — after being told 20 minutes remained.
+                    Comfort-zone inversion: S5 at 160% of budget, S3+S4 at ~50%.</div>
+                <div class="yes"><div class="hd">&#10003; DO INSTEAD</div>
+                    Hard floor: <b>use &ge; 40 minutes</b>. Finishing early is a signal, not a win — run the pre-wrap checklist below,
+                    then deepen S3/S4 (labels, cold start, $), never re-tour S5.</div>
+            </div>
+        </details>
+
+        <h2 id="checklist">The pre-wrap checklist</h2>
+        <p class="small">Before the words "that's my design" — every unchecked box below has personally cost you points. <span id="ckCount">0/8</span></p>
+        <ul class="ck" id="ckList">
+            <li><label><input type="checkbox"> Anchors confirmed, not asserted (DAU &middot; SLA &middot; cost sensitivity)</label></li>
+            <li><label><input type="checkbox"> Every label interrogated: latency &middot; completeness &middot; honesty</label></li>
+            <li><label><input type="checkbox"> Cold start answered (new user / route / tenant)</label></li>
+            <li><label><input type="checkbox"> Cost is a $ number, not a coefficient</label></li>
+            <li><label><input type="checkbox"> QPS derived and said aloud</label></li>
+            <li><label><input type="checkbox"> Cheapest metric exploit named + guardrail attached</label></li>
+            <li><label><input type="checkbox"> One trade-off closed with a strong recommendation</label></li>
+            <li><label><input type="checkbox"> Clock &ge; 40 min used — if early, deepen S3/S4</label></li>
+        </ul>
+        <button class="ghost" id="ckReset">Reset checklist</button>
+
+        <h2 id="quiz">Quiz — 8 questions from your own tape</h2>
+        <p class="small">Score: <span id="quizScore">0/0</span></p>
+        <div id="quizBox"></div>
+        <button class="ghost" id="quizReset">Reset quiz</button>
+
+        <footer>
+            Personal explainer &middot; unlisted &middot; <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+
+    <script>
+    (function () {
+        "use strict";
+        var $ = function (id) { return document.getElementById(id); };
+
+        /* ---------- scoreboard ---------- */
+        var SESSIONS = [
+            { d: "Aug 17", q: "C1 · Async RLHF post-training", s: "2.09", note: "Baseline. Weight-sync miss (“same machine so same model”), zero cost lens, every component interviewer-introduced." },
+            { d: "Aug 18", q: "D1 · Short-video feed rec", s: "2.49", note: "+0.40. Board discipline fixed, wrap was Hire-quality — but QPS and cost were dodged even when explicitly asked." },
+            { d: "Aug 29", q: "D3-T · SMS pumping fraud", s: "2.28", note: "New failure mode: built a spam detector because the attack economics were never modeled. Best timing of the block." },
+            { d: "Aug 30", q: "D4-T · SMS route optimization", s: "2.49", note: "Bandit frame unprompted (new range) — but labels assumed honest, and declared done at min 25/45." }
+        ];
+        var trajNote = $("trajNote");
+        var dots = document.querySelectorAll(".chart .dot");
+        Array.prototype.forEach.call(dots, function (dot) {
+            dot.addEventListener("click", function () {
+                Array.prototype.forEach.call(dots, function (d) { d.classList.remove("sel"); d.setAttribute("r", "7"); });
+                dot.classList.add("sel"); dot.setAttribute("r", "9");
+                var s = SESSIONS[+dot.getAttribute("data-i")];
+                if (s && trajNote) trajNote.innerHTML = "<b>" + s.d + " · " + s.q + " · " + s.s + "</b><br>" + s.note;
+            });
+        });
+
+        /* ---------- stage timeline ---------- */
+        var STAGES = [
+            { id: "S1", name: "Understand", t: "0–5 min", min: 5, wt: "10%",
+              bar: "Restate the problem; assume with sane ballparks; scope pinned by min 5. Few questions, each feeding a decision.",
+              you: "“100M DAU” (real: 500M) · “1s SLA” (real: 200ms) · Aug 29 ballparks off 30× and misread who gets robbed.",
+              fix: "Assume-and-confirm from memorized anchors. Unfamiliar domain → 60s attack model before any architecture." },
+            { id: "S2", name: "Blueprint", t: "5–11 min", min: 6, wt: "15%",
+              bar: "End-to-end with barely enough detail. “Model”, not “XGBoost”. Learning loop + monitoring on the board.",
+              you: "Aug 29: request path only — no data or monitoring boxes anywhere on the board.",
+              fix: "Three lanes on every board: serve · learn · watch. Aug 30 got the learn loop unprompted (3/4) — make it a habit." },
+            { id: "S3", name: "Data", t: "11–20 min", min: 9, wt: "20%",
+              bar: "Labels + WHERE they come from; features → numbers; split; imbalance named and handled. Representative features, not a laundry list.",
+              you: "“Let’s say we get some delivery confirmation” — on labels that are late (2s–6h), missing (15–20%), and spoofed. Cold start: 0/4.",
+              fix: "Interrogate every label: how late? how complete? can it lie? Then the cold-start recipe — it lives here." },
+            { id: "S4", name: "Model · metrics · training", t: "20–36 min", min: 16, wt: "30%",
+              bar: "THE flip stage (+0.30 alone). Defensible path; metrics tied to the scenario; overfitting / cold start / time-travel raised unprompted.",
+              you: "Cost never a $ (β=1.2). Stratified split = time-travel. ROC-AUC at 0.1% prevalence. Adversary never designed against.",
+              fix: "Monetize the confusion matrix. Temporal split by default. Name each metric’s cheapest exploit before the interviewer does." },
+            { id: "S5", name: "Production", t: "36–41 min", min: 5, wt: "10%",
+              bar: "One real trade-off with a STRONG recommendation; deploy, online eval, monitoring.",
+              you: "QPS and $ never said aloud — 0/4, twice when explicitly asked. (Shadow launch is now a reliable strength — keep it.)",
+              fix: "End S5 with two numbers spoken: peak QPS and monthly $. Don’t let this comfy stage eat S3/S4’s clock." },
+            { id: "S6", name: "Your questions", t: "41–45 min", min: 4, wt: "—",
+              bar: "1–2 sharp questions that show judgment about the team.",
+              you: "Actually fine — 2 sharp Qs (Aug 29), 1 sharp (Aug 30). Not the problem.",
+              fix: "Keep. Protect these 4 minutes by not underrunning the middle stages." }
+        ];
+        var ACTUAL = [4, 4, 5, 7, 8, 1]; // Aug 30, reconstructed from debrief
+        var tlT = $("tlTarget"), tlA = $("tlActual"), tlL = $("tlLabels"), panel = $("stagePanel");
+
+        function renderPanel(i) {
+            var s = STAGES[i];
+            if (!panel || !s) return;
+            panel.innerHTML =
+                "<h3>" + s.id + " · " + s.name +
+                " <span class='chip'>" + s.t + "</span><span class='chip'>weight " + s.wt + "</span></h3>" +
+                "<div class='rowline bar'><span class='ico'>◎</span><span><span class='lab'>Staff bar:</span> " + s.bar + "</span></div>" +
+                "<div class='rowline you'><span class='ico'>✗</span><span><span class='lab'>You, on tape:</span> " + s.you + "</span></div>" +
+                "<div class='rowline fix'><span class='ico'>✓</span><span><span class='lab'>Fix:</span> " + s.fix + "</span></div>";
+            var segs = document.querySelectorAll(".tl .seg");
+            Array.prototype.forEach.call(segs, function (el) {
+                el.classList.toggle("on", +el.getAttribute("data-i") === i);
+            });
+        }
+
+        if (tlT && tlA && tlL) {
+            STAGES.forEach(function (s, i) {
+                var b = document.createElement("button");
+                b.className = "seg bar-s" + (i + 1);
+                b.style.width = (s.min / 45 * 100) + "%";
+                b.setAttribute("data-i", i);
+                b.setAttribute("aria-label", s.id + " " + s.name);
+                b.addEventListener("click", function () { renderPanel(i); });
+                tlT.appendChild(b);
+
+                var a = document.createElement("button");
+                a.className = "seg bar-s" + (i + 1);
+                a.style.width = (ACTUAL[i] / 45 * 100) + "%";
+                a.setAttribute("data-i", i);
+                a.setAttribute("aria-label", s.id + " actual " + ACTUAL[i] + " min");
+                a.addEventListener("click", function () { renderPanel(i); });
+                tlA.appendChild(a);
+
+                var lab = document.createElement("span");
+                lab.style.width = (s.min / 45 * 100) + "%";
+                lab.textContent = s.min < 5 ? s.id : s.id + "·" + s.min + "m";
+                tlL.appendChild(lab);
+            });
+            var un = document.createElement("div");
+            un.className = "seg unused";
+            un.style.width = (16 / 45 * 100) + "%";
+            un.setAttribute("aria-label", "16 minutes unused");
+            un.title = "16 min left on the table";
+            tlA.appendChild(un);
+            renderPanel(3); // default: S4, the flip stage
+        }
+
+        /* ---------- widget: QPS ---------- */
+        function fmtK(n) {
+            if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
+            if (n >= 1e3) return Math.round(n / 1e3) + "K";
+            return Math.round(n).toString();
+        }
+        function qUpd() {
+            var dau = +$("qDau").value, s = +$("qSes").value, f = +$("qFet").value, pk = +$("qPk").value;
+            $("qDauO").textContent = dau + "M";
+            $("qSesO").textContent = s;
+            $("qFetO").textContent = f;
+            $("qPkO").textContent = pk.toFixed(1) + "×";
+            var avg = dau * 1e6 * s * f / 86400;
+            $("qOut").innerHTML = "~" + fmtK(avg) + " avg &rarr; ~" + fmtK(avg * pk) + " peak QPS";
+        }
+        ["qDau", "qSes", "qFet", "qPk"].forEach(function (id) {
+            var el = $(id); if (el) el.addEventListener("input", qUpd);
+        });
+        if ($("qDau")) qUpd();
+
+        /* ---------- widget: threshold ---------- */
+        function tUpd() {
+            var fp = +$("tFp").value, fn = +$("tFn").value;
+            $("tFpO").textContent = "$" + fp.toFixed(2);
+            $("tFnO").textContent = "$" + fn.toFixed(2);
+            var t = fp / (fp + fn);
+            $("tOut").innerHTML = "Block when p &gt; " + t.toFixed(3);
+            $("tMark").style.left = (t * 100).toFixed(1) + "%";
+            var ratio = fp / fn;
+            var msg;
+            if (ratio >= 20) msg = "FPs are " + Math.round(ratio) + "× costlier → block only when near-certain. This is why Fraud Guard ships tunable modes, not one threshold.";
+            else if (ratio <= 0.5) msg = "FNs are " + Math.round(1 / ratio) + "× costlier → block aggressively; eat the false positives.";
+            else msg = "Costs are comparable → threshold near 0.5. The point: t* is arithmetic, not vibes — say the two dollar figures first.";
+            $("tSub").textContent = msg;
+        }
+        function tSet(fp, fn) { $("tFp").value = fp; $("tFn").value = fn; tUpd(); }
+        if ($("tFp")) {
+            $("tFp").addEventListener("input", tUpd);
+            $("tFn").addEventListener("input", tUpd);
+            if ($("tPre1")) $("tPre1").addEventListener("click", function () { tSet(20, 0.10); });
+            if ($("tPre2")) $("tPre2").addEventListener("click", function () { tSet(0.5, 5); });
+            tUpd();
+        }
+
+        /* ---------- widget: route EV ---------- */
+        var V_MIN = 0.01, V_MAX = 5;
+        function sliderToV(x) { return V_MIN * Math.pow(V_MAX / V_MIN, x / 100); }
+        function vToSlider(v) { return Math.round(100 * Math.log(v / V_MIN) / Math.log(V_MAX / V_MIN)); }
+        function rUpd() {
+            var v = sliderToV(+$("rV").value);
+            $("rVO").textContent = "$" + (v < 0.1 ? v.toFixed(3) : v.toFixed(2));
+            var evA = 0.97 * v - 0.008, evB = 0.90 * v - 0.001;
+            var mx = Math.max(evA, evB, 0.0001);
+            $("barA").style.width = Math.max(0, evA / mx * 100) + "%";
+            $("barB").style.width = Math.max(0, evB / mx * 100) + "%";
+            $("valA").textContent = "$" + evA.toFixed(4);
+            $("valB").textContent = "$" + evB.toFixed(4);
+            var aWins = evA > evB;
+            $("rowA").classList.toggle("win", aWins);
+            $("rowB").classList.toggle("win", !aWins);
+            var gap = Math.abs(evA - evB) * 1e6;
+            $("rSub").innerHTML = (aWins ? "<b>Expensive route wins</b>" : "<b>Cheap route wins</b>") +
+                " — picking the other leaves <b>$" + fmtK(gap) + " per 1M sends</b> on the table. Breakeven at V = $0.10; one β for all tiers is a category error.";
+        }
+        if ($("rV")) {
+            $("rV").addEventListener("input", rUpd);
+            if ($("rPre1")) $("rPre1").addEventListener("click", function () { $("rV").value = vToSlider(2); rUpd(); });
+            if ($("rPre2")) $("rPre2").addEventListener("click", function () { $("rV").value = vToSlider(0.02); rUpd(); });
+            $("rV").value = vToSlider(2);
+            rUpd();
+        }
+
+        /* ---------- checklist ---------- */
+        var ckList = $("ckList"), ckCount = $("ckCount");
+        function ckUpd() {
+            if (!ckList || !ckCount) return;
+            var boxes = ckList.querySelectorAll("input[type=checkbox]");
+            var done = 0;
+            Array.prototype.forEach.call(boxes, function (b) {
+                b.closest("label").classList.toggle("done", b.checked);
+                if (b.checked) done++;
+            });
+            ckCount.textContent = done + "/" + boxes.length;
+            if (done === boxes.length) ckCount.textContent += " — now you may say “that’s my design”";
+        }
+        if (ckList) {
+            ckList.addEventListener("change", ckUpd);
+            if ($("ckReset")) $("ckReset").addEventListener("click", function () {
+                Array.prototype.forEach.call(ckList.querySelectorAll("input"), function (b) { b.checked = false; });
+                ckUpd();
+            });
+        }
+
+        /* ---------- quiz ---------- */
+        var QUIZ = [
+            { q: "An FP costs $20 (churned legit user), an FN costs $0.10 (one pumped SMS). Block above what score?",
+              o: ["p > 0.005", "p > 0.5", "p > 0.83", "p > 0.995"], c: 3,
+              e: "t* = C_FP/(C_FP+C_FN) = 20/20.10 ≈ 0.995. Expensive FPs → block only when near-certain. Two dollar figures, then arithmetic." },
+            { q: "ROC-AUC = 0.98 on fraud with 0.1% prevalence. What can still be true?",
+              o: ["The model is production-ready", "Most of its blocks are false positives", "Recall must exceed 98%", "Nothing — AUC handles imbalance"], c: 1,
+              e: "ROC-AUC is prevalence-insensitive; at 1000:1 negatives, a tiny FPR still swamps precision. Use PR-AUC / precision@threshold." },
+            { q: "Train/test split for a fraud model?",
+              o: ["Random 80/20", "Stratified by class", "Temporal", "Leave-one-out CV"], c: 2,
+              e: "Anything else leaks future attack patterns into training — time-travel. You proposed stratified on Aug 29." },
+            { q: "Grey routes spoof DLRs. The unspoofable delivery signal for OTP traffic?",
+              o: ["Carrier ack rate", "Verification conversion — the user typed the code", "Sender-reported delivery", "DLR latency percentiles"], c: 1,
+              e: "A route can fake a receipt but not the user's OTP entry. Cross-check DLR-claimed delivery vs conversion per route to catch liars." },
+            { q: "500M DAU × 5 sessions × 3 fetches, peak 2.3× — peak QPS?",
+              o: ["~9K", "~90K", "~200K", "~2M"], c: 2,
+              e: "500M×15 / 86,400 ≈ 87K avg; ×2.3 ≈ 200K. Twenty seconds of arithmetic you've skipped 4/4 sessions." },
+            { q: "Label = >50% of video watched. Cheapest creator exploit?",
+              o: ["Clickbait thumbnails", "Very short videos — autoplay crosses 50%", "Bot farms", "Reposting trending clips"], c: 1,
+              e: "A 5s clip auto-crosses the bar. Fix: length-conditional thresholds with a minimum-seconds floor, applied to label AND metric." },
+            { q: "GRPO trainer takes an optimizer step. The vLLM rollout engine…",
+              o: ["shares the same weights in-process", "reloads from disk next episode", "holds its own copy — trainer broadcasts weights (NCCL/IPC)", "doesn't hold weights"], c: 2,
+              e: "Separate process, own copy; ~16GB per sync for 8B BF16. “Same machine so same model” was the Aug 17 kill." },
+            { q: "A brand-new route has zero history. Its first traffic?",
+              o: ["A/B it on all traffic", "OTP first — highest signal quality", "Capped exploration on low-value traffic, cohort prior, graduation criteria", "Nothing for 30 days"], c: 2,
+              e: "Prior from carrier family → capped low-value exploration → graduate on volume + quality bar. Cold start is 0/4 — this card IS the recipe." }
+        ];
+        var quizBox = $("quizBox"), quizScore = $("quizScore");
+        var answered = 0, correct = 0;
+        function buildQuiz() {
+            if (!quizBox) return;
+            quizBox.innerHTML = "";
+            answered = 0; correct = 0;
+            if (quizScore) quizScore.textContent = "0/0";
+            QUIZ.forEach(function (item, qi) {
+                var div = document.createElement("div");
+                div.className = "q";
+                var qq = document.createElement("div");
+                qq.className = "qq";
+                qq.textContent = (qi + 1) + ". " + item.q;
+                div.appendChild(qq);
+                var opts = document.createElement("div");
+                opts.className = "opts";
+                var expl = document.createElement("div");
+                expl.className = "expl";
+                expl.textContent = item.e;
+                var doneFlag = false;
+                item.o.forEach(function (opt, oi) {
+                    var b = document.createElement("button");
+                    b.textContent = opt;
+                    b.addEventListener("click", function () {
+                        if (doneFlag) return;
+                        doneFlag = true;
+                        answered++;
+                        if (oi === item.c) { b.classList.add("right"); correct++; }
+                        else {
+                            b.classList.add("wrong");
+                            var kids = opts.querySelectorAll("button");
+                            if (kids[item.c]) kids[item.c].classList.add("right");
+                        }
+                        expl.classList.add("show");
+                        if (quizScore) quizScore.textContent = correct + "/" + answered;
+                    });
+                    opts.appendChild(b);
+                });
+                div.appendChild(opts);
+                div.appendChild(expl);
+                quizBox.appendChild(div);
+            });
+        }
+        buildQuiz();
+        if ($("quizReset")) $("quizReset").addEventListener("click", buildQuiz);
+    })();
+    </script>
+</body>
+</html>
