@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "SMS Pumping Fraud Detection — The Staff-Level Answer"
+  slug: sms-pumping-fraud-detection
+  date: 2026-08-31
+  description: "The written-blind ideal answer to the Twilio Verify SMS-pumping HLD — animated fraud-loop diagram, EV-threshold calculator with episode-evidence Bayes demo, L0–L4 pipeline stepper (legit / burst / paced / Redis-down), bot-metronome canvas, suffix-entropy demo, ε-exploration censoring widget, pacing trade-off simulator, and an 8-question quiz."
+
 - title: "Twilio DS Interview Flashcards"
   slug: twilio-ds-flashcards
   date: 2026-08-31
