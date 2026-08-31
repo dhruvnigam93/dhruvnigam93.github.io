@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "Twilio DS Interview Flashcards"
+  slug: twilio-ds-flashcards
+  date: 2026-08-31
+  description: "Anki-style deck of 52 cards for the Twilio Design+DS round — classical ML, metrics & fraud/imbalance, stats & probability, DL core, plus 8 resume-anchored cards (calibration/ForeCal, Bradley-Terry, LUMOS multi-task). Shuffle, topic filter, keyboard nav; fully offline."
+
 - title: "HLD: The Six-Stage Flow, Debugged"
   slug: hld-six-stage-flow-debugged
   date: 2026-08-30
