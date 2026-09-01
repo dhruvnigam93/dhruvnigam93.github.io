@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<title>DFS: One Skeleton, Three Shapes</title>
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #fff;
+    --text: #2d2d2d;
+    --text-muted: #6b6b6b;
+    --accent: #3b6ccc;
+    --accent-bg: #eaf0fb;
+    --code-bg: #f0efe9;
+    --border: #ddd;
+    --callout-bg: #fff8e6;
+    --callout-border: #e0c55b;
+    --correct: #2e7d46;
+    --correct-bg: #e6f4ea;
+    --wrong: #c0392b;
+    --wrong-bg: #fbeae8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1e;
+      --surface: #242429;
+      --text: #e0dfd8;
+      --text-muted: #9a9a9a;
+      --accent: #6b9bfa;
+      --accent-bg: #1e2a42;
+      --code-bg: #2a2a30;
+      --border: #3a3a40;
+      --callout-bg: #2a2718;
+      --callout-border: #8a7a30;
+      --correct: #7ed69b;
+      --correct-bg: #17301f;
+      --wrong: #f0908a;
+      --wrong-bg: #331a18;
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .container {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: max(1.25rem, env(safe-area-inset-top)) 1.25rem 4rem;
+  }
+
+  .back {
+    display: inline-block;
+    margin: 0.25rem 0 1.25rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+  .back:active { opacity: 0.6; }
+
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    letter-spacing: -0.02em;
+  }
+  .meta { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem; }
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 2rem 0 0.5rem;
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 1.5rem 0 0.4rem;
+  }
+
+  p { margin-bottom: 0.75rem; font-size: 0.95rem; }
+
+  code {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Segoe UI Mono", Menlo, Consolas, monospace;
+    font-size: 0.82rem;
+    background: var(--code-bg);
+    padding: 0.15em 0.35em;
+    border-radius: 4px;
+  }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0.5rem 0 1rem;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    display: block;
+    white-space: pre;
+  }
+
+  .comment { color: var(--text-muted); }
+  .highlight-line { color: var(--accent); font-weight: 600; }
+
+  /* Selector tabs */
+  .tab-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin: 1.25rem 0;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    flex: 1 1 30%;
+    min-width: 0;
+    padding: 0.6rem 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: inherit;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    text-align: center;
+    line-height: 1.3;
+    touch-action: manipulation;
+    min-height: 48px;
+  }
+  .tab-btn:hover { border-color: var(--accent); }
+  .tab-btn.active {
+    border-color: var(--accent);
+    background: var(--accent-bg);
+    color: var(--accent);
+  }
+  .tab-btn-all {
+    flex: 1 1 100%;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  /* Shape sections */
+  .shape {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    padding: 1.1rem 1rem;
+    margin-bottom: 1rem;
+  }
+  .shape.hidden { display: none; }
+  .shape-label {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin-bottom: 0.35rem;
+  }
+  .shape h3 { margin-top: 0; }
+  .shape .when {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  /* Decision table */
+  .decision-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin: 0.75rem 0 1rem;
+  }
+  .decision-table th {
+    text-align: left;
+    font-weight: 700;
+    padding: 0.5rem 0.6rem;
+    border-bottom: 2px solid var(--border);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+  .decision-table td {
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .decision-table tr.active-row td {
+    background: var(--accent-bg);
+    font-weight: 600;
+  }
+  .decision-table tr.hidden-row { display: none; }
+
+  /* Callout */
+  .callout {
+    border-left: 4px solid var(--callout-border);
+    background: var(--callout-bg);
+    padding: 0.9rem 1rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1.5rem 0 1rem;
+    font-size: 0.88rem;
+  }
+  .callout strong { display: block; margin-bottom: 0.35rem; }
+  .callout ol { margin: 0; padding-left: 1.25rem; }
+  .callout li { margin-bottom: 0.4rem; line-height: 1.5; }
+
+  .separator {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1.75rem 0;
+  }
+
+  /* Quiz */
+  .quiz-q { margin-bottom: 1.5rem; }
+  .quiz-q .q-text { font-weight: 600; font-size: 0.92rem; margin-bottom: 0.6rem; }
+  .quiz-q .q-num { color: var(--text-muted); font-weight: 700; margin-right: 0.35rem; }
+  .quiz-opt {
+    display: block;
+    width: 100%;
+    text-align: left;
+    font-family: inherit;
+    font-size: 0.88rem;
+    color: var(--text);
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 0.7rem 0.85rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s;
+    min-height: 48px;
+    touch-action: manipulation;
+  }
+  .quiz-opt:hover:not(:disabled) { border-color: var(--accent); }
+  .quiz-opt:disabled { cursor: default; }
+  .quiz-opt.correct { border-color: var(--correct); background: var(--correct-bg); color: var(--correct); font-weight: 600; }
+  .quiz-opt.wrong { border-color: var(--wrong); background: var(--wrong-bg); color: var(--wrong); font-weight: 600; }
+  .quiz-explain {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin: 0.15rem 0 0.25rem;
+    padding-left: 0.2rem;
+    line-height: 1.45;
+  }
+  .quiz-explain.hidden { display: none; }
+  .quiz-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+  #quiz-score { font-weight: 700; font-size: 0.95rem; }
+  #quiz-reset {
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--accent);
+    background: transparent;
+    border: 1.5px solid var(--border);
+    border-radius: 999px;
+    padding: 0.55rem 1.1rem;
+    min-height: 44px;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  #quiz-reset:active { transform: scale(0.96); }
+
+  footer {
+    margin-top: 3em;
+    padding-top: 1.2em;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <a class="back" href="/explainers/">&larr; all explainers</a>
+
+  <h1>DFS: One Skeleton, Three Shapes</h1>
+  <p class="meta">Added 2026-09-01</p>
+  <p class="subtitle">DFS is really one skeleton with three canonical specializations. Knowing which one you're reaching for is half the battle.</p>
+
+  <h2>The skeleton</h2>
+  <pre><code><span class="highlight-line">def dfs(node):</span>
+    <span class="comment">if base_case:              # None / out of bounds / already visited</span>
+        <span class="comment">return base_value</span>
+    <span class="comment"># ... work happens here, before and/or after the recursive calls ...</span>
+    results = [dfs(child) for child in children]
+    <span class="comment">return combine(node, results)</span></code></pre>
+
+  <p>Everything below is this shape with the knobs set differently. Tap a question type to isolate the matching shape:</p>
+
+  <!-- Tab selector -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-shape="all" onclick="selectShape('all')">Show all</button>
+    <button class="tab-btn" data-shape="bottomup" onclick="selectShape('bottomup')">Depends on CHILDREN</button>
+    <button class="tab-btn" data-shape="topdown" onclick="selectShape('topdown')">Depends on PATH FROM ROOT</button>
+    <button class="tab-btn" data-shape="graph" onclick="selectShape('graph')">Graph with CYCLES</button>
+  </div>
+
+  <!-- Shape 1: Bottom-up -->
+  <div class="shape" id="shape-bottomup">
+    <span class="shape-label">Shape 1</span>
+    <h3>Bottom-up tree</h3>
+    <p class="when">Answer flows UP via return values. A node's answer depends on its <strong>children</strong> &mdash; subtree properties like height, diameter, "is balanced", max path sum, subtree sums. Optionally update a <code>self.best</code> on the side.</p>
+    <pre><code>def dfs(node):
+    <span class="comment">if not node:                       # base case first, returns identity value</span>
+        return 0
+    left = dfs(node.left)
+    right = dfs(node.right)
+    <span class="highlight-line">return 1 + max(left, right)        # combine child results at the parent</span></code></pre>
+  </div>
+
+  <!-- Shape 2: Top-down -->
+  <div class="shape" id="shape-topdown">
+    <span class="shape-label">Shape 2</span>
+    <h3>Top-down tree</h3>
+    <p class="when">State flows DOWN via parameters. A node's job depends on the <strong>path from the root</strong>, not its children &mdash; root-to-leaf path sum (#112), validate BST with (low, high) bounds (#98), depth tracking. Usually act/collect at the leaf.</p>
+    <pre><code>def dfs(node, state):                  <span class="comment"># state = path sum, (lo, hi) bounds, depth...</span>
+    if not node:
+        return
+    <span class="highlight-line">if is_leaf(node) and satisfies(state, node):</span>
+        <span class="highlight-line">self.result.append(...)        # collect at the leaf</span>
+    dfs(node.left,  update(state, node))
+    dfs(node.right, update(state, node))</code></pre>
+  </div>
+
+  <!-- Shape 3: Graph -->
+  <div class="shape" id="shape-graph">
+    <span class="shape-label">Shape 3</span>
+    <h3>Graph / grid DFS</h3>
+    <p class="when">Same shape + a visited marker, set <strong>BEFORE</strong> recursing. When cycles are possible &mdash; number of islands (#200), flood fill, connected components, cycle detection. Critical bug: mark visited BEFORE the recursive calls, or you infinite-loop on a back-edge (the #207/#417/#133 lesson).</p>
+    <pre><code>def dfs(r, c):
+    if out_of_bounds(r, c) or (r, c) in visited or grid[r][c] != target:
+        return
+    <span class="highlight-line">visited.add((r, c))                # mark BEFORE recursing (or mutate grid in place)</span>
+    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        dfs(r + dr, c + dc)</code></pre>
+  </div>
+
+  <hr class="separator">
+
+  <h2>Decision rule</h2>
+  <table class="decision-table">
+    <thead>
+      <tr><th>Question depends on...</th><th>Template</th><th>Data flow</th></tr>
+    </thead>
+    <tbody>
+      <tr id="row-bottomup" class="decision-row"><td>Children (subtree property)</td><td>Bottom-up</td><td>return values go UP</td></tr>
+      <tr id="row-topdown" class="decision-row"><td>Path from root</td><td>Top-down</td><td>state passed DOWN</td></tr>
+      <tr id="row-graph" class="decision-row"><td>Cycles possible (graph/grid)</td><td>Either + visited</td><td>mark BEFORE recursing</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <strong>Two invariants</strong>
+    <ol>
+      <li><strong>Base case first</strong> &mdash; <code>None</code> / out-of-bounds / already-visited.</li>
+      <li><strong>On LeetCode, carry a global result with <code>self.x</code> or a one-element list, NOT <code>nonlocal</code></strong> &mdash; LeetCode's <code>python</code> mode is Python 2, where <code>nonlocal</code> is a SyntaxError. Same trap: <code>math.inf</code> &mdash; use <code>float('inf')</code>.</li>
+    </ol>
+  </div>
+
+  <hr class="separator">
+
+  <h2>Quick check</h2>
+  <p class="subtitle" style="margin-bottom:1rem">Five questions. Instant feedback, running score.</p>
+  <div id="quiz"></div>
+  <div class="quiz-bar">
+    <span id="quiz-score">Score: 0 / 5</span>
+    <button id="quiz-reset">Reset</button>
+  </div>
+
+  <footer>
+    Personal explainer &middot; unlisted &middot; <a href="/explainers/">back to index</a>
+  </footer>
+
+</div>
+
+<script>
+// --- Shape selector (vanilla, defensive) ---
+function selectShape(shape) {
+  var shapes = ['bottomup', 'topdown', 'graph'];
+  var buttons = document.querySelectorAll('.tab-btn');
+  for (var i = 0; i < buttons.length; i++) {
+    var btn = buttons[i];
+    btn.classList.toggle('active', btn.getAttribute('data-shape') === shape);
+  }
+  for (var j = 0; j < shapes.length; j++) {
+    var el = document.getElementById('shape-' + shapes[j]);
+    if (!el) continue;
+    if (shape === 'all' || shapes[j] === shape) { el.classList.remove('hidden'); }
+    else { el.classList.add('hidden'); }
+  }
+  for (var k = 0; k < shapes.length; k++) {
+    var row = document.getElementById('row-' + shapes[k]);
+    if (!row) continue;
+    if (shape === 'all') { row.classList.remove('active-row'); row.classList.remove('hidden-row'); }
+    else if (shapes[k] === shape) { row.classList.add('active-row'); row.classList.remove('hidden-row'); }
+    else { row.classList.remove('active-row'); row.classList.add('hidden-row'); }
+  }
+}
+
+// --- Quiz (vanilla, self-contained) ---
+(function () {
+  var QUESTIONS = [
+    {
+      q: "You need each subtree's height to compute a node's answer (e.g. diameter). Which shape?",
+      options: ["Bottom-up tree", "Top-down tree", "Graph / grid DFS"],
+      correct: 0,
+      explain: "The answer depends on the children, so results flow UP via return values."
+    },
+    {
+      q: "Validating a BST by passing (low, high) bounds down into each recursive call is which shape?",
+      options: ["Bottom-up tree", "Top-down tree", "Graph / grid DFS"],
+      correct: 1,
+      explain: "State (the bounds) is threaded DOWN through parameters — that's top-down."
+    },
+    {
+      q: "In graph/grid DFS, when do you mark a node visited?",
+      options: ["After the recursive calls", "Before the recursive calls", "Only in the base case"],
+      correct: 1,
+      explain: "Mark BEFORE recursing, or a back-edge sends you into an infinite loop (the #207/#417/#133 bug)."
+    },
+    {
+      q: "On LeetCode's `python` (Python 2), how do you carry a running result out of a nested DFS?",
+      options: ["nonlocal best", "self.best or a one-element list", "global best"],
+      correct: 1,
+      explain: "`nonlocal` is a SyntaxError in Python 2. Mutate an attribute (self.best) or a list — don't rebind a name."
+    },
+    {
+      q: "Why must tree diameter be computed bottom-up instead of just measuring the root?",
+      options: [
+        "The longest path's turning point can be any node, not the root",
+        "Because the root has no parent",
+        "Because binary trees can contain cycles"
+      ],
+      correct: 0,
+      explain: "The longest path can live entirely inside one subtree, so every node is a candidate peak — you must check them all on the way up."
+    }
+  ];
+
+  var quiz = document.getElementById('quiz');
+  var scoreEl = document.getElementById('quiz-score');
+  var resetEl = document.getElementById('quiz-reset');
+  if (!quiz || !scoreEl) return;
+
+  var answered, score;
+
+  function render() {
+    answered = [];
+    score = 0;
+    quiz.innerHTML = '';
+    scoreEl.textContent = 'Score: 0 / ' + QUESTIONS.length;
+
+    QUESTIONS.forEach(function (item, qi) {
+      var wrap = document.createElement('div');
+      wrap.className = 'quiz-q';
+
+      var qText = document.createElement('div');
+      qText.className = 'q-text';
+      qText.innerHTML = '<span class="q-num">Q' + (qi + 1) + '.</span>' + item.q;
+      wrap.appendChild(qText);
+
+      item.options.forEach(function (opt, oi) {
+        var b = document.createElement('button');
+        b.className = 'quiz-opt';
+        b.type = 'button';
+        b.textContent = opt;
+        b.addEventListener('click', function () { pick(qi, oi, wrap, item); });
+        wrap.appendChild(b);
+      });
+
+      var ex = document.createElement('div');
+      ex.className = 'quiz-explain hidden';
+      ex.textContent = item.explain;
+      wrap.appendChild(ex);
+
+      quiz.appendChild(wrap);
+    });
+  }
+
+  function pick(qi, oi, wrap, item) {
+    if (answered[qi]) return;
+    answered[qi] = true;
+
+    var opts = wrap.querySelectorAll('.quiz-opt');
+    for (var i = 0; i < opts.length; i++) {
+      opts[i].disabled = true;
+      if (i === item.correct) opts[i].classList.add('correct');
+    }
+    if (oi !== item.correct) opts[oi].classList.add('wrong');
+
+    var ex = wrap.querySelector('.quiz-explain');
+    if (ex) ex.classList.remove('hidden');
+
+    if (oi === item.correct) score++;
+    scoreEl.textContent = 'Score: ' + score + ' / ' + QUESTIONS.length;
+  }
+
+  if (resetEl) resetEl.addEventListener('click', render);
+  render();
+})();
+</script>
+</body>
+</html>

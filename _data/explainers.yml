@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "DFS: One Skeleton, Three Shapes"
+  slug: dfs-shapes
+  date: 2026-09-01
+  description: "The DFS skeleton and its three canonical shapes — bottom-up tree, top-down tree, and graph/grid with visited — plus a decision rule and a quick quiz."
+
 - title: "SMS Pumping Fraud Detection — The Staff-Level Answer"
   slug: sms-pumping-fraud-detection
   date: 2026-08-31
