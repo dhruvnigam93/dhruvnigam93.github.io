@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>Which Test? Relationships &amp; Drift</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --good: #059669;
+            --warn: #b45309;
+            --bad: #dc2626;
+            --radius: 14px;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                --good: #34d399;
+                --warn: #fbbf24;
+                --bad: #f87171;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: max(20px, env(safe-area-inset-top)) 20px 80px;
+        }
+        .back {
+            display: inline-block;
+            margin: 8px 0 20px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.3rem; margin: 2em 0 0.5em; }
+        h3 { font-size: 1.05rem; margin: 1.4em 0 0.4em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        code {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.85em;
+        }
+        pre {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            overflow-x: auto;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+        pre code { background: none; border: none; padding: 0; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+        }
+        details {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 0 18px;
+            margin: 12px 0;
+            background: var(--card);
+        }
+        summary {
+            cursor: pointer;
+            padding: 16px 0;
+            font-weight: 600;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after {
+            content: "+";
+            color: var(--muted);
+            font-size: 1.4rem;
+            line-height: 1;
+        }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        button {
+            font: inherit;
+            font-weight: 600;
+            color: #fff;
+            background: var(--accent);
+            border: none;
+            border-radius: 999px;
+            padding: 12px 22px;
+            min-height: 48px;
+            min-width: 48px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        button:active { transform: scale(0.96); }
+        .ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+        input[type="range"] { width: 100%; height: 44px; margin: 0; }
+        input[type="number"] {
+            font: inherit;
+            width: 90px;
+            padding: 10px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: var(--bg);
+            color: var(--fg);
+        }
+        /* pills */
+        .nav { margin: 0 0 1.4em; }
+        .nav a {
+            display: inline-block;
+            border: 1px solid var(--line);
+            background: var(--card);
+            color: var(--fg);
+            border-radius: 999px;
+            padding: 8px 14px;
+            margin: 3px 2px;
+            font-size: 0.85rem;
+            text-decoration: none;
+        }
+        .pillrow { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+        .pillbtn {
+            background: var(--card);
+            color: var(--fg);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 10px 16px;
+            min-height: 44px;
+            font-weight: 600;
+            font-size: 0.92rem;
+        }
+        .pillbtn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .lbl { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 700; margin: 10px 0 2px; }
+        /* chips */
+        .chip {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border: 1.5px solid var(--line);
+            color: var(--muted);
+            white-space: nowrap;
+        }
+        .chip.good { color: var(--good); border-color: var(--good); }
+        .chip.warn { color: var(--warn); border-color: var(--warn); }
+        .chip.bad { color: var(--bad); border-color: var(--bad); }
+        .chip.acc { color: var(--accent); border-color: var(--accent); }
+        /* tables */
+        .tablewrap { overflow-x: auto; margin: 1em 0; -webkit-overflow-scrolling: touch; }
+        table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+        th, td { border-bottom: 1px solid var(--line); padding: 9px 10px; text-align: left; vertical-align: top; }
+        th { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+        td strong { white-space: nowrap; }
+        /* widgets */
+        canvas { width: 100%; display: block; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
+        .readout { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.95rem; }
+        .kv { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 0.95rem; flex-wrap: wrap; }
+        .kv:last-child { border-bottom: none; }
+        .kv .k { color: var(--muted); }
+        .kv .v { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 600; }
+        .sliderlab { display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px; font-size: 0.9rem; }
+        .sliderlab .val { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 700; color: var(--accent); }
+        .note { color: var(--muted); font-size: 0.88rem; }
+        /* 2x2 grid */
+        .grid22 { display: grid; grid-template-columns: auto 1fr 1fr; gap: 8px; align-items: center; margin: 12px 0; font-size: 0.9rem; }
+        .grid22 .hd { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; font-weight: 700; }
+        .grid22 input { width: 100%; }
+        .exp { font-size: 0.78rem; color: var(--muted); font-family: ui-monospace, Menlo, monospace; }
+        /* quiz */
+        .qcard { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 14px 16px; margin: 14px 0; }
+        .qq { font-weight: 600; margin: 0 0 8px; }
+        .opt {
+            display: block;
+            width: 100%;
+            text-align: left;
+            margin: 8px 0;
+            background: var(--bg);
+            color: var(--fg);
+            border: 1.5px solid var(--line);
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            min-height: 48px;
+        }
+        .opt.right { border-color: var(--good); color: var(--good); font-weight: 700; }
+        .opt.wrong { border-color: var(--bad); color: var(--bad); }
+        .qwhy { font-size: 0.9rem; color: var(--muted); border-left: 3px solid var(--accent); padding-left: 10px; margin: 10px 0 2px; }
+        .scorebar { position: sticky; top: 0; background: var(--bg); padding: 8px 0; font-weight: 700; z-index: 2; }
+        footer {
+            margin-top: 3em;
+            padding-top: 1.2em;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>Which Test? Relationships &amp; Drift</h1>
+        <p class="meta">Added 2026-09-02 · Born from a Twilio R2 stumper: <em>"what test between two continuous variables / binary and continuous / binary and binary? How do you measure strength? Significance?"</em></p>
+
+        <nav class="nav">
+            <a href="#picker">Picker</a><a href="#contcont">Cont↔Cont</a><a href="#bincont">Bin↔Cont</a><a href="#binbin">Bin↔Bin</a><a href="#anova">ANOVA</a><a href="#trap">The Trap</a><a href="#mixed">Mixed matrix</a><a href="#drift">Drift</a><a href="#script">30-sec script</a><a href="#quiz">Quiz</a>
+        </nav>
+
+        <div class="card">
+            <p style="margin-top:4px;"><strong>The framing insight — say this first, always.</strong> "Is there a relationship?" splits into two separate questions:</p>
+            <div class="kv"><span class="k">1 · <strong style="color:var(--fg)">Significance</strong></span><span>distinguishable from zero given my <em>n</em>? → a <strong>test</strong> + p-value</span></div>
+            <div class="kv"><span class="k">2 · <strong style="color:var(--fg)">Strength</strong></span><span>how <em>big</em> is it? → an <strong>effect size</strong>, independent of <em>n</em></span></div>
+            <p class="note" style="margin-bottom:4px;">Interviewers who ask "how do you measure the strength" right after you name a test are checking you know these are different things.</p>
+        </div>
+
+        <h2 id="picker">1 · Pick your pair</h2>
+        <p>Tap the two variable types. The card answers all three questions: test, fallback, strength.</p>
+
+        <div class="card">
+            <div class="lbl">Variable A</div>
+            <div class="pillrow" id="typeA">
+                <button type="button" class="pillbtn active" data-t="cont">Continuous</button>
+                <button type="button" class="pillbtn" data-t="bin">Binary</button>
+                <button type="button" class="pillbtn" data-t="cat">Categorical (k&gt;2)</button>
+            </div>
+            <div class="lbl">Variable B</div>
+            <div class="pillrow" id="typeB">
+                <button type="button" class="pillbtn" data-t="cont">Continuous</button>
+                <button type="button" class="pillbtn active" data-t="bin">Binary</button>
+                <button type="button" class="pillbtn" data-t="cat">Categorical (k&gt;2)</button>
+            </div>
+            <div id="pickResult" style="margin-top:14px;"></div>
+        </div>
+
+        <details>
+            <summary>The full master table (the 30-second whiteboard answer)</summary>
+            <div class="tablewrap">
+                <table>
+                    <tr><th>Pair</th><th>Test (significance)</th><th>Non-parametric fallback</th><th>Strength (effect size)</th></tr>
+                    <tr><td><strong>cont ↔ cont</strong></td><td>Pearson r + t-test on r</td><td>Spearman ρ (monotonic)</td><td>|r|, r² (variance explained)</td></tr>
+                    <tr><td><strong>binary ↔ cont</strong></td><td>Two-sample t-test (Welch's)</td><td>Mann-Whitney U</td><td>Cohen's d, point-biserial r, AUC</td></tr>
+                    <tr><td><strong>binary ↔ binary</strong></td><td>Chi-square independence (2×2)</td><td>Fisher's exact (small cells)</td><td>φ (phi), odds ratio</td></tr>
+                    <tr><td><strong>cat (k&gt;2) ↔ cont</strong></td><td>One-way ANOVA F-test</td><td>Kruskal-Wallis</td><td>η² (eta-squared)</td></tr>
+                    <tr><td><strong>cat ↔ cat</strong></td><td>Chi-square (r×c)</td><td>Fisher's exact</td><td>Cramér's V</td></tr>
+                </table>
+            </div>
+        </details>
+
+        <h2 id="contcont">2 · Continuous ↔ continuous</h2>
+        <p><strong>Pearson r</strong> = cov(X,Y) / (σ<sub>X</sub>·σ<sub>Y</sub>). Measures <strong>linear</strong> association only, in [−1, 1]. Significance under H₀: ρ = 0:</p>
+        <pre><code>t = r · √(n−2) / √(1−r²)   ~   t-distribution, n−2 df</code></pre>
+        <p>Worked: r = 0.5, n = 100 → t = 0.5·√98/√0.75 ≈ <strong>5.72</strong> → p ≈ 10⁻⁷.</p>
+        <div class="card">
+            <p style="margin:4px 0;"><strong>Same test, three costumes.</strong> The t-test on r, the t-test on the slope of y = a + bx, and the regression F-test (F = t²) are <em>identical</em>. "Correlation test or regression test?" is a trick — same object.</p>
+        </div>
+        <p><strong>Spearman ρ</strong> = Pearson computed on ranks. Catches any <strong>monotonic</strong> relationship, robust to outliers and heavy tails. (Kendall's τ for small n / many ties.)</p>
+
+        <h3>Scatter lab — where r and ρ agree, and where they break</h3>
+        <div class="card">
+            <div class="pillrow" id="shapeRow">
+                <button type="button" class="pillbtn active" data-s="linear">Linear</button>
+                <button type="button" class="pillbtn" data-s="mono">Monotonic curve</button>
+                <button type="button" class="pillbtn" data-s="ushape">U-shape</button>
+                <button type="button" class="pillbtn" data-s="outlier">Outliers</button>
+                <button type="button" class="pillbtn" data-s="none">Nothing</button>
+            </div>
+            <canvas id="scatter" style="height:260px" data-h="260"></canvas>
+            <div style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+                <span class="chip acc" id="rChip">r = —</span>
+                <span class="chip acc" id="rhoChip">ρ = —</span>
+                <button type="button" class="ghost" id="resample" style="margin-left:auto;">↻ New sample</button>
+            </div>
+            <p class="note" id="shapeNote" style="margin-bottom:2px;"></p>
+        </div>
+        <p><strong>Not even monotonic?</strong> (U-shape: r ≈ 0 but the relationship is strong.) Plot first — <em>the scatter plot is step zero of all of this.</em> Then mutual information, or distance correlation (dCor = 0 ⟺ independence). Naming dCor/MI is a flex; the scatter plot is the non-negotiable part.</p>
+        <p><strong>Strength:</strong> |r| itself (rough bands: 0.1 small · 0.3 medium · 0.5 large) and r² = fraction of variance explained.</p>
+
+        <h2 id="bincont">3 · Binary ↔ continuous</h2>
+        <p>Reframe out loud: <em>"does the distribution of the continuous variable differ between the two groups?"</em> — e.g., session length for churned vs retained.</p>
+        <div class="tablewrap">
+            <table>
+                <tr><th></th><th>Test</th><th>What it actually tests</th></tr>
+                <tr><td><strong>Default</strong></td><td>Welch's two-sample t-test</td><td>Difference in <em>means</em>. Doesn't assume equal group variances — strictly better default than Student's, costs nothing.</td></tr>
+                <tr><td><strong>Skewed / outliers / ordinal</strong></td><td>Mann-Whitney U</td><td>P(X₁ &gt; X₀) ≠ 0.5 — stochastic dominance, <em>not</em> means.</td></tr>
+            </table>
+        </div>
+        <p><strong>Strength — three interchangeable lenses:</strong></p>
+        <ul>
+            <li><strong>Cohen's d</strong> = (μ₁ − μ₀) / s<sub>pooled</sub>. Bands: 0.2 small · 0.5 medium · 0.8 large.</li>
+            <li><strong>Point-biserial r</strong> — literally Pearson r with the binary coded 0/1. Related to the t statistic by r² = t²/(t² + df): the "correlation" and the "t-test" are again the same object.</li>
+            <li><strong>AUC</strong> = P(score of random positive &gt; random negative) — this <em>is</em> the Mann-Whitney U statistic normalized to [0,1]. Great EDA strength readout for one feature vs a binary target: <em>"this feature alone has AUC 0.61."</em></li>
+        </ul>
+        <div class="card">
+            <p style="margin:4px 0;"><strong>Direction flip.</strong> Predicting the binary <em>from</em> the continuous → univariate logistic regression; the Wald test on the coefficient answers the same association question. Association is symmetric; the test menu depends on which variable you condition on.</p>
+        </div>
+
+        <h2 id="binbin">4 · Binary ↔ binary</h2>
+        <p>Build the 2×2 contingency table. Chi-square test of independence:</p>
+        <pre><code>χ² = Σ (O − E)² / E,   E = row total × col total / N,   df = 1 for 2×2</code></pre>
+        <p><strong>Assumption:</strong> all expected counts ≥ 5. Violated (rare events, small n) → <strong>Fisher's exact test</strong> (exact hypergeometric, no approximation).</p>
+
+        <h3>Live 2×2 calculator — edit the cells</h3>
+        <div class="card">
+            <div class="grid22">
+                <div></div><div class="hd">Churn = 1</div><div class="hd">Churn = 0</div>
+                <div class="hd">Promo = 1</div>
+                <div><input type="number" id="cA" value="30" min="0" inputmode="numeric"><div class="exp" id="eA"></div></div>
+                <div><input type="number" id="cB" value="70" min="0" inputmode="numeric"><div class="exp" id="eB"></div></div>
+                <div class="hd">Promo = 0</div>
+                <div><input type="number" id="cC" value="10" min="0" inputmode="numeric"><div class="exp" id="eC"></div></div>
+                <div><input type="number" id="cD" value="90" min="0" inputmode="numeric"><div class="exp" id="eD"></div></div>
+            </div>
+            <div id="ctOut"></div>
+        </div>
+        <p><strong>Strength:</strong></p>
+        <ul>
+            <li><strong>φ (phi)</strong> = √(χ²/N) — and φ = |Pearson r| computed on the 0/1 codes.</li>
+            <li><strong>Odds ratio</strong> = ad/bc — the stakeholder-friendly one: <em>"users on promo have 3.9× the odds of churning."</em> CI via log OR ± 1.96·SE, SE = √(1/a + 1/b + 1/c + 1/d).</li>
+            <li><strong>Cramér's V</strong> = √(χ² / (N·min(r−1, c−1))) — generalizes φ to bigger tables.</li>
+        </ul>
+        <div class="card">
+            <p style="margin:4px 0;"><strong>The pattern: every row of the master table hides a correlation.</strong> cont↔cont → r itself · binary↔cont → point-biserial r · binary↔binary → φ · categorical↔cont → √η². One object, five costumes — saying this out loud is the sign you actually get it.</p>
+        </div>
+
+        <h2 id="anova">5 · Categorical (k&gt;2) ↔ continuous</h2>
+        <p><strong>One-way ANOVA:</strong> F = MS<sub>between</sub> / MS<sub>within</sub>, df = (k−1, N−k). H₀: all group means equal.</p>
+        <ul>
+            <li>With k = 2, F = t² — ANOVA is the t-test generalized.</li>
+            <li>Significant F only says <em>"at least one group differs."</em> Which one → post-hoc pairwise (Tukey HSD) — which is a <strong>multiple-testing problem</strong> (BH / Bonferroni).</li>
+            <li>Non-parametric: <strong>Kruskal-Wallis</strong> (generalizes Mann-Whitney).</li>
+            <li>Strength: <strong>η²</strong> = SS<sub>between</sub> / SS<sub>total</sub> — fraction of variance explained by group membership. (ω² is the less-biased version; naming it is a flex.)</li>
+        </ul>
+
+        <h2 id="trap">6 · Strength vs significance — the trap itself</h2>
+        <p>Test statistics grow like √n — for correlation, t ≈ r·√n. So the p-value is <strong>effect size × sample size, entangled</strong>. Drag the sliders:</p>
+
+        <div class="card">
+            <div class="sliderlab"><span>Effect size r</span><span class="val" id="rV">0.30</span></div>
+            <input type="range" id="rS" min="0.005" max="0.9" step="0.005" value="0.30" aria-label="effect size r">
+            <div class="sliderlab"><span>Sample size n <span class="note">(log scale)</span></span><span class="val" id="nV">100</span></div>
+            <input type="range" id="nS" min="1" max="6" step="0.01" value="2" aria-label="sample size (log scale)">
+            <div class="pillrow">
+                <button type="button" class="ghost" data-r="0.01" data-n="6">r=0.01, n=1M</button>
+                <button type="button" class="ghost" data-r="0.5" data-n="2">r=0.5, n=100</button>
+                <button type="button" class="ghost" data-r="0.3" data-n="1.301">r=0.3, n=20</button>
+            </div>
+            <div class="kv"><span class="k">t statistic</span><span class="v" id="tOut">—</span></div>
+            <div class="kv"><span class="k">two-sided p</span><span class="v" id="pOut">—</span></div>
+            <div class="kv"><span class="k">effect band</span><span id="effChip" class="chip">—</span></div>
+            <div class="kv"><span class="k">p &lt; 0.05?</span><span id="sigChip" class="chip">—</span></div>
+            <p id="verdict" style="font-weight:600;margin:10px 0 4px;"></p>
+        </div>
+
+        <ul>
+            <li>n = 1,000,000 and r = 0.01 → t ≈ 10 → p &lt; 10⁻²². Massively "significant," utterly useless — r² says it explains 0.01% of variance. <strong>At production scale everything is significant;</strong> effect sizes + practical thresholds are the only meaningful filter.</li>
+            <li>Reverse trap: n = 20, r = 0.3, p ≈ 0.2 → "not significant" ≠ "no relationship." It's <strong>underpowered</strong>. Say: <em>"I'd compute power / needed n before declaring absence."</em></li>
+        </ul>
+        <div class="card">
+            <p style="margin:4px 0;"><strong>The answer template:</strong> report <strong>effect size + 95% CI</strong>; use the p-value only as a gate. Never say "there IS a relationship (p&lt;0.05)" without sizing it.</p>
+        </div>
+
+        <h2 id="mixed">7 · Mixed-type "correlation matrix"</h2>
+        <p>If asked "how do you build a correlation matrix when features are mixed types" — one measure per pair type, all on a comparable 0–1-ish scale:</p>
+        <div class="tablewrap">
+            <table>
+                <tr><th>Pair</th><th>Measure</th></tr>
+                <tr><td>cont–cont</td><td>Pearson / Spearman</td></tr>
+                <tr><td>cont–binary</td><td>point-biserial r</td></tr>
+                <tr><td>cont–categorical</td><td>correlation ratio η</td></tr>
+                <tr><td>binary–binary</td><td>φ</td></tr>
+                <tr><td>cat–cat</td><td>Cramér's V</td></tr>
+            </table>
+        </div>
+        <p class="note">φ and Cramér's V are ≥ 0 only — no sign/direction. Practical mention: the <code>phik</code> library does a unified version of this.</p>
+
+        <h2 id="drift">8 · Drift metrics (the "how do you measure drift" follow-up)</h2>
+        <p>Setup: per feature, compare the <strong>serving window</strong> distribution vs the <strong>training reference</strong>.</p>
+        <p><strong>PSI (Population Stability Index)</strong> — the industry default:</p>
+        <pre><code>Bin reference into ~10 quantile bins.
+PSI = Σᵢ (aᵢ − eᵢ) · ln(aᵢ / eᵢ)</code></pre>
+        <p>where e = expected (reference) share in bin i, a = actual (serving) share. It's the symmetrized KL divergence. Smooth zero-count bins with a small ε.</p>
+        <div class="pillrow">
+            <span class="chip good">&lt; 0.1 stable</span>
+            <span class="chip warn">0.1 – 0.25 investigate</span>
+            <span class="chip bad">&gt; 0.25 retrain candidate</span>
+        </div>
+
+        <h3>PSI simulator — shift the serving distribution</h3>
+        <div class="card">
+            <canvas id="psiCanvas" style="height:220px" data-h="220"></canvas>
+            <div class="sliderlab"><span>Mean shift μ <span class="note">(in reference SDs)</span></span><span class="val" id="muV">+0.50</span></div>
+            <input type="range" id="muS" min="-2" max="2" step="0.05" value="0.5" aria-label="mean shift">
+            <div class="sliderlab"><span>Spread ratio σ</span><span class="val" id="sgV">1.00</span></div>
+            <input type="range" id="sgS" min="0.5" max="2" step="0.05" value="1" aria-label="spread ratio">
+            <div class="kv"><span class="k">PSI (10 decile bins)</span><span class="v" id="psiOut">—</span></div>
+            <div class="kv"><span class="k">verdict</span><span id="psiChip" class="chip">—</span></div>
+            <div class="kv"><span class="k">KS statistic D (max CDF gap)</span><span class="v" id="ksOut">—</span></div>
+            <p class="note" style="margin-bottom:2px;">At serving n ≈ 100k, even D ≈ 0.01 gives p ≈ 10⁻⁴ — the KS <em>p-value</em> fires on trivial shifts (Section 6 all over again). That's why monitoring uses PSI/Wasserstein with fixed thresholds, not test p-values.</p>
+        </div>
+
+        <details>
+            <summary>Alternatives by type</summary>
+            <ul>
+                <li><strong>Continuous:</strong> KS two-sample test (D = max CDF gap) — but prefer effect-size-style metrics with thresholds: PSI, <strong>Wasserstein distance</strong> (respects <em>magnitude</em> of shift, not just overlap).</li>
+                <li><strong>Categorical:</strong> chi-square on category shares, or PSI over categories.</li>
+                <li><strong>Divergences:</strong> KL (asymmetric, blows up on zeros) · JS (symmetric, bounded).</li>
+            </ul>
+        </details>
+        <details>
+            <summary>Multivariate drift — the domain classifier trick</summary>
+            <p>Correlations can shift while every marginal stays flat. Label reference rows 0, serving rows 1, train a classifier. <strong>AUC ≈ 0.5 → no detectable drift; AUC ≫ 0.5 → drift</strong>, and feature importances tell you <em>where</em>. This is the strongest advanced mention.</p>
+        </details>
+        <details>
+            <summary>What PSI can't see — concept drift</summary>
+            <p>P(y|x) changing under stable P(x). No input-distribution metric catches it. Catch it with <strong>calibration decay</strong> (observed vs predicted rate in score bins) and <strong>precision/recall on matured labels</strong>.</p>
+        </details>
+
+        <h2 id="script">9 · The 30-second answer script</h2>
+        <div class="card" style="border-left: 4px solid var(--accent);">
+            <p style="margin:4px 0;">"Depends on the variable types. Continuous–continuous: <strong>Pearson correlation</strong>, Spearman if I suspect non-linearity or outliers. Binary–continuous: <strong>two-sample t-test — Welch's</strong> — or Mann-Whitney. Binary–binary: <strong>chi-square on the 2×2</strong>, Fisher's exact if cells are small. For <strong>strength</strong> I report an effect size — r or r², Cohen's d, phi or an odds ratio. For <strong>significance</strong> each test gives a p-value, but with our sample sizes p-values saturate, so I'd lean on effect sizes with thresholds — same reason drift monitoring uses PSI with 0.1/0.25 cutoffs instead of KS p-values."</p>
+        </div>
+        <p class="note">That last sentence links the whole answer back to production ML — it's the staff-level close.</p>
+
+        <h2 id="quiz">10 · Quiz</h2>
+        <p class="scorebar" id="quizscore">Score: 0 / 0</p>
+        <div id="quizbox"></div>
+        <button type="button" class="ghost" id="quizreset">Reset quiz</button>
+
+        <footer>
+            Personal explainer · unlisted · <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+
+    <script>
+    (function () {
+        'use strict';
+        function $(id) { return document.getElementById(id); }
+        function cssVar(name) {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888';
+        }
+
+        /* ---------- math helpers ---------- */
+        function erfcc(x) { // Numerical Recipes complementary error fn, frac err < 1.2e-7
+            var z = Math.abs(x), t = 1 / (1 + 0.5 * z);
+            var ans = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (0.37409196 +
+                t * (0.09678418 + t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 +
+                t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))));
+            return x >= 0 ? ans : 2 - ans;
+        }
+        function normCdf(z) {
+            if (z === -Infinity) return 0;
+            if (z === Infinity) return 1;
+            return 1 - 0.5 * erfcc(z / Math.SQRT2);
+        }
+        function lgamma(x) {
+            var c = [76.18009172947146, -86.50532032941677, 24.01409824083091,
+                -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+            var y = x, tmp = x + 5.5;
+            tmp -= (x + 0.5) * Math.log(tmp);
+            var ser = 1.000000000190015;
+            for (var j = 0; j < 6; j++) ser += c[j] / ++y;
+            return -tmp + Math.log(2.5066282746310005 * ser / x);
+        }
+        function betacf(a, b, x) {
+            var MAXIT = 300, EPS = 3e-12, FPMIN = 1e-300;
+            var qab = a + b, qap = a + 1, qam = a - 1, c = 1, d = 1 - qab * x / qap;
+            if (Math.abs(d) < FPMIN) d = FPMIN;
+            d = 1 / d;
+            var h = d;
+            for (var m = 1; m <= MAXIT; m++) {
+                var m2 = 2 * m;
+                var aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+                d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN;
+                c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+                d = 1 / d; h *= d * c;
+                aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+                d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN;
+                c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+                d = 1 / d;
+                var del = d * c; h *= del;
+                if (Math.abs(del - 1) < EPS) break;
+            }
+            return h;
+        }
+        function ibeta(a, b, x) {
+            if (x <= 0) return 0;
+            if (x >= 1) return 1;
+            var bt = Math.exp(lgamma(a + b) - lgamma(a) - lgamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+            if (x < (a + 1) / (a + b + 2)) return bt * betacf(a, b, x) / a;
+            return 1 - bt * betacf(b, a, 1 - x) / b;
+        }
+        function tTwoSidedP(t, df) {
+            t = Math.abs(t);
+            if (!isFinite(t)) return 0;
+            if (df > 200) return erfcc(t / Math.SQRT2); // normal approx, = 2*Q(t)
+            return ibeta(df / 2, 0.5, df / (df + t * t));
+        }
+        function chi2P1(x) { // upper tail, df = 1
+            return erfcc(Math.sqrt(x / 2));
+        }
+        function fmtP(p) {
+            if (!(p > 0)) return '< 1e−300 (≈ 0)';
+            if (p >= 0.001) return p.toFixed(4);
+            return p.toExponential(1).replace('e-', '×10⁻').replace('e+', '×10');
+        }
+        function makeRng(seed) {
+            var s = seed >>> 0;
+            return function () {
+                s += 0x6D2B79F5;
+                var t = s;
+                t = Math.imul(t ^ (t >>> 15), t | 1);
+                t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            };
+        }
+        function pearson(x, y) {
+            var n = x.length, mx = 0, my = 0, i;
+            for (i = 0; i < n; i++) { mx += x[i]; my += y[i]; }
+            mx /= n; my /= n;
+            var sxy = 0, sxx = 0, syy = 0;
+            for (i = 0; i < n; i++) {
+                var dx = x[i] - mx, dy = y[i] - my;
+                sxy += dx * dy; sxx += dx * dx; syy += dy * dy;
+            }
+            var den = Math.sqrt(sxx * syy);
+            return den > 0 ? sxy / den : 0;
+        }
+        function ranks(v) {
+            var n = v.length, idx = [], i;
+            for (i = 0; i < n; i++) idx.push(i);
+            idx.sort(function (a, b) { return v[a] - v[b]; });
+            var rk = new Array(n);
+            i = 0;
+            while (i < n) {
+                var j = i;
+                while (j + 1 < n && v[idx[j + 1]] === v[idx[i]]) j++;
+                var avg = (i + j) / 2 + 1;
+                for (var k = i; k <= j; k++) rk[idx[k]] = avg;
+                i = j + 1;
+            }
+            return rk;
+        }
+        function fitCanvas(cv) {
+            var dpr = window.devicePixelRatio || 1;
+            var w = cv.clientWidth || 300;
+            var h = parseInt(cv.getAttribute('data-h') || '240', 10);
+            cv.width = Math.round(w * dpr);
+            cv.height = Math.round(h * dpr);
+            var ctx = cv.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            return { ctx: ctx, w: w, h: h };
+        }
+
+        /* ---------- 1. pair picker ---------- */
+        var PAIRS = {
+            'cont|cont': {
+                test: 'Pearson r + t-test on r',
+                fallback: 'Spearman ρ (monotonic) · Kendall’s τ',
+                effect: '|r| and r² (variance explained)',
+                note: 'Plot the scatter first. U-shape → mutual information / distance correlation.',
+                anchor: '#contcont'
+            },
+            'cont|bin': {
+                test: 'Welch’s two-sample t-test',
+                fallback: 'Mann-Whitney U (skew / outliers / ordinal)',
+                effect: 'Cohen’s d · point-biserial r · AUC',
+                note: '"Does the distribution differ between the two groups?" AUC = normalized Mann-Whitney U.',
+                anchor: '#bincont'
+            },
+            'bin|bin': {
+                test: 'Chi-square independence on the 2×2',
+                fallback: 'Fisher’s exact (any expected count < 5)',
+                effect: 'φ (phi) · odds ratio (stakeholder-friendly)',
+                note: 'φ = |Pearson r| on the 0/1 codes.',
+                anchor: '#binbin'
+            },
+            'cont|cat': {
+                test: 'One-way ANOVA F-test',
+                fallback: 'Kruskal-Wallis',
+                effect: 'η² (eta-squared) · ω² (less biased)',
+                note: 'Significant F → post-hoc pairwise (Tukey), which is a multiple-testing problem.',
+                anchor: '#anova'
+            },
+            'bin|cat': {
+                test: 'Chi-square on the 2×k table',
+                fallback: 'Fisher’s exact (small cells)',
+                effect: 'Cramér’s V',
+                note: 'A binary is just a categorical with k = 2 — same machinery as cat↔cat.',
+                anchor: '#binbin'
+            },
+            'cat|cat': {
+                test: 'Chi-square on the r×c table',
+                fallback: 'Fisher’s exact (small cells)',
+                effect: 'Cramér’s V = √(χ² / (N·min(r−1, c−1)))',
+                note: 'Cramér’s V generalizes φ beyond 2×2.',
+                anchor: '#binbin'
+            }
+        };
+        var ORDER = { cont: 0, bin: 1, cat: 2 };
+        function pickerKey(a, b) {
+            return ORDER[a] <= ORDER[b] ? a + '|' + b : b + '|' + a;
+        }
+        function setupGroup(el, onChange) {
+            if (!el) return null;
+            var btns = el.querySelectorAll('.pillbtn');
+            el.addEventListener('click', function (e) {
+                var b = e.target.closest('.pillbtn');
+                if (!b) return;
+                for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+                b.classList.add('active');
+                onChange();
+            });
+            return function () {
+                var act = el.querySelector('.pillbtn.active');
+                return act ? act.getAttribute('data-t') : null;
+            };
+        }
+        var pickResult = $('pickResult');
+        var getA, getB;
+        function renderPick() {
+            if (!pickResult || !getA || !getB) return;
+            var a = getA(), b = getB();
+            var info = PAIRS[pickerKey(a, b)];
+            if (!info) return;
+            pickResult.innerHTML =
+                '<div class="kv"><span class="k">Test (significance)</span><span class="v">' + info.test + '</span></div>' +
+                '<div class="kv"><span class="k">Non-parametric fallback</span><span class="v">' + info.fallback + '</span></div>' +
+                '<div class="kv"><span class="k">Strength (effect size)</span><span class="v">' + info.effect + '</span></div>' +
+                '<p class="note" style="margin:8px 0 2px;">' + info.note + ' <a href="' + info.anchor + '">depth ↓</a></p>';
+        }
+        getA = setupGroup($('typeA'), function () { renderPick(); });
+        getB = setupGroup($('typeB'), function () { renderPick(); });
+        renderPick();
+
+        /* ---------- 2. scatter lab ---------- */
+        var SHAPES = {
+            linear: {
+                note: 'r and ρ both high — a linear world, Pearson is the right tool.',
+                gen: function (rng, rnorm) {
+                    var xs = [], ys = [];
+                    for (var i = 0; i < 80; i++) {
+                        var x = rnorm();
+                        xs.push(x); ys.push(0.85 * x + 0.55 * rnorm());
+                    }
+                    return [xs, ys];
+                }
+            },
+            mono: {
+                note: 'ρ > r: monotonic but curved. Spearman works on ranks, so the bend costs it nothing.',
+                gen: function (rng, rnorm) {
+                    var xs = [], ys = [];
+                    for (var i = 0; i < 80; i++) {
+                        var u = rng();
+                        xs.push(u); ys.push(Math.pow(u, 8) + 0.03 * rnorm());
+                    }
+                    return [xs, ys];
+                }
+            },
+            ushape: {
+                note: 'Both ≈ 0 despite an obvious pattern — why the scatter plot is step zero. Mutual information or distance correlation would flag it.',
+                gen: function (rng, rnorm) {
+                    var xs = [], ys = [];
+                    for (var i = 0; i < 80; i++) {
+                        var x = (rng() * 2 - 1) * 2;
+                        xs.push(x); ys.push(x * x + 0.35 * rnorm());
+                    }
+                    return [xs, ys];
+                }
+            },
+            outlier: {
+                note: 'A few extreme points manufacture a big Pearson r; Spearman (ranks) barely moves. Outliers are Pearson’s kryptonite.',
+                gen: function (rng, rnorm) {
+                    var xs = [], ys = [], i;
+                    for (i = 0; i < 76; i++) {
+                        xs.push(rnorm() * 0.5); ys.push(rnorm() * 0.5);
+                    }
+                    for (i = 0; i < 4; i++) {
+                        var t = 4.5 + i * 0.4;
+                        xs.push(t + 0.2 * rnorm()); ys.push(t + 0.2 * rnorm());
+                    }
+                    return [xs, ys];
+                }
+            },
+            none: {
+                note: 'Both ≈ 0 and the plot agrees — genuinely nothing here.',
+                gen: function (rng, rnorm) {
+                    var xs = [], ys = [];
+                    for (var i = 0; i < 80; i++) { xs.push(rnorm()); ys.push(rnorm()); }
+                    return [xs, ys];
+                }
+            }
+        };
+        var scatterCv = $('scatter'), shapeRow = $('shapeRow'), shapeNote = $('shapeNote');
+        var rChip = $('rChip'), rhoChip = $('rhoChip'), resampleBtn = $('resample');
+        var curShape = 'linear', seed = 42, curData = null;
+        function genData() {
+            var rng = makeRng(seed);
+            var spare = null;
+            function rnorm() {
+                if (spare !== null) { var s = spare; spare = null; return s; }
+                var u = 0, v = 0;
+                while (u === 0) u = rng();
+                v = rng();
+                var m = Math.sqrt(-2 * Math.log(u));
+                spare = m * Math.sin(2 * Math.PI * v);
+                return m * Math.cos(2 * Math.PI * v);
+            }
+            var shape = SHAPES[curShape];
+            if (!shape) return;
+            curData = shape.gen(rng, rnorm);
+            var r = pearson(curData[0], curData[1]);
+            var rho = pearson(ranks(curData[0]), ranks(curData[1]));
+            if (rChip) rChip.textContent = 'Pearson r = ' + r.toFixed(2);
+            if (rhoChip) rhoChip.textContent = 'Spearman ρ = ' + rho.toFixed(2);
+            if (shapeNote) shapeNote.textContent = shape.note;
+        }
+        function drawScatter() {
+            if (!scatterCv || !curData) return;
+            var f = fitCanvas(scatterCv), ctx = f.ctx, W = f.w, H = f.h;
+            var xs = curData[0], ys = curData[1];
+            var pad = 18;
+            var xmin = Math.min.apply(null, xs), xmax = Math.max.apply(null, xs);
+            var ymin = Math.min.apply(null, ys), ymax = Math.max.apply(null, ys);
+            var xr = (xmax - xmin) || 1, yr = (ymax - ymin) || 1;
+            xmin -= xr * 0.07; xmax += xr * 0.07; ymin -= yr * 0.1; ymax += yr * 0.1;
+            ctx.clearRect(0, 0, W, H);
+            ctx.strokeStyle = cssVar('--line');
+            ctx.lineWidth = 1;
+            ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
+            ctx.fillStyle = cssVar('--accent');
+            ctx.globalAlpha = 0.75;
+            for (var i = 0; i < xs.length; i++) {
+                var px = pad + (xs[i] - xmin) / (xmax - xmin) * (W - 2 * pad);
+                var py = H - pad - (ys[i] - ymin) / (ymax - ymin) * (H - 2 * pad);
+                ctx.beginPath();
+                ctx.arc(px, py, 3.2, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+        }
+        if (shapeRow) {
+            shapeRow.addEventListener('click', function (e) {
+                var b = e.target.closest('.pillbtn');
+                if (!b) return;
+                var btns = shapeRow.querySelectorAll('.pillbtn');
+                for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+                b.classList.add('active');
+                curShape = b.getAttribute('data-s');
+                genData(); drawScatter();
+            });
+        }
+        if (resampleBtn) {
+            resampleBtn.addEventListener('click', function () {
+                seed = (seed * 1103515245 + 12345) >>> 0;
+                genData(); drawScatter();
+            });
+        }
+        genData();
+
+        /* ---------- 3. significance explorer ---------- */
+        var rS = $('rS'), nS = $('nS'), rV = $('rV'), nV = $('nV');
+        var tOut = $('tOut'), pOut = $('pOut'), effChip = $('effChip'), sigChip = $('sigChip'), verdict = $('verdict');
+        function effBand(r) {
+            var a = Math.abs(r);
+            if (a < 0.1) return ['trivial (< 0.1)', ''];
+            if (a < 0.3) return ['small (0.1–0.3)', 'warn'];
+            if (a < 0.5) return ['medium (0.3–0.5)', 'acc'];
+            return ['large (≥ 0.5)', 'good'];
+        }
+        function updateTrap() {
+            if (!rS || !nS) return;
+            var r = parseFloat(rS.value);
+            var n = Math.round(Math.pow(10, parseFloat(nS.value)));
+            if (n < 5) n = 5;
+            var df = n - 2;
+            var t = r * Math.sqrt(df) / Math.sqrt(1 - r * r);
+            var p = tTwoSidedP(t, df);
+            if (rV) rV.textContent = r.toFixed(r < 0.1 ? 3 : 2);
+            if (nV) nV.textContent = n.toLocaleString('en-US');
+            if (tOut) tOut.textContent = t >= 100 ? t.toFixed(0) : t.toFixed(2);
+            if (pOut) pOut.textContent = fmtP(p);
+            var eb = effBand(r);
+            if (effChip) {
+                effChip.textContent = eb[0];
+                effChip.className = 'chip' + (eb[1] ? ' ' + eb[1] : '');
+            }
+            var sig = p < 0.05;
+            if (sigChip) {
+                sigChip.textContent = sig ? 'yes — "significant"' : 'no';
+                sigChip.className = 'chip ' + (sig ? 'good' : 'bad');
+            }
+            var msg;
+            if (sig && Math.abs(r) < 0.1) {
+                msg = '⚠ The trap: significant but trivial. r² = ' + (r * r).toFixed(4) + ' — it explains ' + (r * r * 100).toFixed(2) + '% of variance. At this n, "significant" is free. Report the effect size.';
+            } else if (sig) {
+                msg = 'Significant and ' + eb[0].split(' ')[0] + ' — now report r with a 95% CI, and sanity-check it against a practical threshold.';
+            } else if (Math.abs(r) >= 0.3) {
+                msg = '⚠ Reverse trap: a sizeable effect that "isn’t significant" — this is underpowered, not absent. Compute power / needed n before declaring no relationship.';
+            } else {
+                msg = 'Small effect, small n — nothing detectable either way.';
+            }
+            if (verdict) verdict.textContent = msg;
+        }
+        if (rS) rS.addEventListener('input', updateTrap);
+        if (nS) nS.addEventListener('input', updateTrap);
+        var presetBtns = document.querySelectorAll('[data-r][data-n]');
+        for (var pb = 0; pb < presetBtns.length; pb++) {
+            presetBtns[pb].addEventListener('click', function () {
+                if (rS) rS.value = this.getAttribute('data-r');
+                if (nS) nS.value = this.getAttribute('data-n');
+                updateTrap();
+            });
+        }
+        updateTrap();
+
+        /* ---------- 4. 2x2 calculator ---------- */
+        var cA = $('cA'), cB = $('cB'), cC = $('cC'), cD = $('cD');
+        var eA = $('eA'), eB = $('eB'), eC = $('eC'), eD = $('eD');
+        var ctOut = $('ctOut');
+        function upd22() {
+            if (!cA || !cB || !cC || !cD || !ctOut) return;
+            var a = Math.max(0, parseFloat(cA.value) || 0);
+            var b = Math.max(0, parseFloat(cB.value) || 0);
+            var c = Math.max(0, parseFloat(cC.value) || 0);
+            var d = Math.max(0, parseFloat(cD.value) || 0);
+            var N = a + b + c + d;
+            var r1 = a + b, r0 = c + d, c1 = a + c, c0 = b + d;
+            if (N === 0 || r1 === 0 || r0 === 0 || c1 === 0 || c0 === 0) {
+                ctOut.innerHTML = '<p class="note">Need positive counts in both rows and both columns.</p>';
+                [eA, eB, eC, eD].forEach(function (el) { if (el) el.textContent = ''; });
+                return;
+            }
+            var Ea = r1 * c1 / N, Eb = r1 * c0 / N, Ec = r0 * c1 / N, Ed = r0 * c0 / N;
+            if (eA) eA.textContent = 'E=' + Ea.toFixed(1);
+            if (eB) eB.textContent = 'E=' + Eb.toFixed(1);
+            if (eC) eC.textContent = 'E=' + Ec.toFixed(1);
+            if (eD) eD.textContent = 'E=' + Ed.toFixed(1);
+            var chi = Math.pow(a - Ea, 2) / Ea + Math.pow(b - Eb, 2) / Eb +
+                      Math.pow(c - Ec, 2) / Ec + Math.pow(d - Ed, 2) / Ed;
+            var p = chi2P1(chi);
+            var phi = Math.sqrt(chi / N);
+            var minE = Math.min(Ea, Eb, Ec, Ed);
+            var orHtml;
+            if (a > 0 && b > 0 && c > 0 && d > 0) {
+                var OR = (a * d) / (b * c);
+                var se = Math.sqrt(1 / a + 1 / b + 1 / c + 1 / d);
+                var lo = Math.exp(Math.log(OR) - 1.96 * se);
+                var hi = Math.exp(Math.log(OR) + 1.96 * se);
+                orHtml = OR.toFixed(2) + ' <span class="note">(95% CI ' + lo.toFixed(2) + ' – ' + hi.toFixed(2) + ')</span>';
+            } else {
+                var OR2 = ((a + 0.5) * (d + 0.5)) / ((b + 0.5) * (c + 0.5));
+                orHtml = OR2.toFixed(2) + ' <span class="note">(Haldane +0.5 — a zero cell)</span>';
+            }
+            var eb = effBand(phi);
+            var html =
+                '<div class="kv"><span class="k">χ² (df = 1)</span><span class="v">' + chi.toFixed(2) + '</span></div>' +
+                '<div class="kv"><span class="k">p-value</span><span class="v">' + fmtP(p) + '</span></div>' +
+                '<div class="kv"><span class="k">φ = √(χ²/N)</span><span class="v">' + phi.toFixed(2) + ' <span class="chip ' + (eb[1] || '') + '" style="margin-left:6px;">' + eb[0] + '</span></span></div>' +
+                '<div class="kv"><span class="k">Odds ratio ad/bc</span><span class="v">' + orHtml + '</span></div>';
+            if (minE < 5) {
+                html += '<p style="margin:10px 0 2px;"><span class="chip bad">expected count ' + minE.toFixed(1) + ' &lt; 5 → use Fisher’s exact</span></p>';
+            }
+            ctOut.innerHTML = html;
+        }
+        [cA, cB, cC, cD].forEach(function (el) { if (el) el.addEventListener('input', upd22); });
+        upd22();
+
+        /* ---------- 5. PSI simulator ---------- */
+        var muS = $('muS'), sgS = $('sgS'), muV = $('muV'), sgV = $('sgV');
+        var psiOut = $('psiOut'), psiChip = $('psiChip'), ksOut = $('ksOut'), psiCv = $('psiCanvas');
+        var ZDEC = [-1.2816, -0.8416, -0.5244, -0.2533, 0, 0.2533, 0.5244, 0.8416, 1.2816];
+        function psiCalc(mu, sg) {
+            var edges = [-Infinity].concat(ZDEC, [Infinity]);
+            var psi = 0, EPSL = 1e-6;
+            for (var i = 0; i < 10; i++) {
+                var e = 0.1;
+                var lo = edges[i] === -Infinity ? -Infinity : (edges[i] - mu) / sg;
+                var hi = edges[i + 1] === Infinity ? Infinity : (edges[i + 1] - mu) / sg;
+                var aShare = Math.max(normCdf(hi) - normCdf(lo), EPSL);
+                psi += (aShare - e) * Math.log(aShare / e);
+            }
+            return psi;
+        }
+        function ksCalc(mu, sg) {
+            var D = 0;
+            for (var z = -6; z <= 6; z += 0.02) {
+                var gap = Math.abs(normCdf(z) - normCdf((z - mu) / sg));
+                if (gap > D) D = gap;
+            }
+            return D;
+        }
+        function drawPsi() {
+            if (!psiCv || !muS || !sgS) return;
+            var mu = parseFloat(muS.value), sg = parseFloat(sgS.value);
+            var f = fitCanvas(psiCv), ctx = f.ctx, W = f.w, H = f.h;
+            ctx.clearRect(0, 0, W, H);
+            var zLo = -4.5, zHi = 4.5, pad = 8;
+            function X(z) { return pad + (z - zLo) / (zHi - zLo) * (W - 2 * pad); }
+            var maxY = 0.42 / Math.min(sg, 1);
+            function refPdf(z) { return Math.exp(-z * z / 2) / Math.sqrt(2 * Math.PI); }
+            function srvPdf(z) { var u = (z - mu) / sg; return Math.exp(-u * u / 2) / (sg * Math.sqrt(2 * Math.PI)); }
+            function Y(y) { return H - pad - y / maxY * (H - 2.6 * pad); }
+            // decile lines
+            ctx.strokeStyle = cssVar('--line');
+            ctx.lineWidth = 1;
+            for (var i = 0; i < ZDEC.length; i++) {
+                ctx.beginPath();
+                ctx.moveTo(X(ZDEC[i]), pad);
+                ctx.lineTo(X(ZDEC[i]), H - pad);
+                ctx.stroke();
+            }
+            // reference filled
+            var z;
+            ctx.beginPath();
+            ctx.moveTo(X(zLo), Y(0));
+            for (z = zLo; z <= zHi; z += 0.05) ctx.lineTo(X(z), Y(refPdf(z)));
+            ctx.lineTo(X(zHi), Y(0));
+            ctx.closePath();
+            ctx.fillStyle = cssVar('--muted');
+            ctx.globalAlpha = 0.25;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            // serving line
+            ctx.beginPath();
+            for (z = zLo; z <= zHi; z += 0.05) {
+                var px = X(z), py = Y(srvPdf(z));
+                if (z === zLo) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            }
+            ctx.strokeStyle = cssVar('--accent');
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+            // legend
+            ctx.font = '12px -apple-system, sans-serif';
+            ctx.fillStyle = cssVar('--muted');
+            ctx.fillText('■ reference (training)', 12, 18);
+            ctx.fillStyle = cssVar('--accent');
+            ctx.fillText('— serving', 12, 34);
+            // readouts
+            var psi = psiCalc(mu, sg), D = ksCalc(mu, sg);
+            if (muV) muV.textContent = (mu >= 0 ? '+' : '') + mu.toFixed(2);
+            if (sgV) sgV.textContent = sg.toFixed(2);
+            if (psiOut) psiOut.textContent = psi.toFixed(3);
+            if (ksOut) ksOut.textContent = D.toFixed(3);
+            if (psiChip) {
+                if (psi < 0.1) { psiChip.textContent = 'stable — no action'; psiChip.className = 'chip good'; }
+                else if (psi <= 0.25) { psiChip.textContent = 'moderate — investigate'; psiChip.className = 'chip warn'; }
+                else { psiChip.textContent = 'major — retrain candidate'; psiChip.className = 'chip bad'; }
+            }
+        }
+        if (muS) muS.addEventListener('input', drawPsi);
+        if (sgS) sgS.addEventListener('input', drawPsi);
+
+        /* ---------- 6. quiz ---------- */
+        var QUIZ = [
+            {
+                q: 'Session length (continuous) vs churned (binary). Your default significance test?',
+                o: ['Pearson correlation t-test', 'Student’s two-sample t-test (equal variances)', 'Welch’s two-sample t-test', 'Chi-square test'],
+                a: 2,
+                why: 'Welch’s is the default: it drops the equal-variance assumption and costs nothing. Mann-Whitney U if skewed / outlier-heavy.'
+            },
+            {
+                q: 'Scatter shows a clean U-shape; Pearson r ≈ 0. What’s true?',
+                o: ['There is no relationship', 'Spearman ρ will catch it', 'A strong relationship can exist — use mutual information or distance correlation', 'You just need more samples'],
+                a: 2,
+                why: 'r and ρ both miss non-monotonic shapes. dCor = 0 ⟺ independence; MI also catches it. The scatter plot is what saves you.'
+            },
+            {
+                q: 'A 2×2 table has an expected count of 3 in one cell. You should…',
+                o: ['Run chi-square anyway', 'Use Fisher’s exact test', 'Drop the rare category', 'Switch to ANOVA'],
+                a: 1,
+                why: 'Chi-square needs all expected counts ≥ 5. Fisher’s exact is exact (hypergeometric) — no approximation to break.'
+            },
+            {
+                q: 'n = 1,000,000, r = 0.01, p < 10⁻²². Best conclusion?',
+                o: ['Strong relationship — the p is tiny', 'Significant but trivial: r² = 0.0001. Report the effect size, not the p', 'The test is broken', 'Lower alpha to 0.01 and re-test'],
+                a: 1,
+                why: 't ≈ r·√n, so at production n everything is "significant". This effect explains 0.01% of variance — practically useless.'
+            },
+            {
+                q: 'A single feature’s AUC against a binary target is a rescaled version of which test statistic?',
+                o: ['Chi-square', 'Welch’s t', 'Mann-Whitney U', 'Kolmogorov-Smirnov D'],
+                a: 2,
+                why: 'AUC = P(random positive scores above random negative) = U / (n₁·n₀). Same object, normalized to [0,1].'
+            },
+            {
+                q: 'A feature’s PSI comes back at 0.18. The standard read?',
+                o: ['Stable — ignore', 'Moderate shift — investigate', 'Major shift — retrain now', 'PSI can’t be between 0.1 and 0.25'],
+                a: 1,
+                why: 'Thresholds: < 0.1 stable · 0.1–0.25 moderate/investigate · > 0.25 major/retrain candidate.'
+            },
+            {
+                q: 'One-way ANOVA across 5 cohorts is significant. What does that tell you?',
+                o: ['All 5 means differ', 'The largest cohort drives the effect', 'At least one mean differs — post-hoc pairwise tests (with multiple-testing control) find which', 'The variances are unequal'],
+                a: 2,
+                why: 'F only rejects "all means equal". Tukey HSD (or BH/Bonferroni-corrected pairwise) localizes it — and that’s a multiple-testing problem.'
+            },
+            {
+                q: 'P(x) is stable but P(y|x) is shifting (concept drift). Will per-feature PSI catch it?',
+                o: ['Yes — PSI catches all drift', 'Yes, with more bins', 'No — you need calibration decay and matured-label metrics', 'No — use KS instead'],
+                a: 2,
+                why: 'PSI only sees input marginals. Concept drift under stable inputs shows up in calibration (observed vs predicted per score bin) and delayed-label precision/recall.'
+            }
+        ];
+        var quizBox = $('quizbox'), quizScore = $('quizscore'), quizReset = $('quizreset');
+        var qAnswered = 0, qScore = 0;
+        function updScore() {
+            if (!quizScore) return;
+            quizScore.textContent = 'Score: ' + qScore + ' / ' + qAnswered +
+                (qAnswered >= QUIZ.length ? ' — done!' : '  (' + (QUIZ.length - qAnswered) + ' left)');
+        }
+        function buildQuiz() {
+            if (!quizBox) return;
+            quizBox.innerHTML = '';
+            qAnswered = 0; qScore = 0;
+            updScore();
+            QUIZ.forEach(function (item, qi) {
+                var card = document.createElement('div');
+                card.className = 'qcard';
+                var h = document.createElement('p');
+                h.className = 'qq';
+                h.textContent = (qi + 1) + '. ' + item.q;
+                card.appendChild(h);
+                var fb = document.createElement('p');
+                fb.className = 'qwhy';
+                fb.style.display = 'none';
+                var btns = [];
+                item.o.forEach(function (opt, oi) {
+                    var b = document.createElement('button');
+                    b.type = 'button';
+                    b.className = 'opt';
+                    b.textContent = opt;
+                    b.addEventListener('click', function () {
+                        if (card.getAttribute('data-done')) return;
+                        card.setAttribute('data-done', '1');
+                        qAnswered++;
+                        if (oi === item.a) {
+                            qScore++;
+                            b.classList.add('right');
+                            b.textContent = '✓ ' + b.textContent;
+                        } else {
+                            b.classList.add('wrong');
+                            b.textContent = '✗ ' + b.textContent;
+                            btns[item.a].classList.add('right');
+                            btns[item.a].textContent = '✓ ' + btns[item.a].textContent;
+                        }
+                        fb.textContent = item.why;
+                        fb.style.display = 'block';
+                        updScore();
+                    });
+                    btns.push(b);
+                    card.appendChild(b);
+                });
+                card.appendChild(fb);
+                quizBox.appendChild(card);
+            });
+        }
+        if (quizReset) quizReset.addEventListener('click', buildQuiz);
+        buildQuiz();
+
+        /* ---------- redraw plumbing ---------- */
+        function redrawAll() { drawScatter(); drawPsi(); }
+        var rzT = null;
+        window.addEventListener('resize', function () {
+            if (rzT) clearTimeout(rzT);
+            rzT = setTimeout(redrawAll, 150);
+        });
+        try {
+            var mq = window.matchMedia('(prefers-color-scheme: dark)');
+            if (mq.addEventListener) mq.addEventListener('change', redrawAll);
+            else if (mq.addListener) mq.addListener(redrawAll);
+        } catch (e) { /* no-op */ }
+        redrawAll();
+    })();
+    </script>
+</body>
+</html>

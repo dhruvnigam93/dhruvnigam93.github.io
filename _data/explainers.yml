@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "Which Test? Relationships & Drift"
+  slug: stats-tests-relationships-drift
+  date: 2026-09-02
+  description: "The EDA test-selection question (Twilio R2 stumper) — interactive pair→test picker, Pearson-vs-Spearman scatter lab, significance-vs-strength explorer (the n=1M trap), live 2×2 χ²/odds-ratio calculator, PSI drift simulator with thresholds, the 30-second answer script, and an 8-question quiz."
+
 - title: "RL for Promotions — the Full Deep Dive"
   slug: rl-promotions-deep-dive
   date: 2026-09-02
