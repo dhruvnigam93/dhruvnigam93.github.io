@@ -24,8 +24,8 @@
 
 - title: "Twilio DS Interview Flashcards"
   slug: twilio-ds-flashcards
-  date: 2026-08-31
-  description: "Anki-style deck of 52 cards for the Twilio Design+DS round — classical ML, metrics & fraud/imbalance, stats & probability, DL core, plus 8 resume-anchored cards (calibration/ForeCal, Bradley-Terry, LUMOS multi-task). Shuffle, topic filter, keyboard nav; fully offline."
+  date: 2026-09-02
+  description: "Anki-style deck of 59 cards for the Twilio Design+DS round — classical ML, metrics & fraud/imbalance, stats & probability (incl. relationship tests: Pearson/t-test/chi-square, effect size vs significance, PSI drift), DL core, plus 8 resume-anchored cards (calibration/ForeCal, Bradley-Terry, LUMOS multi-task). Shuffle, topic filter, keyboard nav; fully offline."
 
 - title: "HLD: The Six-Stage Flow, Debugged"
   slug: hld-six-stage-flow-debugged
