@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>RL for Promotions — the Full Deep Dive</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --good: #16a34a;
+            --bad: #dc2626;
+            --warn: #d97706;
+            --radius: 14px;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                --good: #4ade80;
+                --bad: #f87171;
+                --warn: #fbbf24;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: max(20px, env(safe-area-inset-top)) 20px 80px;
+        }
+        .back {
+            display: inline-block;
+            margin: 8px 0 20px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.35rem; margin: 2.2em 0 0.5em; padding-top: 0.4em; border-top: 1px solid var(--line); }
+        h3 { font-size: 1.05rem; margin: 1.6em 0 0.4em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        code {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.85em;
+        }
+        pre {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            overflow-x: auto;
+            font-size: 0.78em;
+            line-height: 1.5;
+        }
+        pre code { background: none; border: none; padding: 0; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+        }
+        .eq {
+            display: block;
+            text-align: center;
+            font-family: Georgia, "Times New Roman", serif;
+            font-style: italic;
+            font-size: 1.05em;
+            margin: 1em 0;
+            padding: 12px 8px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .eq b { font-style: normal; }
+        details {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 0 18px;
+            margin: 12px 0;
+            background: var(--card);
+        }
+        summary {
+            cursor: pointer;
+            padding: 14px 0;
+            font-weight: 600;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after { content: "+"; color: var(--muted); font-size: 1.4rem; line-height: 1; flex-shrink: 0; }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        button {
+            font: inherit;
+            font-weight: 600;
+            color: #fff;
+            background: var(--accent);
+            border: none;
+            border-radius: 999px;
+            padding: 12px 22px;
+            min-height: 48px;
+            min-width: 48px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        button:active { transform: scale(0.96); }
+        .ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+        input[type="range"] { width: 100%; height: 44px; }
+        footer {
+            margin-top: 3em;
+            padding-top: 1.2em;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+        /* pill nav */
+        .pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 1.2em 0; }
+        .pills a {
+            display: inline-block;
+            padding: 8px 14px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: var(--card);
+            color: var(--fg);
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+        .pills a:active { opacity: 0.6; }
+        /* tables */
+        .tablewrap { overflow-x: auto; margin: 1em 0; -webkit-overflow-scrolling: touch; }
+        table.tbl { border-collapse: collapse; width: 100%; font-size: 0.86rem; min-width: 420px; }
+        table.tbl th, table.tbl td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+        table.tbl th { background: var(--card); }
+        .num { font-variant-numeric: tabular-nums; }
+        .goodtxt { color: var(--good); font-weight: 600; }
+        .badtxt { color: var(--bad); font-weight: 600; }
+        .warntxt { color: var(--warn); font-weight: 600; }
+        /* widget frames */
+        .widget {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1.2em 0;
+            background: var(--bg);
+        }
+        .widget h4 { margin: 0 0 8px; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+        .wctl { display: flex; align-items: center; gap: 12px; margin: 8px 0; flex-wrap: wrap; }
+        .wctl label { font-size: 0.9rem; font-weight: 600; min-width: 5.5em; }
+        .wctl output { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 3.2em; text-align: right; }
+        .wctl input[type="range"] { flex: 1; min-width: 120px; }
+        .readout { font-size: 1rem; margin: 10px 0 2px; }
+        .readout b { font-variant-numeric: tabular-nums; }
+        /* gamma bars */
+        .bars { display: flex; align-items: flex-end; gap: 4px; height: 110px; margin: 12px 0 2px; }
+        .bars .bar {
+            flex: 1;
+            background: var(--accent);
+            border-radius: 4px 4px 0 0;
+            min-height: 2px;
+            transition: height 0.15s ease;
+            position: relative;
+        }
+        .barlabels { display: flex; gap: 4px; font-size: 0.65rem; color: var(--muted); text-align: center; }
+        .barlabels span { flex: 1; }
+        /* q table */
+        table.qtab { border-collapse: collapse; width: 100%; font-size: 0.9rem; margin: 8px 0; }
+        table.qtab th, table.qtab td { border: 1px solid var(--line); padding: 8px 10px; text-align: center; font-variant-numeric: tabular-nums; }
+        table.qtab th { background: var(--card); font-size: 0.8rem; }
+        table.qtab td.hot { background: color-mix(in srgb, var(--accent) 28%, var(--bg)); font-weight: 700; }
+        table.qtab td.cur { outline: 2px solid var(--accent); outline-offset: -2px; }
+        .steplog {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.72rem;
+            line-height: 1.55;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin: 10px 0;
+            max-height: 150px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .statbar { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.85rem; color: var(--muted); margin: 6px 0; }
+        .statbar b { color: var(--fg); font-variant-numeric: tabular-nums; }
+        canvas { width: 100%; height: auto; display: block; border: 1px solid var(--line); border-radius: 10px; }
+        /* quiz */
+        .q { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin: 14px 0; background: var(--card); }
+        .q p.qq { font-weight: 600; margin: 0 0 10px; }
+        .q .opts { display: flex; flex-direction: column; gap: 8px; }
+        .q .opts button {
+            background: var(--bg);
+            color: var(--fg);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            text-align: left;
+            font-weight: 500;
+            padding: 12px 14px;
+            font-size: 0.92rem;
+            line-height: 1.4;
+        }
+        .q .opts button.correct { border-color: var(--good); background: color-mix(in srgb, var(--good) 16%, var(--bg)); }
+        .q .opts button.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, var(--bg)); }
+        .q .expl { font-size: 0.85rem; color: var(--muted); margin: 10px 0 0; display: none; }
+        .q .expl.show { display: block; }
+        .scorebox { font-weight: 700; margin: 12px 0; }
+        .flow {
+            display: flex; flex-direction: column; gap: 6px; margin: 1em 0;
+        }
+        .flow .node {
+            border: 1px solid var(--line); border-radius: 10px; background: var(--card);
+            padding: 10px 14px; font-size: 0.88rem;
+        }
+        .flow .arrow { text-align: center; color: var(--muted); font-size: 0.9rem; line-height: 1; }
+        .tag {
+            display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em;
+            padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line);
+            background: var(--card); color: var(--muted); vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>RL for Promotions — the Full Deep Dive</h1>
+        <p class="meta">Added 2026-09-02</p>
+
+        <p>You framed discount promotions as a reinforcement learning problem, built a
+        data-driven simulator from production logs, trained tabular Q-learning and DQN agents at
+        scale, deployed the policy in a live A/B on ~2.2M users — and the result came out flat.
+        This page rebuilds the whole thing from fundamentals up, with the real code and the real
+        autopsy, so an RL person can go as deep as they want and you don't run out of floor.</p>
+
+        <div class="pills">
+            <a href="#fundamentals">RL refresher</a>
+            <a href="#problem">The problem</a>
+            <a href="#mdp">MDP design</a>
+            <a href="#reward">Reward shaping</a>
+            <a href="#simulator">Simulator</a>
+            <a href="#agents">Agents</a>
+            <a href="#scale">Training at scale</a>
+            <a href="#simresults">Sim results</a>
+            <a href="#liveab">Live A/B</a>
+            <a href="#autopsy">Autopsy</a>
+            <a href="#grill">Grill Q&amp;A</a>
+            <a href="#quiz">Quiz</a>
+        </div>
+
+        <!-- ==================== PART 0: FUNDAMENTALS ==================== -->
+        <h2 id="fundamentals">Part 0 — RL fundamentals, rebuilt from rust</h2>
+
+        <p>Everything in RL is one loop: an <b>agent</b> observes a state, picks an action, and the
+        <b>environment</b> returns a reward and a next state. Here the agent is the promo engine;
+        the environment is <em>the user</em> (plus the cricket calendar).</p>
+
+        <div class="flow">
+            <div class="node"><b>Agent</b> (promo policy π) — sees state s<sub>t</sub>, picks action a<sub>t</sub> (a discount tier)</div>
+            <div class="arrow">↓ &nbsp;a<sub>t</sub></div>
+            <div class="node"><b>Environment</b> (the user + match calendar) — user reacts: plays or doesn't, uses the discount or doesn't</div>
+            <div class="arrow">↓ &nbsp;r<sub>t</sub>, s<sub>t+1</sub></div>
+            <div class="node">Loop repeats for T = 10 days (one episode)</div>
+        </div>
+
+        <h3>The MDP</h3>
+        <p>A <b>Markov Decision Process</b> is the 5-tuple (S, A, P, R, γ): states, actions,
+        transition kernel P(s′ | s, a), reward function R(s, a, s′), and discount factor γ.
+        The <b>Markov property</b> is the load-bearing assumption: the current state contains
+        everything needed to predict what happens next — history beyond s adds nothing.
+        (Foreshadowing: our state <em>didn't</em>, and that's half the autopsy.)</p>
+
+        <p>The agent maximizes the <b>return</b> — cumulative discounted reward:</p>
+        <span class="eq">G<sub>t</sub> = r<sub>t+1</sub> + γ·r<sub>t+2</sub> + γ²·r<sub>t+3</sub> + … = Σ<sub>k≥0</sub> γ<sup>k</sup> r<sub>t+k+1</sub></span>
+
+        <div class="widget" id="gamma-widget">
+            <h4>Widget · what γ actually does</h4>
+            <p style="font-size:0.9rem; margin-top:0;">A user generates reward 1.0 every day for 10 days.
+            Bars show the weight γ<sup>t</sup> each day gets. Drag γ.</p>
+            <div class="wctl">
+                <label for="gammaRange">γ</label>
+                <input type="range" id="gammaRange" min="0" max="100" value="100" step="1">
+                <output id="gammaVal">1.00</output>
+            </div>
+            <div class="bars" id="gammaBars"></div>
+            <div class="barlabels" id="gammaBarLabels"></div>
+            <p class="readout">Discounted return G = <b id="gammaSum">10.00</b> &nbsp;·&nbsp; day-10 weight = <b id="gammaLast">1.00</b></p>
+            <p style="font-size:0.85rem; color:var(--muted); margin-bottom:0;">The project used <b>γ = 1</b>:
+            with a fixed 10-step horizon the return is bounded, and every day of retention counts equally.
+            γ &lt; 1 is what you need for infinite horizons (convergence) or when sooner genuinely beats later.</p>
+        </div>
+
+        <h3>Value functions and the Bellman equations</h3>
+        <p>A policy π maps states to actions. Its <b>action-value</b> function
+        Q<sup>π</sup>(s, a) = E[G<sub>t</sub> | s<sub>t</sub>=s, a<sub>t</sub>=a, then follow π].
+        The optimal Q* satisfies the <b>Bellman optimality equation</b>:</p>
+        <span class="eq">Q*(s, a) = E<sub>s′</sub>[ r + γ · max<sub>a′</sub> Q*(s′, a′) ]</span>
+        <p>Read it as: the value of doing a in s = immediate reward + the value of behaving
+        optimally afterwards. If you know Q*, the optimal policy is trivial —
+        π*(s) = argmax<sub>a</sub> Q*(s, a). All of Q-learning is "estimate Q* from samples."</p>
+
+        <h3>Q-learning: off-policy TD control</h3>
+        <p>Q-learning turns the Bellman optimality equation into an incremental update. After
+        experiencing (s, a, r, s′):</p>
+        <span class="eq">Q(s,a) ← Q(s,a) + α · [ <b>r + γ · max<sub>a′</sub> Q(s′,a′)</b> − Q(s,a) ]</span>
+        <p>The bracketed term is the <b>TD error</b>: (target − current estimate). Three things to
+        be able to say fluently:</p>
+        <ul>
+            <li><b>Off-policy:</b> the target uses max<sub>a′</sub> — the <em>greedy</em> action —
+            regardless of what the behavior policy (ε-greedy) actually does next. You learn about
+            the optimal policy while behaving exploratorily. SARSA, by contrast, plugs in the action
+            actually taken (on-policy).</li>
+            <li><b>ε-greedy:</b> with probability ε act randomly, else act greedily. Decay ε over
+            training (we went 1.0 → 0.01) so early exploration gives way to exploitation.</li>
+            <li><b>Convergence:</b> tabular Q-learning converges to Q* if every (s,a) pair is visited
+            infinitely often and the learning rate satisfies the Robbins-Monro conditions. Finite
+            state space + enough episodes ≈ good enough in practice.</li>
+        </ul>
+
+        <div class="widget" id="ql-stepper">
+            <h4>Widget · Q-learning, one update at a time</h4>
+            <p style="font-size:0.9rem; margin-top:0;">A miniature version of the real MDP: 3 user
+            states × 2 actions. Rewards mirror the real shaping — <b>1.0</b> if the user comes back
+            organically (free), <b>≈0.55</b> if they come back on a discount (you paid), <b>0</b> if
+            they stay away. γ = 1, episode = 10 steps, ε decays. Watch the Q-table fill in and the
+            greedy policy emerge.</p>
+            <div class="wctl">
+                <label for="lrRange">α (LR)</label>
+                <input type="range" id="lrRange" min="1" max="50" value="10" step="1">
+                <output id="lrVal">0.10</output>
+            </div>
+            <div class="tablewrap">
+                <table class="qtab" id="qTable">
+                    <thead><tr><th>Q(s,a)</th><th>No promo</th><th>50% off</th><th>greedy π(s)</th></tr></thead>
+                    <tbody>
+                        <tr><th>Active</th><td id="q00">0.00</td><td id="q01">0.00</td><td id="pol0">—</td></tr>
+                        <tr><th>Lapsing</th><td id="q10">0.00</td><td id="q11">0.00</td><td id="pol1">—</td></tr>
+                        <tr><th>Cold</th><td id="q20">0.00</td><td id="q21">0.00</td><td id="pol2">—</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="statbar">
+                <span>episode <b id="epCount">1</b></span>
+                <span>step <b id="stepCount">0</b>/10</span>
+                <span>ε = <b id="epsVal">1.00</b></span>
+                <span>state: <b id="curState">Lapsing</b></span>
+            </div>
+            <div class="steplog" id="stepLog">Press Step to run one Q-learning update.</div>
+            <div class="wctl">
+                <button id="btnStep">Step</button>
+                <button id="btnAuto" class="ghost">Auto-play</button>
+                <button id="btnReset" class="ghost">Reset</button>
+            </div>
+            <p style="font-size:0.85rem; color:var(--muted); margin-bottom:0;">What to notice: the
+            agent learns <em>No promo</em> is best for Active users (organic return is free reward),
+            and <em>50% off</em> is best for Lapsing — exactly the shape of a sane promo policy.
+            The real system learned this over 33 × 6 × supply-context states instead of 3.</p>
+        </div>
+
+        <h3>DQN: when the table gets too big</h3>
+        <p>Tabular Q-learning stores one number per (s,a). When states are continuous or too
+        numerous you replace the table with a network Q<sub>θ</sub>(s,a) and minimize the squared
+        TD error:</p>
+        <span class="eq">L(θ) = E<sub>(s,a,r,s′)∼D</sub>[ ( r + γ · max<sub>a′</sub> Q<sub>θ⁻</sub>(s′,a′) − Q<sub>θ</sub>(s,a) )² ]</span>
+        <p>Naively this diverges — bootstrapped targets + function approximation + off-policy data
+        is Sutton's "deadly triad." DQN's two stabilizers, both in our implementation:</p>
+        <ul>
+            <li><b>Experience replay (D):</b> store transitions in a buffer, train on random
+            minibatches. Breaks the temporal correlation between consecutive samples and reuses data.</li>
+            <li><b>Target network (θ⁻):</b> compute targets with a frozen copy of the network,
+            synced every N steps (we used 100). Otherwise you're regressing toward a target that
+            moves every gradient step.</li>
+        </ul>
+        <p>One more line worth having ready: the max operator makes Q-learning <b>overestimate</b>
+        (max of noisy estimates ≥ estimate of max — Jensen). Double DQN fixes it by selecting the
+        argmax with the online net but evaluating it with the target net.</p>
+
+        <!-- ==================== PART 1: PROBLEM ==================== -->
+        <h2 id="problem">Part 1 — the problem</h2>
+
+        <p>Dream11 hands out discount promotions to bring lapsed users back. The incumbent system
+        (<b>Pacman</b>) used a supervised churn model plus a static "retention grid": given
+        (churn bucket, days inactive), look up a discount. It works, but it's <em>myopic</em> —
+        every day is decided independently, with no notion of sequencing, saving budget for big
+        match days, or long-run effects.</p>
+
+        <p>The RL framing: maximize cumulative DAU over the horizon, under a budget:</p>
+        <span class="eq">max<sub>π</sub> Σ<sub>t=1..T</sub> Σ<sub>i</sub> r(s<sub>it</sub>, π(s<sub>it</sub>)) &nbsp; s.t. &nbsp; Σ<sub>t</sub> Σ<sub>i</sub> c(s<sub>it</sub>, π(s<sub>it</sub>)) ≤ B</span>
+
+        <p><b>Why not a contextual bandit?</b> Because actions have <em>sequential</em> effects: a
+        100% discount today changes tomorrow's state (and may train the user to wait for
+        discounts). Bandits optimize immediate reward per decision; the whole point here is
+        long-horizon credit. Knapsack-bandit variants were considered and rejected — they assume
+        i.i.d. rewards per pull, which promo responses violate.</p>
+
+        <div class="card">
+            <b>The cast:</b> agent = promo engine · environment = user + match calendar ·
+            action = discount tier · reward = "did they come back, and how much did it cost us" ·
+            episode = 10 days.
+        </div>
+
+        <!-- ==================== PART 2: MDP DESIGN ==================== -->
+        <h2 id="mdp">Part 2 — MDP design</h2>
+
+        <h3>State: 8 dimensions</h3>
+        <div class="tablewrap">
+        <table class="tbl">
+            <tr><th>#</th><th>Feature</th><th>Range</th><th>Why it's there</th></tr>
+            <tr><td>1</td><td><code>days_inactive</code></td><td class="num">0–31</td><td>Core recency signal (31 = 30+ days)</td></tr>
+            <tr><td>2</td><td><code>churn_bucket</code></td><td class="num">−1–4</td><td>Quintile of a churn-model probability; −1 = unscored</td></tr>
+            <tr><td>3</td><td><code>timestep</code></td><td class="num">0–9</td><td>Position in the episode (finite horizon ⇒ time matters)</td></tr>
+            <tr><td>4</td><td><code>prev_supply</code></td><td class="num">1–3</td><td>Tier of yesterday's matches</td></tr>
+            <tr><td>5</td><td><code>time_to_next_t1</code></td><td class="num">−1–10</td><td>Days until the next tier-1 match (−1 = none left)</td></tr>
+            <tr><td>6</td><td><code>remaining_t1</code></td><td class="num">0–10</td><td>Tier-1 matches left in the episode</td></tr>
+            <tr><td>7</td><td><code>time_to_next_t2</code></td><td class="num">−1–10</td><td>Days until the next tier-2 match</td></tr>
+            <tr><td>8</td><td><code>remaining_t2</code></td><td class="num">0–10</td><td>Tier-2 matches left</td></tr>
+        </table>
+        </div>
+
+        <p><b>Supply tiers</b> encode the cricket calendar: t1 = IPL / India World Cup matches,
+        t2 = other India internationals, t3 = everything else. Dims 4–8 are <em>forward-looking</em>:
+        they let the agent learn things like "don't burn a 100% discount on a t3 Tuesday when an
+        IPL match lands Friday." That's the sequential structure a bandit can't see. The supply
+        sequence is exogenous — sampled from the real match calendar, not affected by actions.</p>
+
+        <h3>Action: 6 discount tiers</h3>
+        <p><code>Discrete(6)</code> → {no promo, 10%, 25%, 50%, 75%, 100% discount}, each capped at a
+        fixed rupee value. Small deliberately: every action needed enough historical data to
+        estimate its effects (see the simulator's masking rule).</p>
+
+        <h3>Horizon and discounting</h3>
+        <p>Episodes are 10 timesteps (1 step = 1 day), γ = 1. Finite horizon does the truncation
+        that γ &lt; 1 normally does; undiscounted means day-9 retention is worth as much as day-1.
+        The strategic ambition was a ~60-day horizon; 10 days is what the data could support.</p>
+
+        <!-- ==================== PART 3: REWARD ==================== -->
+        <h2 id="reward">Part 3 — reward shaping (where it went wrong first)</h2>
+
+        <p>The reward has to encode a <em>dual</em> objective in one scalar: reward retention,
+        penalize spend. The design: when a user is active at t, reward depends on how much promo
+        cash (<code>cb</code>, cashback used) it took relative to their contest entry amount
+        (<code>cea</code>):</p>
+
+        <span class="eq">R = a · e<sup>−γ<sub>r</sub> · (cb/cea)</sup> + b, &nbsp; a = (α−1)/(e<sup>−γ<sub>r</sub></sup>−1), &nbsp; b = 1−a</span>
+
+        <p>The a, b algebra pins two endpoints: <b>R(0) = 1</b> (user played, cost you nothing —
+        full reward) and <b>R(1) = α</b> (user played entirely on your money — reward α). Inactive
+        users get 0. So α is literally "how much credit do I give a fully-bought retention day,"
+        and γ<sub>r</sub> sets how fast credit decays as subsidy rises.</p>
+
+        <div class="widget" id="reward-widget">
+            <h4>Widget · the reward curve, live</h4>
+            <div class="wctl">
+                <label for="alphaRange">α</label>
+                <input type="range" id="alphaRange" min="5" max="95" value="30" step="1">
+                <output id="alphaVal">0.30</output>
+            </div>
+            <div class="wctl">
+                <label for="grRange">γ<sub>r</sub></label>
+                <input type="range" id="grRange" min="25" max="500" value="100" step="5">
+                <output id="grVal">1.00</output>
+            </div>
+            <canvas id="rewardCanvas" width="680" height="300"></canvas>
+            <p class="readout">a = <b id="aVal"></b>, b = <b id="bVal"></b> &nbsp;·&nbsp; R(0) = 1, R(1) = α</p>
+            <p style="font-size:0.85rem; color:var(--muted); margin-bottom:0;">The sweep covered a
+            13 × 20 grid of (α, γ<sub>r</sub>) — 260 reward shapes, each defining a different MDP.
+            Findings: lower α → less retention and less spend but <em>better</em>
+            retention-per-rupee; higher γ<sub>r</sub> cut spend without hurting retention much.
+            Set α high and flat (α = 0.5, γ<sub>r</sub> = 0.5) and look at how little a 100%-subsidized
+            day is punished — that's the shape that taught the agent to overspend.</p>
+        </div>
+
+        <p>Design principles that made it into the docs — all standard, all learned the hard way:
+        keep the reward <em>smooth</em> so there's gradient signal; avoid large negative regions
+        (an agent can learn to rush to episode-end to stop accumulating negatives); make sure the
+        state can distinguish situations the reward treats differently. And the meta-lesson,
+        verbatim from the retro: <em>"getting the reward even slightly wrong will lead the agent to
+        learn unexpected behavior, as we have learned the hard way."</em> That's a reward-hacking
+        story you own — same failure family as under-penalized length in RLHF reward models.</p>
+
+        <!-- ==================== PART 4: SIMULATOR ==================== -->
+        <h2 id="simulator">Part 4 — the simulator: an empirical MDP from logs</h2>
+
+        <p>You can't do ε-greedy exploration on paying users. So the MDP was <em>estimated</em> from
+        ~7 months of production promo logs and the agent trained inside it. Everything is
+        empirical — no hand-authored dynamics:</p>
+
+        <div class="flow">
+            <div class="node"><b>Production logs</b> — per user-day: state (days_inactive, churn_bucket), promo shown (action), what happened next</div>
+            <div class="arrow">↓ PySpark, group by (state, action, supply-context)</div>
+            <div class="node"><b>Transition table</b> — P(s′ | s, a, supply) as empirical frequencies; only pairs with &gt; threshold observations kept</div>
+            <div class="arrow">↓ + per-(s,a,s′) reward percentiles</div>
+            <div class="node"><b>Reward table</b> — 21 percentiles (0th…100th) of shaped reward per transition, one set per (α, γ<sub>r</sub>) config</div>
+            <div class="arrow">↓ loaded into</div>
+            <div class="node"><b>Gymnasium env</b> — <code>reset()</code> samples an initial state + a real calendar window; <code>step()</code> samples s′ ∼ P̂, r ∼ percentiles</div>
+        </div>
+
+        <p>The heart of it, from <code>src/environment.py</code> (condensed):</p>
+
+<pre><code>class UserEnv(gym.Env):
+    def step(self, action):
+        trans_probs = self._get_transition_probabilities(self.current_state, action)
+        if trans_probs is not None:
+            next_state = tuple(self._sample_next_state(trans_probs))   # s' ~ P̂(·|s,a,supply)
+            reward = self._sample_reward(self.current_state, action, next_state)
+            self.current_state = next_state + self._get_derived_state_variables(
+                self.current_timestep + 1)                             # re-derive supply features
+        else:                       # no data for this (s,a) — penalize instead of guessing
+            reward = self.unknown_action_reward
+        self.current_timestep += 1
+        done = self.current_timestep &gt;= self.max_episode_length
+        return self.current_state, reward, done, True, {}
+
+    def _sample_reward(self, state, action, next_state):
+        row = self.config_df.query(...)         # match (s, a, supply, s'), total &gt; threshold
+        percentiles = [f"reward_{i}th_perc" for i in range(0, 101, 5)]
+        return np.random.choice(row[percentiles].values[0])   # sample the empirical distribution
+
+    def get_permissible_actions(self, state):
+        # actions with enough historical support in THIS state + supply context
+        acts = self.config_df.query(...)["action"].unique().tolist()
+        return acts if acts else [0]</code></pre>
+
+        <p>Three design choices worth defending out loud:</p>
+        <ul>
+            <li><b>Reward percentiles, not means.</b> Storing 21 percentiles per transition and
+            sampling from them preserves the <em>variance</em> of outcomes. Training against means
+            would hand the agent a smoothed world and teach it risk-blindness.</li>
+            <li><b>Action masking via data support.</b> A state-action pair enters the MDP only with
+            enough historical observations (10K in the sim build). Where the logs are silent, the
+            empirical P̂ and R̂ are garbage — masking stops the agent from exploiting estimation
+            noise. This is offline-RL thinking: stay where the data is.</li>
+            <li><b>Exogenous supply.</b> Episodes replay real calendar windows, so the agent trains
+            against genuine match-density patterns, not synthetic ones.</li>
+        </ul>
+
+        <div class="card">
+            <b>The silent assumption that killed it:</b> grouping logs by (s, a) and calling the
+            frequencies P(s′ | s, a) treats <em>correlation as causation</em>. The historical
+            actions weren't randomized — Pacman assigned them based on user attributes, some of
+            which aren't in the 2-D user state. The estimated "effect" of a 100% discount is
+            polluted by <em>who</em> historically got 100% discounts. Hold this thought for the autopsy.
+        </div>
+
+        <!-- ==================== PART 5: AGENTS ==================== -->
+        <h2 id="agents">Part 5 — the agents</h2>
+
+        <h3>Tabular Q-learning (what actually shipped)</h3>
+        <p>From <code>src/agents.py</code> — a defaultdict Q-table with visit counts, ε-greedy over
+        the <em>masked</em> action set:</p>
+
+<pre><code>class QLearningAgent:
+    def __init__(self, action_space, learning_rate=0.1, discount_factor=0.99,
+                 exploration_rate=1.0, exploration_decay=0.995):
+        self.q_table = defaultdict(
+            lambda: defaultdict(lambda: {"q_value": 0, "visit_count": 0}))
+
+    def get_action(self, state, permissible_actions):
+        if random.uniform(0, 1) &lt; self.exploration_rate:
+            return random.choice(permissible_actions)          # explore
+        return self.get_max_action(state, permissible_actions) # exploit
+
+    def learn(self, state, action, reward, next_state):
+        q_predict = self.q_table[state][action]["q_value"]
+        max_next_q = max(self.q_table[next_state][a]["q_value"]
+                         for a in range(self.action_space))
+        q_target = reward + self.discount_factor * max_next_q   # Bellman target
+        self.q_table[state][action]["q_value"] += self.learning_rate * (q_target - q_predict)
+        self.q_table[state][action]["visit_count"] += 1</code></pre>
+
+        <p><b>Why tabular in production?</b> The effective state space is small — 32 × 6 user
+        states crossed with bounded supply features — and the empirical MDP only defines
+        well-supported cells anyway. A table converges fast at 1M episodes, is trivially
+        serializable (pickle → daily batch scoring), and every decision is inspectable:
+        "why did user X get 50%?" has a lookup-the-cell answer. When the argmax looked weird, you
+        read the Q-values and the visit counts. That debuggability is a feature, not a
+        compromise.</p>
+
+        <h3>Hand-rolled DQN (built, benchmarked in sim; tabular won on ship)</h3>
+        <p>From <code>src/dqn_agent.py</code> — the full standard kit, written from scratch in
+        PyTorch:</p>
+
+<pre><code>class DQNAgent:
+    def _build_model(self):
+        return nn.Sequential(
+            nn.Linear(self.state_dim, 64), nn.ReLU(),
+            nn.Linear(64, 128), nn.ReLU(),
+            nn.Linear(128, 64), nn.ReLU(),
+            nn.Linear(64, self.action_dim))          # Q(s,·) in one forward pass
+
+    def train(self):
+        batch = random.sample(self.memory, self.batch_size)     # replay buffer (10K)
+        states, actions, rewards, next_states, dones = zip(*batch)
+        ...
+        current_q = self.q_net(states).gather(1, actions)
+        next_q    = self.target_net(next_states).max(1)[0].detach()   # frozen target net
+        target_q  = rewards + (self.gamma * next_q * (~dones))
+        loss = self.loss(current_q, target_q.unsqueeze(1))            # MSE TD error
+        ...
+        if self.train_steps % self.target_update_freq == 0:           # sync every 100 steps
+            self.target_net.load_state_dict(self.q_net.state_dict())</code></pre>
+
+        <p>There was also a <code>MaskedDQN</code> variant on Stable-Baselines3 — masking applied at
+        <code>predict()</code> by argmaxing only over permissible actions — and an exploratory Ray
+        RLlib integration. Knowing all three levels (from-scratch, SB3, RLlib) is good interview
+        surface: you can discuss what the libraries actually do under the hood because you've
+        written the loop yourself.</p>
+
+        <h3>The baseline: Pacman</h3>
+        <p>The incumbent policy is a lookup: (churn_bucket, days_inactive) → discount, at a
+        configurable "aggression" level (0.7–0.85 swept). It's exactly the myopic policy the RL
+        agent had to beat — and a strong one, because it was tuned on years of business data.</p>
+
+        <!-- ==================== PART 6: SCALE ==================== -->
+        <h2 id="scale">Part 6 — training at scale</h2>
+
+        <ul>
+            <li><b>1,000,000 episodes per configuration</b>, ε decaying 1.0 → 0.01 across training.</li>
+            <li><b>Sweeps as a Cartesian product:</b> 4 learning rates × selected (α, γ<sub>r</sub>)
+            reward shapes × 4 Pacman aggression levels for the baseline arm — 40+ configs per
+            sweep, so 40M+ simulated episodes per run.</li>
+            <li><b>Distributed by config:</b> a controller script fanned each config out as a
+            separate Databricks job via the Jobs API — embarrassingly parallel, no Ray cluster
+            needed for the tabular agent.</li>
+            <li><b>Everything logged:</b> per-episode reward, retention, spend, policy overlap with
+            Pacman, unknown-action rate, exploration rate → Delta tables (summary + per-timestep raw),
+            with the agent pickle and full config JSON alongside. Model selection = best terminal
+            reward per reward shape, then a 100K-episode re-evaluation of the winners.</li>
+        </ul>
+
+        <p>This is the part of the story that reads "ML infra maturity": hyperparameter sweeps as
+        cattle, full experiment lineage, reproducible selection. Same muscle as a post-training
+        sweep over KL coefficients and LRs.</p>
+
+        <!-- ==================== PART 7: SIM RESULTS ==================== -->
+        <h2 id="simresults">Part 7 — simulation results: the first warning</h2>
+
+        <p>Agent vs Pacman inside the simulator, terminal 10K episodes of 1M:</p>
+
+        <div class="tablewrap">
+        <table class="tbl">
+            <tr><th>Metric (per episode)</th><th>Pacman</th><th>Q-agent</th><th>Verdict</th></tr>
+            <tr><td>Retention</td><td class="num">~0.55–0.62</td><td class="num">~0.65–0.68</td><td class="goodtxt">agent wins</td></tr>
+            <tr><td>Spend (₹)</td><td class="num">~4.3</td><td class="num">~6.0</td><td class="badtxt">+50% — agent overspends</td></tr>
+            <tr><td>Retention per rupee</td><td class="num">0.128–0.146</td><td class="num">0.100–0.115</td><td class="badtxt">agent loses, everywhere</td></tr>
+            <tr><td>Policy overlap w/ Pacman</td><td colspan="2" class="num">~80%</td><td>mostly agrees, differs at the margin</td></tr>
+        </table>
+        </div>
+
+        <p>Read that table honestly and the story is: <b>the agent bought its retention.</b> Higher
+        raw retention, but strictly worse efficiency across every hyperparameter setting. The
+        reward shape under-priced spending (α too generous, γ<sub>r</sub> too flat in the shipped
+        config), and the agent did exactly what it was paid to do — which was not quite what the
+        business wanted. The metric you optimize and the metric you report were different, and the
+        agent found the gap.</p>
+
+        <p>The sweep also produced the fix direction: lowest α + highest γ<sub>r</sub> gave the best
+        retention-per-rupee. But that finding came from the same non-causal simulator, so its
+        transfer was equally suspect — which is the deeper problem.</p>
+
+        <!-- ==================== PART 8: LIVE A/B ==================== -->
+        <h2 id="liveab">Part 8 — the live A/B (Jan 31 – Feb 9, 2024)</h2>
+
+        <div class="tablewrap">
+        <table class="tbl">
+            <tr><th>Design choice</th><th>Value</th><th>Why</th></tr>
+            <tr><td>Duration</td><td class="num">10 days, 1 episode</td><td>Matches the training horizon exactly</td></tr>
+            <tr><td>Cohorts</td><td class="num">14 × ~560K paid users</td><td>~7.8M-user universe; ~2.2M treated by the RL policy</td></tr>
+            <tr><td>Arms</td><td>4 RL vs 10 Pacman</td><td>Pacman at 5 aggression levels — the control is a <em>family</em> of baselines, not one</td></tr>
+            <tr><td>Window</td><td>Tier-3 supply only</td><td>Deliberately picked a no-big-match window: v0 taught that supply variance swamps the treatment effect</td></tr>
+            <tr><td>Hypothesis</td><td class="num">+1% DAU at ±2% spend</td><td>Pre-registered, falsifiable</td></tr>
+            <tr><td>Serving</td><td>Daily batch</td><td>Churn-score freshness gate → build 8-dim state → masked argmax from pickled Q-table → business-rule filter (no deep discounts for recently-active users) → promo delivery + audit log</td></tr>
+        </table>
+        </div>
+
+        <p><b>Result: flat.</b> No significant DAU lift at comparable spend. The simulator's promised
+        gains did not appear on real users.</p>
+
+        <p>Note what's <em>good</em> here even though the result was null: a pre-registered
+        hypothesis, a control family instead of a single control, a deliberately de-confounded
+        window, guardrail business rules on top of the learned policy, and full audit logging of
+        every action taken. This is how you run a null experiment that still earns you credibility.</p>
+
+        <!-- ==================== PART 9: AUTOPSY ==================== -->
+        <h2 id="autopsy">Part 9 — autopsy: why sim gains didn't transfer</h2>
+
+        <p><b>1. The simulator was not causal.</b> The transition estimates P̂(s′ | s, a) came from
+        logged data where Pacman chose the actions. Users who historically received aggressive
+        discounts were systematically different (in ways the 2-D user state can't see) from users
+        who didn't. So the model's implied effect of switching someone's action is biased —
+        classic confounding. In the sim, the agent exploited response patterns that were artifacts
+        of the old targeting rule, not causal effects available for the taking. Online, those
+        gains evaporated. The retro line: <em>"the response estimates were not causal and were
+        confounded by factors not incorporated in the MDP state."</em></p>
+
+        <p><b>2. The state was too coarse for the Markov property to hold.</b> Two dimensions of
+        user state (recency × churn quintile) means everything else that drives promo response —
+        tenure, spend level, favorite format, price sensitivity — lives <em>outside</em> the state
+        and acts as an unmodeled confounder. The Markov assumption wasn't approximately true; it
+        was doing load-bearing work it couldn't support.</p>
+
+        <p><b>3. The reward was mis-specified.</b> Independent of causality, the shipped shape
+        under-penalized spend and the agent overspent by 50% in sim. Two of the three failure
+        modes were visible <em>before</em> going live — the sim's own efficiency table said so.</p>
+
+        <p>The one-line verdict, which is also the best thing you can say in an interview:
+        <b>"we learned that constructing a reliable simulator is a harder problem than the RL
+        itself."</b> The team's subsequent direction — and the textbook one — is offline RL that
+        never trusts a simulator: learn directly from logged transitions while <em>constraining the
+        learned policy to stay near the data-generating policy</em>, and evaluate with off-policy
+        estimators (importance sampling) before anything goes live.</p>
+
+        <div class="card">
+            <b>The RLHF bridge (use this).</b> "Constrain the learned policy near the behavior
+            policy that generated your data" is the same principle as the KL penalty to the
+            reference model in RLHF/GRPO — same failure mode being prevented, too: a policy
+            exploiting regions where its value estimate (or reward model) is extrapolating without
+            data support. Reward hacking, distribution shift, staying on-support — this project and
+            post-training are the same ideas wearing different clothes.
+        </div>
+
+        <p><b>How I'd do it today</b> (the forward-looking answer): (1) estimate promo <em>uplift</em>
+        causally first — randomized logging or doubly-robust estimators — and build rewards on
+        uplift, not raw response; (2) skip the simulator, go straight to offline RL on logged
+        transitions with pessimism/behavior constraints; (3) gate deployment on off-policy
+        evaluation, not simulator returns; (4) richer state via user embeddings (this is exactly
+        the itch LUMOS later scratched — one foundation model's representations replacing
+        hand-picked state features).</p>
+
+        <!-- ==================== PART 10: GRILL ==================== -->
+        <h2 id="grill">Part 10 — grill Q&amp;A: the questions an RL person will actually ask</h2>
+
+        <details>
+            <summary>Why tabular Q-learning in production and not your DQN?</summary>
+            <p>The masked, data-supported state space is small — 32 × 6 user states crossed with
+            bounded supply context, minus all cells without 10K observations. A table converges
+            fast, has zero training instability, serializes to a pickle for daily batch scoring,
+            and every decision is a readable cell with a visit count next to it. The DQN existed
+            and matched it in sim; it added the deadly-triad risk surface and removed
+            inspectability, for no measurable gain at this state-space size. Staff answer:
+            model capacity should match problem capacity, and the bottleneck here was never the
+            function approximator — it was the fidelity of the MDP.</p>
+        </details>
+
+        <details>
+            <summary>Why γ = 1? Isn't that dangerous?</summary>
+            <p>Divergence risk from γ = 1 is an infinite-horizon problem — returns are bounded by
+            the fixed 10-step episode. And the business objective is literally "sum of DAU over
+            the window," with no preference for early days, so any γ &lt; 1 would distort the
+            objective, telling the agent day-2 retention matters more than day-9. Finite horizon
+            plus timestep-in-state is the principled way to do undiscounted control.</p>
+        </details>
+
+        <details>
+            <summary>Q-learning is off-policy. Where did that actually matter here?</summary>
+            <p>Twice. In sim training, the behavior policy is ε-greedy (mostly random early on)
+            while the target is the greedy max — that's what lets 1M noisy episodes converge
+            toward Q*. And it matters conceptually for the pivot: off-policy methods are the only
+            family that can learn from <em>logged</em> data generated by Pacman, which is what the
+            offline-RL direction requires. On-policy methods (SARSA, vanilla policy gradient)
+            can't touch that data.</p>
+        </details>
+
+        <details>
+            <summary>How did you handle state-action pairs with no data?</summary>
+            <p>Three mechanisms. In the MDP build: pairs below the observation threshold simply
+            don't exist in the transition table. In the env: stepping into an unknown pair returns
+            a penalty reward (a variant env instead freezes the timestep). At inference:
+            <code>get_permissible_actions()</code> masks the argmax to supported actions only, with
+            no-promo as the fallback. It's a crude form of the pessimism principle — never let the
+            policy express confidence where the data is silent. The principled version of this
+            instinct is exactly what behavior-constrained offline RL formalizes.</p>
+        </details>
+
+        <details>
+            <summary>Why did simulation results not transfer online?</summary>
+            <p>Because the simulator's dynamics were estimated from observational data. P̂(s′|s,a)
+            conflates "what a discount causes" with "who used to get discounts" — the old
+            targeting policy is a confounder living outside the 2-D user state. The agent
+            optimized against biased counterfactuals; online, the bias didn't pay out. Secondary:
+            the reward under-penalized spend, which the sim's own retention-per-rupee table
+            flagged before launch. Lesson stated plainly: sim-to-real for <em>user behavior</em> is a
+            causal-inference problem, and building the simulator is harder than the RL.</p>
+        </details>
+
+        <details>
+            <summary>Why not just a contextual bandit / uplift model?</summary>
+            <p>The honest answer: for the 10-day horizon we could support, a well-built uplift
+            model might have matched us — and it's the right first rung. The case for RL is the
+            sequential structure: discounts change tomorrow's state, budget couples decisions
+            across days, and supply features ("save the big discount for the IPL match") only pay
+            off with lookahead. The principled framing is that bandits are the special case
+            (horizon 1) and we wanted the general machinery in place for longer horizons — but I'd
+            concede the crawl-walk-run critique and start with uplift today.</p>
+        </details>
+
+        <details>
+            <summary>How was the budget constraint actually enforced?</summary>
+            <p>Not with constrained-MDP machinery in v1 — honestly. Three practical layers: the
+            reward shape prices spend into every decision (soft constraint); the action set caps
+            per-user promo value; and experiment-level budget was set by cohort sizing. Lagrangian
+            CMDP and an LP allocation layer over Q-values were designed but not shipped in my
+            phase. Knowing the gap and the fix is the defensible position.</p>
+        </details>
+
+        <details>
+            <summary>Maximization bias — did your Q-values overestimate?</summary>
+            <p>Structurally yes — the max over sampled empirical rewards guarantees some upward
+            bias, and we didn't ship Double Q-learning. Two mitigants: action masking kept the max
+            over a small supported set (bias grows with the number of noisy options), and 1M
+            episodes over a small table shrinks per-cell variance a lot. The visible symptom of
+            residual optimism was the agent's spend aggression. Right fix if it had mattered more:
+            Double Q-learning — two tables, select with one, evaluate with the other.</p>
+        </details>
+
+        <details>
+            <summary>How did you evaluate the policy before going live?</summary>
+            <p>Simulator returns plus policy-overlap-with-Pacman as a sanity metric — and that was
+            the gap. There was no off-policy evaluation on held-out logged data before v1; the
+            simulator was the (flawed) evaluator. Today I'd gate on importance-sampling OPE:
+            weight logged returns by π(a|s)/β(a|s), check effective sample size, and refuse to
+            ship if the estimate or its variance is bad. That gate would have caught this policy
+            <em>before</em> burning an experiment window on it.</p>
+        </details>
+
+        <details>
+            <summary>What does this have to do with RLHF?</summary>
+            <p>Nearly everything transfers. Reward mis-specification → reward hacking (my agent
+            bought retention the way a chat model buys thumbs-ups with sycophancy). Staying near
+            the behavior policy in offline RL → the KL-to-reference penalty in PPO/GRPO. OOD
+            action masking → pessimism about states the reward model hasn't seen. Even the
+            operational shape rhymes: sweep reward/constraint hyperparameters, evaluate offline,
+            then pay for a small online test. I did the whole loop on users before I did it on
+            language models.</p>
+        </details>
+
+        <!-- ==================== QUIZ ==================== -->
+        <h2 id="quiz">Quiz — 8 questions, no mercy</h2>
+        <div id="quizBox"></div>
+        <p class="scorebox">Score: <span id="quizScore">0</span> / <span id="quizTotal">8</span></p>
+        <button id="quizReset" class="ghost">Reset quiz</button>
+
+        <footer>
+            Personal explainer · unlisted · <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+
+    <script>
+    (function () {
+        "use strict";
+
+        function css(name) {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        }
+
+        /* ---------------- gamma widget ---------------- */
+        (function () {
+            var range = document.getElementById("gammaRange");
+            var out = document.getElementById("gammaVal");
+            var barsEl = document.getElementById("gammaBars");
+            var labelsEl = document.getElementById("gammaBarLabels");
+            var sumEl = document.getElementById("gammaSum");
+            var lastEl = document.getElementById("gammaLast");
+            if (!range || !barsEl) return;
+
+            var N = 10;
+            var bars = [];
+            for (var i = 0; i < N; i++) {
+                var b = document.createElement("div");
+                b.className = "bar";
+                barsEl.appendChild(b);
+                bars.push(b);
+                var lab = document.createElement("span");
+                lab.textContent = "d" + (i + 1);
+                labelsEl.appendChild(lab);
+            }
+            function render() {
+                var g = parseInt(range.value, 10) / 100;
+                out.textContent = g.toFixed(2);
+                var sum = 0;
+                for (var i = 0; i < N; i++) {
+                    var w = Math.pow(g, i);
+                    sum += w;
+                    bars[i].style.height = Math.max(2, w * 100) + "px";
+                }
+                sumEl.textContent = sum.toFixed(2);
+                lastEl.textContent = Math.pow(g, N - 1).toFixed(2);
+            }
+            range.addEventListener("input", render);
+            render();
+        })();
+
+        /* ---------------- Q-learning stepper ---------------- */
+        (function () {
+            var btnStep = document.getElementById("btnStep");
+            var btnAuto = document.getElementById("btnAuto");
+            var btnReset = document.getElementById("btnReset");
+            var lrRange = document.getElementById("lrRange");
+            var lrVal = document.getElementById("lrVal");
+            var logEl = document.getElementById("stepLog");
+            if (!btnStep || !logEl) return;
+
+            var S = ["Active", "Lapsing", "Cold"];
+            var A = ["No promo", "50% off"];
+            // trans[s][a] = list of [nextState, prob, reward]
+            var trans = [
+                [ // Active
+                    [[0, 0.70, 1.00], [1, 0.30, 0.00]],          // no promo: organic
+                    [[0, 0.85, 0.62], [1, 0.15, 0.00]]           // promo: sticks more, but you paid
+                ],
+                [ // Lapsing
+                    [[0, 0.20, 1.00], [2, 0.80, 0.00]],
+                    [[0, 0.70, 0.55], [1, 0.30, 0.00]]
+                ],
+                [ // Cold
+                    [[0, 0.05, 1.00], [2, 0.95, 0.00]],
+                    [[0, 0.25, 0.55], [2, 0.75, 0.00]]
+                ]
+            ];
+
+            var Q, eps, state, step, ep, auto = null;
+
+            function reset() {
+                Q = [[0, 0], [0, 0], [0, 0]];
+                eps = 1.0; state = 1; step = 0; ep = 1;
+                logEl.textContent = "Press Step to run one Q-learning update.";
+                render(null);
+            }
+
+            function fmt(x) { return x.toFixed(2); }
+
+            function render(hotCell) {
+                for (var s = 0; s < 3; s++) {
+                    for (var a = 0; a < 2; a++) {
+                        var td = document.getElementById("q" + s + a);
+                        if (!td) continue;
+                        td.textContent = fmt(Q[s][a]);
+                        td.classList.remove("hot", "cur");
+                        if (hotCell && hotCell[0] === s && hotCell[1] === a) td.classList.add("hot");
+                    }
+                    var pol = document.getElementById("pol" + s);
+                    if (pol) {
+                        if (Q[s][0] === 0 && Q[s][1] === 0) pol.textContent = "—";
+                        else pol.textContent = Q[s][0] >= Q[s][1] ? A[0] : A[1];
+                    }
+                }
+                var curTd = document.getElementById("q" + state + "0");
+                var el;
+                el = document.getElementById("epCount"); if (el) el.textContent = ep;
+                el = document.getElementById("stepCount"); if (el) el.textContent = step;
+                el = document.getElementById("epsVal"); if (el) el.textContent = fmt(eps);
+                el = document.getElementById("curState"); if (el) el.textContent = S[state];
+            }
+
+            function sampleNext(s, a) {
+                var r = Math.random(), acc = 0, list = trans[s][a];
+                for (var i = 0; i < list.length; i++) {
+                    acc += list[i][1];
+                    if (r <= acc) return list[i];
+                }
+                return list[list.length - 1];
+            }
+
+            function doStep() {
+                var alpha = parseInt(lrRange ? lrRange.value : 10, 10) / 100;
+                var explore = Math.random() < eps;
+                var a;
+                if (explore) a = Math.random() < 0.5 ? 0 : 1;
+                else a = Q[state][0] >= Q[state][1] ? 0 : 1;
+
+                var res = sampleNext(state, a);
+                var s2 = res[0], r = res[2];
+                var maxNext = Math.max(Q[s2][0], Q[s2][1]);
+                var target = r + 1.0 * maxNext; // gamma = 1
+                var td = target - Q[state][a];
+                var oldQ = Q[state][a];
+                Q[state][a] = oldQ + alpha * td;
+
+                var line = "s=" + S[state] + ", ε=" + fmt(eps) + " → " +
+                    (explore ? "explore" : "exploit") + " a=" + A[a] +
+                    " | s′=" + S[s2] + ", r=" + fmt(r) +
+                    "\n  target = " + fmt(r) + " + 1·max Q(" + S[s2] + ") = " + fmt(target) +
+                    " ; TD err = " + fmt(td) +
+                    " ; Q(" + S[state] + "," + A[a] + "): " + fmt(oldQ) + " → " + fmt(Q[state][a]);
+                logEl.textContent = line + "\n" + logEl.textContent.split("\n").slice(0, 12).join("\n");
+
+                var hot = [state, a];
+                eps = Math.max(0.05, eps * 0.98);
+                state = s2;
+                step += 1;
+                if (step >= 10) {
+                    step = 0; ep += 1;
+                    state = [0, 1, 1, 2][Math.floor(Math.random() * 4)];
+                    logEl.textContent = "— episode " + ep + " starts (s=" + S[state] + ") —\n" + logEl.textContent;
+                }
+                render(hot);
+            }
+
+            btnStep.addEventListener("click", doStep);
+            if (btnAuto) btnAuto.addEventListener("click", function () {
+                if (auto) {
+                    clearInterval(auto); auto = null;
+                    btnAuto.textContent = "Auto-play";
+                } else {
+                    auto = setInterval(doStep, 600);
+                    btnAuto.textContent = "Pause";
+                }
+            });
+            if (btnReset) btnReset.addEventListener("click", function () {
+                if (auto) { clearInterval(auto); auto = null; if (btnAuto) btnAuto.textContent = "Auto-play"; }
+                reset();
+            });
+            if (lrRange) lrRange.addEventListener("input", function () {
+                if (lrVal) lrVal.textContent = (parseInt(lrRange.value, 10) / 100).toFixed(2);
+            });
+            reset();
+        })();
+
+        /* ---------------- reward curve widget ---------------- */
+        (function () {
+            var canvas = document.getElementById("rewardCanvas");
+            var aRange = document.getElementById("alphaRange");
+            var gRange = document.getElementById("grRange");
+            var aOut = document.getElementById("alphaVal");
+            var gOut = document.getElementById("grVal");
+            var aValEl = document.getElementById("aVal");
+            var bValEl = document.getElementById("bVal");
+            if (!canvas || !canvas.getContext || !aRange || !gRange) return;
+            var ctx = canvas.getContext("2d");
+
+            function draw() {
+                var alpha = parseInt(aRange.value, 10) / 100;
+                var g = parseInt(gRange.value, 10) / 100;
+                if (aOut) aOut.textContent = alpha.toFixed(2);
+                if (gOut) gOut.textContent = g.toFixed(2);
+
+                var a = (alpha - 1) / (Math.exp(-g) - 1);
+                var b = 1 - a;
+                if (aValEl) aValEl.textContent = a.toFixed(3);
+                if (bValEl) bValEl.textContent = b.toFixed(3);
+
+                var W = canvas.width, H = canvas.height;
+                var padL = 46, padR = 16, padT = 16, padB = 34;
+                var fg = css("--fg"), muted = css("--muted"), line = css("--line"),
+                    accent = css("--accent"), bg = css("--bg");
+
+                ctx.clearRect(0, 0, W, H);
+                ctx.fillStyle = bg;
+                ctx.fillRect(0, 0, W, H);
+
+                function X(x) { return padL + x * (W - padL - padR); }
+                function Y(y) { return H - padB - y * (H - padT - padB); }
+
+                // grid + axes
+                ctx.strokeStyle = line; ctx.lineWidth = 1;
+                ctx.beginPath();
+                for (var gy = 0; gy <= 1.001; gy += 0.25) {
+                    ctx.moveTo(X(0), Y(gy)); ctx.lineTo(X(1), Y(gy));
+                }
+                ctx.stroke();
+                ctx.strokeStyle = muted;
+                ctx.beginPath();
+                ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(1), Y(0));
+                ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(0), Y(1));
+                ctx.stroke();
+
+                ctx.fillStyle = muted;
+                ctx.font = "12px -apple-system, sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText("cb / cea  (subsidy ratio)", (padL + W - padR) / 2, H - 8);
+                ctx.textAlign = "right";
+                for (var ty = 0; ty <= 1.001; ty += 0.25) {
+                    ctx.fillText(ty.toFixed(2), padL - 6, Y(ty) + 4);
+                }
+                ctx.textAlign = "center";
+                for (var tx = 0; tx <= 1.001; tx += 0.25) {
+                    ctx.fillText(tx.toFixed(2), X(tx), H - padB + 16);
+                }
+
+                // curve
+                ctx.strokeStyle = accent; ctx.lineWidth = 3;
+                ctx.beginPath();
+                for (var i = 0; i <= 200; i++) {
+                    var x = i / 200;
+                    var y = a * Math.exp(-g * x) + b;
+                    if (i === 0) ctx.moveTo(X(x), Y(y)); else ctx.lineTo(X(x), Y(y));
+                }
+                ctx.stroke();
+
+                // endpoints
+                ctx.fillStyle = fg;
+                ctx.beginPath(); ctx.arc(X(0), Y(1), 5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(X(1), Y(alpha), 5, 0, Math.PI * 2); ctx.fill();
+                ctx.textAlign = "left";
+                ctx.fillText("R(0) = 1  (free retention)", X(0) + 10, Y(1) + 14);
+                ctx.textAlign = "right";
+                ctx.fillText("R(1) = α = " + alpha.toFixed(2), X(1) - 8, Y(alpha) - 10);
+            }
+
+            aRange.addEventListener("input", draw);
+            gRange.addEventListener("input", draw);
+            if (window.matchMedia) {
+                try {
+                    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+                } catch (e) { /* older Safari */ }
+            }
+            draw();
+        })();
+
+        /* ---------------- quiz ---------------- */
+        (function () {
+            var box = document.getElementById("quizBox");
+            var scoreEl = document.getElementById("quizScore");
+            var totalEl = document.getElementById("quizTotal");
+            var resetBtn = document.getElementById("quizReset");
+            if (!box) return;
+
+            var QS = [
+                {
+                    q: "The Q-learning TD target is r + γ·max‑a′ Q(s′,a′). What makes it \"off-policy\"?",
+                    opts: [
+                        "The target bootstraps from the greedy action, regardless of what the ε-greedy behavior policy does next",
+                        "It uses a replay buffer, so samples come from old policies",
+                        "It requires a simulator rather than real interaction"
+                    ],
+                    a: 0,
+                    ex: "Behavior = ε-greedy, target = greedy max. Learning about one policy while following another is the definition of off-policy. (SARSA plugs in the actual next action → on-policy.)"
+                },
+                {
+                    q: "Why did the simulator-trained policy fail to beat Pacman online?",
+                    opts: [
+                        "The DQN overfit the replay buffer",
+                        "Transitions were estimated from logged data where actions were assigned by the old targeting policy — correlational, not causal, so simulated gains were confounding artifacts",
+                        "The learning rate was too high, so the Q-table never converged"
+                    ],
+                    a: 1,
+                    ex: "Who got discounts historically was systematically different from who didn't, in ways outside the 2-D user state. P̂(s′|s,a) baked that bias in; the agent exploited it; online it wasn't real."
+                },
+                {
+                    q: "What is the target network in DQN for?",
+                    opts: [
+                        "It doubles the model capacity for hard states",
+                        "It enables prioritized sampling of transitions",
+                        "It freezes the bootstrap target for N steps so you're not regressing toward a target that moves with every gradient update"
+                    ],
+                    a: 2,
+                    ex: "Without it, Q̂ chases its own tail — the target r + γ·max Q(s′) shifts each step. Freezing θ⁻ (synced every 100 steps in our impl) makes the regression problem quasi-stationary."
+                },
+                {
+                    q: "Why does experience replay help?",
+                    opts: [
+                        "Consecutive transitions are strongly correlated; random minibatches from the buffer restore an i.i.d.-ish training distribution (and reuse data)",
+                        "It increases exploration by replaying rare states more often",
+                        "It removes the need for a target network"
+                    ],
+                    a: 0,
+                    ex: "SGD assumes roughly independent samples. A trajectory violates that badly — replay breaks the temporal correlation and lets each transition train the net many times."
+                },
+                {
+                    q: "In the reward R = a·e^(−γr·cb/cea) + b, what does α control?",
+                    opts: [
+                        "The learning rate of the Q update",
+                        "The reward when the user returns fully subsidized — R(1) = α, i.e., how much credit a 'bought' retention day earns",
+                        "The probability of exploring a random action"
+                    ],
+                    a: 1,
+                    ex: "The a, b algebra pins R(0) = 1 (free retention, full credit) and R(1) = α. Small α says bought retention is nearly worthless; large α invites overspending — which is what happened."
+                },
+                {
+                    q: "Why mask actions to those with ≥10K historical observations?",
+                    opts: [
+                        "To make the action space smaller and training faster",
+                        "To satisfy a business rule about who can receive discounts",
+                        "Because empirical P̂ and R̂ estimates for rarely-tried state-action pairs are noise — masking stops the agent from exploiting estimation error where data is silent"
+                    ],
+                    a: 2,
+                    ex: "It's the pessimism principle in crude form: no confidence off the data support. The formal version of this instinct is behavior-constrained offline RL."
+                },
+                {
+                    q: "The project set γ = 1. Why was that safe?",
+                    opts: [
+                        "Fixed 10-step episodes bound the return, and the business objective weights every day in the window equally — γ<1 would distort it",
+                        "γ = 1 always converges faster than γ < 1",
+                        "It wasn't — γ = 1 was the main reason the live test was flat"
+                    ],
+                    a: 0,
+                    ex: "Divergence from γ = 1 is an infinite-horizon disease. With a finite horizon (and timestep in the state), undiscounted control is principled — 'sum of DAU over the window' has no time preference."
+                },
+                {
+                    q: "In simulation the agent beat Pacman on retention but lost on retention-per-rupee. Root cause?",
+                    opts: [
+                        "The Q-table was too small to represent the policy",
+                        "Reward mis-specification: the shape under-penalized spend, so the agent 'bought' retention — optimizing the reward exactly, and the business objective only approximately",
+                        "ε never decayed, so the agent kept exploring expensive actions"
+                    ],
+                    a: 1,
+                    ex: "+50% spend for a retention bump, worse efficiency at every hyperparameter setting. The agent did what it was paid to do. Same failure family as reward hacking in RLHF."
+                }
+            ];
+
+            if (totalEl) totalEl.textContent = QS.length;
+            var score = 0, answered = [];
+
+            function build() {
+                box.innerHTML = "";
+                score = 0; answered = QS.map(function () { return false; });
+                if (scoreEl) scoreEl.textContent = "0";
+                QS.forEach(function (item, qi) {
+                    var qd = document.createElement("div");
+                    qd.className = "q";
+                    var qp = document.createElement("p");
+                    qp.className = "qq";
+                    qp.textContent = (qi + 1) + ". " + item.q;
+                    qd.appendChild(qp);
+                    var opts = document.createElement("div");
+                    opts.className = "opts";
+                    var expl = document.createElement("p");
+                    expl.className = "expl";
+                    expl.textContent = item.ex;
+                    item.opts.forEach(function (opt, oi) {
+                        var b = document.createElement("button");
+                        b.type = "button";
+                        b.textContent = opt;
+                        b.addEventListener("click", function () {
+                            if (answered[qi]) return;
+                            answered[qi] = true;
+                            if (oi === item.a) {
+                                b.classList.add("correct");
+                                score += 1;
+                                if (scoreEl) scoreEl.textContent = String(score);
+                            } else {
+                                b.classList.add("wrong");
+                                var kids = opts.querySelectorAll("button");
+                                if (kids[item.a]) kids[item.a].classList.add("correct");
+                            }
+                            expl.classList.add("show");
+                        });
+                        opts.appendChild(b);
+                    });
+                    qd.appendChild(opts);
+                    qd.appendChild(expl);
+                    box.appendChild(qd);
+                });
+            }
+
+            if (resetBtn) resetBtn.addEventListener("click", build);
+            build();
+        })();
+    })();
+    </script>
+</body>
+</html>

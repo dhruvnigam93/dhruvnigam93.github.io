@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "RL for Promotions — the Full Deep Dive"
+  slug: rl-promotions-deep-dive
+  date: 2026-09-02
+  description: "The Dream11 promotions RL project rebuilt from fundamentals — MDP design, data-driven simulator, tabular Q-learning & hand-rolled DQN with real code, the 2.2M-user live A/B, and the causal autopsy — plus a γ slider, live Q-learning stepper, reward-shape explorer, 10 grill answers, and an 8-question quiz."
+
 - title: "DFS: One Skeleton, Three Shapes"
   slug: dfs-shapes
   date: 2026-09-01
