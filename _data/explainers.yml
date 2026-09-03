@@ -116,3 +116,8 @@
   slug: how-this-works
   date: 2026-08-18
   description: "What this page is, and how new explainers land here."
+
+- title: "Counting DP: Combinations vs Permutations"
+  slug: counting-dp-combinations-vs-permutations
+  date: 2026-09-03
+  description: "How the order and reuse knobs turn one take/skip recursion into #518, #377, and #494 — with live enumeration and a quiz."

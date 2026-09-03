@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>Counting DP: Combinations vs Permutations</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --card2: #eef1f6;
+            --radius: 14px;
+            --kw: #8250df;
+            --fn: #0550ae;
+            --cmt: #6b7280;
+            --hl-bg: rgba(37,99,235,.14);
+            --hl-br: rgba(37,99,235,.45);
+            --hlg-bg: rgba(22,163,74,.14);
+            --hlg-br: rgba(22,163,74,.5);
+            --good: #16a34a;
+            --bad: #dc2626;
+            --warn: #b45309;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                --card2: #1d212b;
+                --kw: #c792ea;
+                --fn: #82aaff;
+                --cmt: #6b7280;
+                --hl-bg: rgba(110,168,254,.22);
+                --hl-br: rgba(110,168,254,.5);
+                --hlg-bg: rgba(74,222,128,.18);
+                --hlg-br: rgba(74,222,128,.5);
+                --good: #4ade80;
+                --bad: #f87171;
+                --warn: #f2b45a;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            margin: 0; background: var(--bg); color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; font-size: 18px;
+        }
+        .wrap { max-width: 720px; margin: 0 auto; padding: max(20px, env(safe-area-inset-top)) 20px 80px; }
+        .back { display: inline-block; margin: 8px 0 20px; color: var(--muted); text-decoration: none; font-size: 0.95rem; }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.75rem; line-height: 1.22; margin: 0 0 6px; letter-spacing:-.01em; }
+        h2 { font-size: 1.3rem; margin: 1.8em 0 0.5em; letter-spacing:-.01em; }
+        h2 .n { color: var(--accent); }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        code {
+            background: var(--card2); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.82em;
+        }
+        pre {
+            background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+            padding: 14px 16px; overflow-x: auto; font-size: 0.8em; line-height: 1.5;
+        }
+        pre code { background: none; border: none; padding: 0; }
+        .kw { color: var(--kw); } .fn { color: var(--fn); } .cmt { color: var(--cmt); }
+        .hl { background: var(--hl-bg); box-shadow: 0 0 0 1px var(--hl-br); border-radius: 4px; padding: 0 3px; font-weight: 700; }
+        .hl.g { background: var(--hlg-bg); box-shadow: 0 0 0 1px var(--hlg-br); }
+        .card {
+            background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+            padding: 14px 16px; margin: 1em 0;
+        }
+        .card.accent { border-left: 3px solid var(--accent); }
+        .card.warn { border-left: 3px solid var(--warn); }
+        .card.good { border-left: 3px solid var(--good); }
+        ul { margin: .6em 0; padding-left: 22px; } li { margin: .45em 0; }
+
+        /* segmented knobs */
+        .knob { margin: 0 0 14px; }
+        .knob-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 0 0 7px; }
+        .seg { display: flex; gap: 6px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 5px; }
+        .seg button {
+            flex: 1; appearance: none; border: 0; background: transparent; color: var(--muted);
+            font: inherit; font-size: .9rem; font-weight: 700; padding: 9px 6px; border-radius: 8px;
+            cursor: pointer; min-height: 48px; transition: .15s; line-height: 1.15;
+        }
+        .seg button small { display: block; font-weight: 400; font-size: .7rem; opacity: .75; margin-top: 2px; }
+        .seg button.on { background: var(--accent); color: #fff; }
+        .inputs { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .inputs label { font-size: .72rem; text-transform: uppercase; letter-spacing:.06em; color: var(--muted); display: block; margin-bottom: 5px; }
+        .inputs input {
+            background: var(--bg); border: 1px solid var(--line); color: var(--fg);
+            border-radius: 10px; padding: 11px 12px; font: inherit; font-size: .95rem; width: 130px; min-height:48px;
+        }
+        .inputs input:focus { outline: 0; border-color: var(--accent); }
+
+        .rhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 2px 0 12px; }
+        .badge { background: var(--card2); border: 1px solid var(--line); border-radius: 999px; padding: 6px 13px; font-size: .85rem; font-weight: 700; }
+        .badge .lc { color: var(--accent); }
+        .count { margin-left: auto; font-size: .85rem; color: var(--muted); }
+        .count b { color: var(--good); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+        .ways { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 6px; }
+        .way { background: var(--card2); border: 1px solid var(--line); border-radius: 7px; padding: 5px 9px; font-family: ui-monospace, monospace; font-size: .8rem; }
+        .empty { color: var(--muted); font-size: .88rem; }
+
+        .tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 12px 0; }
+        table { width: 100%; border-collapse: collapse; font-size: .86rem; min-width: 460px; }
+        th, td { border: 1px solid var(--line); padding: 10px 11px; text-align: left; vertical-align: top; }
+        th { background: var(--card2); font-weight: 700; }
+        .grid td:first-child { background: var(--card2); font-weight: 700; white-space: nowrap; }
+        td .lc, .grid .lc { color: var(--accent); font-weight: 700; }
+        .tag { display:inline-block; font-size:.7rem; color:var(--muted); border:1px solid var(--line); border-radius:5px; padding:1px 6px; margin-right:4px; }
+
+        /* quiz */
+        .q { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin: 12px 0; background: var(--card); }
+        .q .qt { font-weight: 700; margin: 0 0 10px; }
+        .qopt {
+            display: block; width: 100%; text-align: left; background: var(--bg); color: var(--fg);
+            border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 8px 0;
+            font: inherit; font-size: .92rem; cursor: pointer; min-height: 48px; font-weight:500;
+            transition: .12s;
+        }
+        .qopt:active { transform: scale(.99); }
+        .qopt.correct { border-color: var(--good); background: var(--hlg-bg); font-weight: 700; }
+        .qopt.wrong { border-color: var(--bad); background: rgba(220,38,38,.10); }
+        .qopt:disabled { cursor: default; }
+        .qfb { font-size: .86rem; margin: 8px 0 0; color: var(--muted); display: none; }
+        .qfb.show { display: block; }
+        .qfb b.ok { color: var(--good); } .qfb b.no { color: var(--bad); }
+        .scorebar {
+            position: sticky; top: 0; z-index: 5; background: var(--bg);
+            display: flex; align-items: center; gap: 12px; padding: 10px 0; margin-bottom: 6px;
+            border-bottom: 1px solid var(--line);
+        }
+        .scorebar .s { font-weight: 700; font-variant-numeric: tabular-nums; }
+        .scorebar button { font: inherit; font-weight: 600; background: transparent; color: var(--accent); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; min-height: 40px; cursor: pointer; margin-left: auto; }
+        footer { margin-top: 3em; padding-top: 1.2em; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+<main class="wrap">
+    <a class="back" href="/explainers/">&larr; all explainers</a>
+
+    <h1>Counting DP: Combinations vs Permutations</h1>
+    <p class="meta">Added 2026-09-03 · one recursion, two knobs</p>
+
+    <div class="card warn">
+        <b>The confusion this kills:</b> "Is this #518 or #377? Do I loop coins or amount? Why is my count too big?" These aren't different algorithms. They're <b>the same take/skip recursion</b> — you only choose two things: <b>does order count?</b> and <b>can a coin repeat?</b>
+    </div>
+
+    <h2><span class="n">1.</span> The two knobs</h2>
+    <p>Every "count the ways to reach a total" problem is fixed by two yes/no questions:</p>
+    <ul>
+        <li><b>Order</b> — is <code>1 + 2</code> the same as <code>2 + 1</code>?<br>
+            Same → <b>combinations</b>. &nbsp; Different → <b>permutations</b>.</li>
+        <li><b>Reuse</b> — can you pick the same coin again?<br>
+            Yes → <b>unbounded</b> knapsack. &nbsp; No → <b>0/1</b> knapsack.</li>
+    </ul>
+    <p>Two bits → four problems. Flip both below and watch the template <em>and</em> the actual enumerated ways change.</p>
+
+    <h2><span class="n">2.</span> Flip the knobs</h2>
+    <div class="card">
+        <div class="knob">
+            <p class="knob-label">Order</p>
+            <div class="seg" id="segOrder">
+                <button data-v="comb" class="on">Combinations<small>1+2 = 2+1</small></button>
+                <button data-v="perm">Permutations<small>1+2 &ne; 2+1</small></button>
+            </div>
+        </div>
+        <div class="knob">
+            <p class="knob-label">Reuse</p>
+            <div class="seg" id="segReuse">
+                <button data-v="reuse" class="on">Reuse coins<small>unbounded</small></button>
+                <button data-v="once">Use once<small>0/1</small></button>
+            </div>
+        </div>
+        <div class="inputs">
+            <div><label>coins</label><input id="coins" value="1,2" inputmode="numeric"></div>
+            <div><label>amount</label><input id="amount" value="3" inputmode="numeric" style="width:96px"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="rhead">
+            <span class="badge" id="problemBadge"></span>
+            <span class="count">ways = <b id="countOut">–</b></span>
+        </div>
+        <pre id="codeOut"></pre>
+        <p class="knob-label" style="margin-bottom:2px">The actual ways it counts</p>
+        <div class="ways" id="waysOut"></div>
+    </div>
+
+    <div class="card good">
+        <b>Read the highlighted line.</b> The <span class="hl">blue</span> token is what the <em>order</em> knob controls; the <span class="hl g">green</span> token is what the <em>reuse</em> knob controls. Everything else is boilerplate.
+    </div>
+
+    <h2><span class="n">3.</span> Why order lives in the STATE</h2>
+    <p>This is the whole lesson. If the state is just <code>dp(remaining)</code>, then at <code>remaining = 3</code> the call explores "take a 1, then make 2" <em>and</em> "take a 2, then make 1" — building <code>1+2</code> and <code>2+1</code> separately. With no memory of what you already committed to, <b>you count permutations by default.</b></p>
+    <p>Add a coin <b>index</b> <code>i</code> to the state and "skip" advances to <code>i+1</code> and <b>never looks back</b> — a smaller-index coin can never come after a larger one. That collapses <code>2+1</code> into <code>1+2</code>: now you count combinations.</p>
+    <div class="card accent">
+        <b>Combinations vs permutations is a state-design decision, not a code tweak.</b><br>
+        Permutations → state = <code>(remaining)</code>, every call tries all coins.<br>
+        Combinations → state = <code>(i, remaining)</code>, skip advances <code>i</code> so order is frozen.
+    </div>
+
+    <h2><span class="n">4.</span> The bottom-up one-liner</h2>
+    <p>Written iteratively, the two knobs become <b>loop order</b> and <b>loop direction</b>:</p>
+    <pre><code><span class="cmt"># dp[x] = ways to make total x,  dp[0] = 1</span>
+
+<span class="cmt"># COMBINATIONS (#518): coins on the OUTSIDE</span>
+<span class="kw">for</span> c <span class="kw">in</span> coins:
+    <span class="kw">for</span> x <span class="kw">in</span> range(c, amount+1):     <span class="cmt"># forward = reuse</span>
+        dp[x] += dp[x - c]
+
+<span class="cmt"># PERMUTATIONS (#377): amount on the OUTSIDE</span>
+<span class="kw">for</span> x <span class="kw">in</span> range(1, amount+1):
+    <span class="kw">for</span> c <span class="kw">in</span> coins:
+        dp[x] += dp[x - c]</code></pre>
+    <p><b>Coins outer → combinations. Amount outer → permutations.</b> For <b>0/1</b> (use once) in the combination form, run the inner amount loop <em>backwards</em> — <code>range(amount, c-1, -1)</code> — so each coin touches each cell once.</p>
+
+    <h2><span class="n">5.</span> The 2×2 map</h2>
+    <div class="tablewrap">
+    <table class="grid">
+        <tr><th></th><th>Reuse (unbounded)</th><th>Use once (0/1)</th></tr>
+        <tr>
+            <td>Combinations<br><span class="tag">order ✗</span></td>
+            <td><span class="lc">#518</span> Coin Change II</td>
+            <td><span class="lc">#494</span> Target Sum · <span class="lc">#416</span> Subset Sum</td>
+        </tr>
+        <tr>
+            <td>Permutations<br><span class="tag">order ✓</span></td>
+            <td><span class="lc">#377</span> Combination Sum IV</td>
+            <td><span class="empty">rare — ordered subsets, no canonical LC</span></td>
+        </tr>
+    </table>
+    </div>
+    <div class="card warn">
+        <b>Naming trap:</b> #377 is titled "Combination Sum IV" but counts <b>permutations</b>. Trust the wording ("<em>different sequences</em>"), never the title.
+    </div>
+
+    <h2><span class="n">6.</span> Carry these three lines</h2>
+    <ul>
+        <li><b>Order = state.</b> Index in the state ⇒ combinations. Amount-only state ⇒ permutations.</li>
+        <li><b>Reuse = which index <em>take</em> recurses to.</b> Stay at <code>i</code> ⇒ reuse; go to <code>i+1</code> ⇒ once.</li>
+        <li><b>Bottom-up: coins-outer = combinations, amount-outer = permutations;</b> backwards inner = 0/1.</li>
+    </ul>
+
+    <h2><span class="n">7.</span> Quiz yourself</h2>
+    <div class="scorebar">
+        <span class="s" id="score">0 / 0</span>
+        <span class="empty" id="scoremsg"></span>
+        <button id="resetQuiz">Reset</button>
+    </div>
+    <div id="quiz"></div>
+
+    <footer>
+        <span class="tag">DP</span><span class="tag">knapsack</span><span class="tag">#518</span><span class="tag">#377</span><span class="tag">#494</span><br>
+        Built after the Sep 3 coverage-sprint #518 top-down redo. The distrustful trace on <code>coins=[1,2], amount=3</code> is what exposed the double-count — do it every time.<br>
+        Personal explainer · unlisted · <a href="/explainers/">back to index</a>
+    </footer>
+</main>
+
+<script>
+(function () {
+    /* ---------- interactive knob panel ---------- */
+    var order = "comb", reuse = "reuse";
+    var $ = function (id) { return document.getElementById(id); };
+
+    function parseCoins() {
+        return ($("coins").value || "").split(",")
+            .map(function (s) { return parseInt(s.trim(), 10); })
+            .filter(function (n) { return !isNaN(n) && n > 0; });
+    }
+    function getAmount() {
+        var a = parseInt($("amount").value, 10);
+        if (isNaN(a) || a < 0) a = 0;
+        return Math.min(a, 12);
+    }
+
+    function combReuse(i, rem, c) {
+        if (rem === 0) return [[]];
+        if (rem < 0 || i === c.length) return [];
+        var o = combReuse(i + 1, rem, c);
+        combReuse(i, rem - c[i], c).forEach(function (s) { o.push([c[i]].concat(s)); });
+        return o;
+    }
+    function combOnce(i, rem, c) {
+        if (rem === 0) return [[]];
+        if (rem < 0 || i === c.length) return [];
+        var o = combOnce(i + 1, rem, c);
+        combOnce(i + 1, rem - c[i], c).forEach(function (s) { o.push([c[i]].concat(s)); });
+        return o;
+    }
+    function permReuse(rem, c) {
+        if (rem === 0) return [[]];
+        if (rem < 0) return [];
+        var o = [];
+        c.forEach(function (x) { permReuse(rem - x, c).forEach(function (s) { o.push([x].concat(s)); }); });
+        return o;
+    }
+    function permsOf(a) {
+        if (a.length <= 1) return [a.slice()];
+        var r = [];
+        for (var i = 0; i < a.length; i++) {
+            var rest = a.slice(0, i).concat(a.slice(i + 1));
+            permsOf(rest).forEach(function (p) { r.push([a[i]].concat(p)); });
+        }
+        return r;
+    }
+    function permOnce(rem, c) {
+        var subs = combOnce(0, rem, c), o = [];
+        subs.forEach(function (s) { permsOf(s).forEach(function (p) { o.push(p); }); });
+        return o;
+    }
+    function enumerate(c, a) {
+        if (order === "comb" && reuse === "reuse") return combReuse(0, a, c);
+        if (order === "comb" && reuse === "once") return combOnce(0, a, c);
+        if (order === "perm" && reuse === "reuse") return permReuse(a, c);
+        return permOnce(a, c);
+    }
+    function problemLabel() {
+        if (order === "comb" && reuse === "reuse") return ["#518", "Coin Change II"];
+        if (order === "comb" && reuse === "once") return ["#494", "Target Sum / Subset Sum"];
+        if (order === "perm" && reuse === "reuse") return ["#377", "Combination Sum IV"];
+        return ["—", "ordered subsets (no canonical LC)"];
+    }
+    function codeFor() {
+        var takeIdx = (reuse === "reuse") ? '<span class="hl g">i</span>' : '<span class="hl g">i + 1</span>';
+        if (order === "comb") {
+            return ''
+                + '<span class="cmt"># state = (coin index, remaining) → order is FROZEN</span>\n'
+                + '<span class="kw">def</span> <span class="fn">dp</span>(<span class="hl">i</span>, rem):\n'
+                + '    <span class="kw">if</span> rem == 0: <span class="kw">return</span> 1\n'
+                + '    <span class="kw">if</span> rem &lt; 0 <span class="kw">or</span> <span class="hl">i == len(coins)</span>: <span class="kw">return</span> 0\n'
+                + '    skip = <span class="fn">dp</span>(<span class="hl">i + 1</span>, rem)              <span class="cmt"># drop coin i for good</span>\n'
+                + '    take = <span class="fn">dp</span>(' + takeIdx + ', rem - coins[i]) <span class="cmt"># ' + (reuse === "reuse" ? 'stay = reuse' : 'advance = once') + '</span>\n'
+                + '    <span class="kw">return</span> skip + take';
+        } else if (reuse === "reuse") {
+            return ''
+                + '<span class="cmt"># state = (remaining) only → every call tries ALL coins</span>\n'
+                + '<span class="kw">def</span> <span class="fn">dp</span>(<span class="hl">rem</span>):\n'
+                + '    <span class="kw">if</span> rem == 0: <span class="kw">return</span> 1\n'
+                + '    <span class="kw">if</span> rem &lt; 0: <span class="kw">return</span> 0\n'
+                + '    total = 0\n'
+                + '    <span class="kw">for</span> c <span class="kw">in</span> coins:          <span class="cmt"># <span class="hl">no index</span> → 1+2 and 2+1 both counted</span>\n'
+                + '        total += <span class="fn">dp</span>(<span class="hl g">rem - c</span>)\n'
+                + '    <span class="kw">return</span> total';
+        }
+        return ''
+            + '<span class="cmt"># permutations + use-once: needs a used-set (rare)</span>\n'
+            + '<span class="kw">def</span> <span class="fn">dp</span>(<span class="hl">rem</span>, used):\n'
+            + '    <span class="kw">if</span> rem == 0: <span class="kw">return</span> 1\n'
+            + '    <span class="kw">if</span> rem &lt; 0: <span class="kw">return</span> 0\n'
+            + '    total = 0\n'
+            + '    <span class="kw">for</span> j <span class="kw">in</span> range(len(coins)):  <span class="cmt"># <span class="hl">no fixed order</span></span>\n'
+            + '        <span class="kw">if</span> j <span class="kw">in</span> used: <span class="kw">continue</span>   <span class="cmt"># <span class="hl g">each coin once</span></span>\n'
+            + '        total += <span class="fn">dp</span>(rem - coins[j], used | {j})\n'
+            + '    <span class="kw">return</span> total';
+    }
+    function render() {
+        var coins = parseCoins(), amount = getAmount(), lbl = problemLabel();
+        $("problemBadge").innerHTML = '<span class="lc">' + lbl[0] + '</span> &nbsp;' + lbl[1];
+        $("codeOut").innerHTML = '<code>' + codeFor() + '</code>';
+        if (!coins.length) {
+            $("countOut").textContent = '–';
+            $("waysOut").innerHTML = '<span class="empty">enter some coins…</span>';
+            return;
+        }
+        var ways = enumerate(coins, amount);
+        $("countOut").textContent = ways.length;
+        var box = $("waysOut");
+        if (!ways.length) { box.innerHTML = '<span class="empty">no way to make ' + amount + '</span>'; return; }
+        var shown = ways.slice(0, 60).map(function (w) {
+            return '<span class="way">' + (w.length ? w.join(' + ') : '∅') + '</span>';
+        }).join('');
+        if (ways.length > 60) shown += '<span class="empty">+' + (ways.length - 60) + ' more…</span>';
+        box.innerHTML = shown;
+    }
+    function wire(id, set) {
+        var seg = $(id);
+        if (!seg) return;
+        seg.addEventListener("click", function (e) {
+            var b = e.target.closest("button"); if (!b) return;
+            Array.prototype.forEach.call(seg.querySelectorAll("button"), function (x) { x.classList.remove("on"); });
+            b.classList.add("on"); set(b.getAttribute("data-v")); render();
+        });
+    }
+    wire("segOrder", function (v) { order = v; });
+    wire("segReuse", function (v) { reuse = v; });
+    if ($("coins")) $("coins").addEventListener("input", render);
+    if ($("amount")) $("amount").addEventListener("input", render);
+    render();
+
+    /* ---------- quiz ---------- */
+    var QUESTIONS = [
+        {
+            q: "Your recurrence is dp(remaining), and every call loops over all coins. Does it count combinations or permutations?",
+            opts: ["Permutations", "Combinations", "Neither — it double-counts randomly"],
+            a: 0,
+            why: "With amount-only state there's no memory of committed coins, so 1+2 and 2+1 are counted separately — that's permutations (#377)."
+        },
+        {
+            q: "LeetCode #377 is titled \"Combination Sum IV.\" What does it actually count?",
+            opts: ["Combinations (order ignored)", "Permutations (order matters)", "Only the shortest way"],
+            a: 1,
+            why: "Classic naming trap. It asks for different sequences → permutations. Trust the wording, not the title."
+        },
+        {
+            q: "Bottom-up, which loop must be OUTER to count combinations (like #518)?",
+            opts: ["The amount loop", "The coins loop", "Either order gives the same count"],
+            a: 1,
+            why: "Coins outer opens each coin once in a fixed sequence, so combinations can't reorder. Amount outer → permutations."
+        },
+        {
+            q: "In the take/skip template, to ALLOW reuse (unbounded) the take branch should recurse to…",
+            opts: ["dp(i + 1, rem - coins[i])", "dp(i, rem - coins[i])", "dp(0, rem - coins[i])"],
+            a: 1,
+            why: "Staying at i lets you pick coin i again → unbounded. Advancing to i+1 makes it 0/1 (use once)."
+        },
+        {
+            q: "coins = [1, 2], amount = 3. How many COMBINATIONS (order ignored, reuse allowed)?",
+            opts: ["2  (1+1+1, 1+2)", "3  (1+1+1, 1+2, 2+1)", "1  (just 1+2)"],
+            a: 0,
+            why: "Combinations ignore order, so 1+2 and 2+1 are one. Ways: {1+1+1, 1+2} = 2. (Permutations would give 3.)"
+        },
+        {
+            q: "What is the time complexity of the top-down dp(i, remaining) for Coin Change II?",
+            opts: ["O(amount)", "O(n × amount)", "O(2^n)"],
+            a: 1,
+            why: "States are (coin index, remaining) = n × (amount+1) cells, each O(1) → O(n × amount) time and space."
+        }
+    ];
+
+    var answered = [];
+    function buildQuiz() {
+        var host = $("quiz");
+        if (!host) return;
+        host.innerHTML = "";
+        answered = QUESTIONS.map(function () { return false; });
+        QUESTIONS.forEach(function (item, qi) {
+            var block = document.createElement("div");
+            block.className = "q";
+            var qt = document.createElement("p");
+            qt.className = "qt";
+            qt.textContent = (qi + 1) + ". " + item.q;
+            block.appendChild(qt);
+            item.opts.forEach(function (opt, oi) {
+                var b = document.createElement("button");
+                b.className = "qopt";
+                b.type = "button";
+                b.textContent = opt;
+                b.addEventListener("click", function () { pick(qi, oi, block, item); });
+                block.appendChild(b);
+            });
+            var fb = document.createElement("p");
+            fb.className = "qfb";
+            block.appendChild(fb);
+            host.appendChild(block);
+        });
+        updateScore();
+    }
+    function pick(qi, oi, block, item) {
+        if (answered[qi]) return;
+        answered[qi] = true;
+        var btns = block.querySelectorAll(".qopt");
+        Array.prototype.forEach.call(btns, function (b, idx) {
+            b.disabled = true;
+            if (idx === item.a) b.classList.add("correct");
+            if (idx === oi && oi !== item.a) b.classList.add("wrong");
+        });
+        var fb = block.querySelector(".qfb");
+        var ok = (oi === item.a);
+        fb.className = "qfb show";
+        fb.innerHTML = (ok ? '<b class="ok">Correct.</b> ' : '<b class="no">Not quite.</b> ') + item.why;
+        updateScore();
+    }
+    function updateScore() {
+        var done = answered.filter(Boolean).length;
+        var correct = 0;
+        QUESTIONS.forEach(function (item, qi) {
+            if (!answered[qi]) return;
+            var block = $("quiz").children[qi];
+            if (block && block.querySelector(".qopt.correct") && !block.querySelector(".qopt.wrong")) {
+                // count as correct only if the chosen one was correct (no wrong highlighted from user's pick)
+            }
+        });
+        // simpler: recount from stored picks
+        correct = scoreCount();
+        $("score").textContent = correct + " / " + QUESTIONS.length;
+        var msg = $("scoremsg");
+        if (done === QUESTIONS.length) {
+            msg.textContent = correct === QUESTIONS.length ? "🎯 perfect" : (correct >= QUESTIONS.length - 1 ? "sharp" : "review §3 & §4");
+        } else {
+            msg.textContent = "";
+        }
+    }
+    var picks = [];
+    function scoreCount() {
+        var c = 0;
+        for (var i = 0; i < QUESTIONS.length; i++) { if (picks[i] === QUESTIONS[i].a) c++; }
+        return c;
+    }
+    // patch pick to record choice
+    var _pick = pick;
+    pick = function (qi, oi, block, item) { picks[qi] = oi; _pick(qi, oi, block, item); };
+
+    var resetBtn = $("resetQuiz");
+    if (resetBtn) resetBtn.addEventListener("click", function () { picks = []; buildQuiz(); });
+    buildQuiz();
+})();
+</script>
+</body>
+</html>
