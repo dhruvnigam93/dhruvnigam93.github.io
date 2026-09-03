@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>RL on LLMs is a Systems Problem</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --radius: 14px;
+            /* dataviz palette (validated vs card surfaces) */
+            --s1: #2a78d6; --s2: #1baf7a; --s3: #eda100; --s4: #008300;
+            --s5: #4a3aa7; --s6: #e34948; --s7: #e87ba4;
+            --grid: #e1e0d9; --bad: #d03b3b; --goodtxt: #006300;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                --s1: #3987e5; --s2: #199e70; --s3: #c98500; --s4: #008300;
+                --s5: #9085e9; --s6: #e66767; --s7: #d55181;
+                --grid: #2c2c2a; --bad: #d03b3b; --goodtxt: #0ca30c;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: max(20px, env(safe-area-inset-top)) 20px 80px;
+        }
+        .back { display: inline-block; margin: 8px 0 20px; color: var(--muted); text-decoration: none; font-size: 0.95rem; }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.3rem; margin: 2em 0 0.5em; }
+        h3 { font-size: 1.05rem; margin: 1.4em 0 0.4em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        code {
+            background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+            padding: 1px 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85em;
+        }
+        pre {
+            background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+            padding: 14px 16px; overflow-x: auto; font-size: 0.78em; line-height: 1.5;
+        }
+        pre code { background: none; border: none; padding: 0; }
+        .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin: 1em 0; }
+        details { border: 1px solid var(--line); border-radius: var(--radius); padding: 0 18px; margin: 12px 0; background: var(--card); }
+        summary { cursor: pointer; padding: 16px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        summary::-webkit-details-marker { display: none; }
+        summary::after { content: "+"; color: var(--muted); font-size: 1.4rem; line-height: 1; }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        button {
+            font: inherit; font-weight: 600; color: #fff; background: var(--accent);
+            border: none; border-radius: 999px; padding: 12px 22px; min-height: 48px; min-width: 48px;
+            cursor: pointer; touch-action: manipulation;
+        }
+        button:active { transform: scale(0.96); }
+        .ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+        input[type="range"] { width: 100%; height: 44px; accent-color: var(--accent); }
+        footer { margin-top: 3em; padding-top: 1.2em; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
+        /* pills nav */
+        .pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 6px; }
+        .pills a {
+            text-decoration: none; font-size: 0.85rem; font-weight: 600; color: var(--accent);
+            border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; min-height: 40px; display: inline-flex; align-items: center;
+        }
+        /* segmented option buttons */
+        .seg { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+        .seg button {
+            background: transparent; color: var(--fg); border: 1px solid var(--line);
+            padding: 10px 14px; font-size: 0.85rem; font-weight: 600; min-height: 44px;
+        }
+        .seg button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .ctl-label { font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 14px 0 2px; }
+        /* legend chips */
+        .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 0; font-size: 0.82rem; color: var(--muted); }
+        .legend span { display: inline-flex; align-items: center; gap: 6px; }
+        .chip { width: 12px; height: 12px; border-radius: 3px; display: inline-block; flex: none; }
+        /* memory bar */
+        .membar { display: flex; height: 34px; border-radius: 8px; overflow: hidden; gap: 2px; background: transparent; margin: 14px 0 4px; }
+        .membar div { transition: flex-grow 0.35s ease; border-radius: 3px; min-width: 0; }
+        .memrows { margin: 10px 0 0; font-size: 0.88rem; }
+        .memrows .row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+        .memrows .row .gb { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--fg); font-weight: 600; }
+        .memrows .row .nm { color: var(--muted); }
+        .bigstat { font-size: 1.5rem; font-weight: 700; margin: 12px 0 0; }
+        .bigstat small { font-size: 0.85rem; font-weight: 400; color: var(--muted); display: block; }
+        /* stepper memory map */
+        .gpubar { display: flex; height: 44px; border-radius: 8px; overflow: hidden; gap: 2px; margin: 8px 0 2px; background: transparent; }
+        .gpubar div {
+            transition: flex-grow 0.4s ease, background 0.3s; border-radius: 3px; min-width: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.68rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden;
+        }
+        .gpubar .free { background: transparent; border: 1px dashed var(--line); color: var(--muted); }
+        .barcap { font-size: 0.78rem; color: var(--muted); margin: 0 0 8px; }
+        .stepcap { min-height: 4.2em; font-size: 0.92rem; margin: 10px 0; }
+        .overflowing { animation: shake 0.4s; outline: 2px solid var(--bad); }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+        /* meter */
+        .meter { height: 14px; border-radius: 7px; background: var(--line); overflow: hidden; margin: 6px 0; }
+        .meter div { height: 100%; background: var(--s1); border-radius: 7px; transition: width 0.35s ease; }
+        /* tables */
+        .tablewrap { overflow-x: auto; margin: 1em 0; -webkit-overflow-scrolling: touch; }
+        table { border-collapse: collapse; font-size: 0.85rem; min-width: 560px; width: 100%; }
+        th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+        th { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+        td:first-child { font-weight: 600; }
+        /* quiz */
+        .q { margin: 18px 0; }
+        .q p.qq { font-weight: 600; margin-bottom: 8px; }
+        .q .opts { display: flex; flex-direction: column; gap: 8px; }
+        .q .opts button {
+            background: var(--card); color: var(--fg); border: 1px solid var(--line);
+            border-radius: 10px; text-align: left; font-weight: 500; font-size: 0.92rem; padding: 12px 14px;
+        }
+        .q .opts button.right { border-color: var(--s4); background: color-mix(in srgb, var(--s4) 12%, var(--card)); }
+        .q .opts button.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 10%, var(--card)); }
+        .q .why { font-size: 0.85rem; color: var(--muted); margin-top: 6px; display: none; }
+        .q.done .why { display: block; }
+        .score { font-weight: 700; margin: 14px 0; }
+        canvas { width: 100%; display: block; border-radius: 10px; }
+        .note { font-size: 0.85rem; color: var(--muted); }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>RL on LLMs is a Systems Problem</h1>
+        <p class="meta">Added 2026-09-03</p>
+
+        <p>Most explanations of RLHF and GRPO stop at the math: policy gradient, clip ratio, KL term. Then you try to actually run it and discover the math was the easy part. Online RL on a language model is not a training job — it's <strong>a training job, an inference service, and a scoring pipeline welded together</strong>, fighting over the same GPU memory, every step.</p>
+        <p>This page builds the systems problems from first principles, then shows how the two most important open-source frameworks — Hugging Face's <strong>TRL</strong> and ByteDance's <strong>verl</strong> — solve them with nearly opposite architectures. Grounded in both codebases as of September 2026.</p>
+
+        <nav class="pills">
+            <a href="#step">One step</a>
+            <a href="#models">Four models</a>
+            <a href="#copies">Two copies</a>
+            <a href="#stale">Staleness</a>
+            <a href="#klsec">Reward &amp; KL</a>
+            <a href="#frameworks">TRL vs verl</a>
+            <a href="#quiz">Quiz</a>
+        </nav>
+
+        <h2 id="step">1 · One RL step, three different workloads</h2>
+        <p>Every online RL step (PPO, GRPO, RLOO — the family doesn't matter) does four things: <strong>generate</strong> rollouts from the current policy, <strong>score</strong> them (reward + reference logprobs), <strong>learn</strong> (the gradient update), and <strong>sync</strong> the new weights back into whatever generated. The problem: these want different engines.</p>
+        <ul>
+            <li><strong>Generate</strong> is autoregressive decoding — memory-bandwidth-bound, KV-cache-hungry, 10–50× faster on a serving engine (vLLM/SGLang) than on <code>model.generate()</code> inside a training framework. For reasoning models it's usually <em>more than half of wall-clock</em>.</li>
+            <li><strong>Score</strong> is prefill-only forwards through frozen models — cheap compute, more resident models.</li>
+            <li><strong>Learn</strong> wants sharded optimizer state, activation checkpointing, fast backward — a training framework.</li>
+        </ul>
+
+        <div class="card">
+            <p style="margin-top:0"><strong>Where do the bubbles go?</strong> Watch two GPU pools over two RL steps. Colocation time-shares one pool; disaggregation splits pools and idles them; going one-step-off fills the bubbles at the price of staleness.</p>
+            <div class="seg" id="tl-modes">
+                <button data-mode="colo" class="active">Colocated (time-share)</button>
+                <button data-mode="dsync">Disaggregated, sync</button>
+                <button data-mode="dasync">One-step-off</button>
+            </div>
+            <canvas id="tl-canvas" height="150" aria-label="GPU timeline animation"></canvas>
+            <div class="legend" id="tl-legend"></div>
+            <p id="tl-read" class="note" style="margin-bottom:0"></p>
+        </div>
+
+        <p>So the first structural fact: <strong>the best tool for generation and the best tool for training are different programs, with different memory layouts of the same weights.</strong> Nearly everything downstream is about resolving that tension.</p>
+
+        <h2 id="models">2 · The four-model problem</h2>
+        <p>SFT holds one model. Online RL can hold four: the <strong>policy</strong> (trained — needs gradients + optimizer), a frozen <strong>reference</strong> (KL anchor), a frozen <strong>reward model</strong>, and PPO's <strong>critic</strong> (trained too — its own optimizer state). Play with the ledger:</p>
+
+        <div class="card">
+            <div class="ctl-label">Model size <span id="mc-size-lbl" style="text-transform:none"></span></div>
+            <input type="range" id="mc-size" min="0" max="5" step="1" value="2" aria-label="model size">
+            <div class="ctl-label">Algorithm</div>
+            <div class="seg" id="mc-algo">
+                <button data-v="grpo" class="active">GRPO (no critic)</button>
+                <button data-v="ppo">PPO (learned critic)</button>
+            </div>
+            <div class="ctl-label">Training mode</div>
+            <div class="seg" id="mc-train">
+                <button data-v="full" class="active">Full-param</button>
+                <button data-v="lora">LoRA</button>
+            </div>
+            <div class="ctl-label">Reference model (KL)</div>
+            <div class="seg" id="mc-ref">
+                <button data-v="full" class="active">Full frozen copy</button>
+                <button data-v="lora">LoRA trick (free)</button>
+                <button data-v="none">&beta;=0 (none)</button>
+            </div>
+            <div class="ctl-label">Reward</div>
+            <div class="seg" id="mc-rm">
+                <button data-v="model" class="active">Reward model</button>
+                <button data-v="verifier">Verifier (CPU)</button>
+            </div>
+            <div class="ctl-label">Colocated rollout engine</div>
+            <div class="seg" id="mc-vllm">
+                <button data-v="awake" class="active">vLLM resident</button>
+                <button data-v="sleep">vLLM sleep/wake</button>
+            </div>
+            <div class="membar" id="mc-bar" aria-label="memory composition bar"></div>
+            <div class="memrows" id="mc-rows"></div>
+            <p class="bigstat" id="mc-total"></p>
+            <div class="seg" style="margin-top:14px">
+                <button class="ghost" id="mc-preset-2023">Preset: 2023 PPO-RLHF</button>
+                <button class="ghost" id="mc-preset-2025">Preset: 2025 R1-style</button>
+            </div>
+            <p class="note" style="margin-bottom:0">bf16 weights = 2 bytes/param; full-param training adds ~2 (grads) + ~12 (fp32 Adam m, v + master) &asymp; the classic 16 bytes/param. Activations and KV cache come on top. Sharding (ZeRO/FSDP) spreads this over GPUs — it doesn't shrink it.</p>
+        </div>
+
+        <p>Flip between the two presets and you get the story of 2024→2026 RL infrastructure: <strong>the systematic elimination of resident models.</strong></p>
+        <div class="card">
+            <ul style="margin:0">
+                <li><strong>GRPO deleted the critic.</strong> Group-normalized rewards replace the learned value baseline. Discussed as an algorithmic insight; it's equally a systems win — it removes half the trainable memory of PPO.</li>
+                <li><strong>Verifiable rewards deleted the reward model.</strong> For math/code, a regex extractor or a unit-test run <em>is</em> the reward, on CPU.</li>
+                <li><strong>Two tricks deleted the reference model.</strong> Train with LoRA and the base-with-adapters-off <em>is</em> the reference (both frameworks exploit this); or set KL to zero and control drift with clipping + entropy monitoring.</li>
+            </ul>
+        </div>
+
+        <h2 id="copies">3 · The two-copies problem</h2>
+        <p>You can't eliminate the big one: the policy exists <strong>twice</strong> — sharded for training, laid out tensor-parallel for inference. Three ways to reconcile:</p>
+        <ul>
+            <li><strong>A — Colocate &amp; time-share.</strong> Same GPUs flip engines: training state offloads, vLLM wakes; then vLLM sleeps, training state returns. Max utilization for synchronous RL; a resharding dance every step.</li>
+            <li><strong>B — Disaggregate.</strong> Serving engine on its own GPUs; trainer ships prompts out and weights over. Cleaner memory, natural for async — but pools idle unless you break synchrony.</li>
+            <li><strong>C — One engine.</strong> Use the trainer's <code>generate()</code>. Debug only.</li>
+        </ul>
+        <p>The tax for two copies is <strong>weight sync</strong> — every step, new weights into the sampler. TRL's colocate sync is disarmingly direct:</p>
+<pre><code># trl/generation/vllm_generation.py
+for name, param in self._iter_named_params():
+    self.llm.llm_engine.model_executor.driver_worker \
+        .model_runner.model.load_weights([(name, param)])</code></pre>
+        <p>Five attributes deep into vLLM internals: zero serialization, maximum fragility (TRL has shipped hotfixes for exactly this path). In server mode TRL is more principled — the trainer joins an NCCL communicator as rank 0 with the remote vLLM workers and <em>broadcasts</em> tensors; HTTP only carries metadata.</p>
+        <p>verl's colocated sync is a five-step pipeline where <strong>the order is load-bearing</strong>. Step through it:</p>
+
+        <div class="card">
+            <p class="barcap" style="margin-top:0">One GPU, 80 GB, 7B policy (illustrative)</p>
+            <div class="gpubar" id="ws-gpu"></div>
+            <p class="barcap">CPU RAM</p>
+            <div class="gpubar" id="ws-cpu" style="height:30px"></div>
+            <p class="stepcap" id="ws-cap"></p>
+            <div class="seg">
+                <button class="ghost" id="ws-prev">&larr; Prev</button>
+                <button id="ws-next">Next &rarr;</button>
+                <button class="ghost" id="ws-oops">What if KV cache first?</button>
+            </div>
+            <div class="legend" id="ws-legend"></div>
+        </div>
+
+        <p>Details that matter at scale: the FSDP gather is <em>lazy</em> (DTensor <code>full_tensor()</code> all-gathers per tensor as the transfer consumes it — the full model never materializes); the transfer is <em>bucketed</em> (fixed 2–4 GB CUDA-IPC buffer over ZMQ with acks); and a <code>delta_sharded</code> mode ships only changed shards for disaggregated setups. If you remember one thing: <strong>weight sync is not an implementation detail</strong> — at 70B+ it's a first-order cost, and it's where RL frameworks differ most.</p>
+
+        <h2 id="stale">4 · Staleness: the throughput–correctness dial</h2>
+        <p>Policy-gradient math assumes rollouts came from the policy you're updating. Every throughput trick breaks that a little. Slide along the spectrum:</p>
+
+        <div class="card">
+            <input type="range" id="st-dial" min="0" max="3" step="1" value="0" aria-label="staleness regime">
+            <p style="margin:4px 0 0"><strong id="st-name"></strong></p>
+            <p class="note" style="margin:2px 0 8px" id="st-desc"></p>
+            <div class="ctl-label">Rollout-GPU utilization (illustrative)</div>
+            <div class="meter"><div id="st-meter" style="width:55%"></div></div>
+            <div class="ctl-label">Staleness</div>
+            <p style="margin:2px 0" id="st-stale"></p>
+            <div class="ctl-label">What protects you</div>
+            <p style="margin:2px 0" id="st-prot"></p>
+            <div class="ctl-label">Who ships it</div>
+            <p style="margin:2px 0 0" id="st-fw"></p>
+        </div>
+
+        <div class="card">
+            <p style="margin-top:0"><strong>The subtle one: your two engines disagree about logprobs.</strong> vLLM's kernels, batching, and precision produce numerically different logprobs than your FSDP forward over the <em>same tokens</em>. Feed vLLM's numbers into the PPO ratio as &pi;<sub>old</sub> and you've corrupted the ratio — it presents as slow, mysterious divergence. Both frameworks <strong>recompute old logprobs under the training engine</strong> (verl makes it a named pipeline stage), and both offer explicit importance-sampling correction as the cheaper opt-out (TRL: four <code>vllm_importance_sampling_mode</code>s; verl: <code>bypass_mode</code>).</p>
+            <p class="note" style="margin-bottom:0">War story: TRL's first async GRPO ran generation in a thread and died of GIL contention + NCCL timeouts. The rewrite moved rollouts to a separate process.</p>
+        </div>
+
+        <h2 id="klsec">5 · Rewards, references, and KL</h2>
+        <p><strong>Rewards</strong>, in increasing hosting cost: rule-based verifiers on CPU (2025's default for math/code — sandbox the code execution, and watch the verifier become the straggler; verl ships a 64-worker process-pool reward manager with timeouts) → reward model colocated on training GPUs (TRL's model) → RM on its own pool (one config line in verl) → remote RM service. Multi-reward is the norm, and normalization order matters: z-score each reward <em>within the group before summing</em>, or a high-variance reward silently dominates.</p>
+        <p><strong>Reference model</strong> decision tree, encoded by both frameworks: KL coefficient zero → don't load one. Training LoRA → adapters-off <em>is</em> the reference (TRL literally keeps a second frozen adapter named <code>"ref"</code> and switches). Full-param with KL → pay for the frozen copy, CPU-offload it (it's forward-only).</p>
+        <p><strong>The KL estimator</strong> matters more than it looks. With <em>d</em> = log&pi;<sub>ref</sub> − log&pi;, the three candidates: k1 = −d (unbiased, high variance, <em>can go negative</em>), k2 = d²/2, and k3 = e<sup>d</sup> − d − 1 (low variance, always ≥ 0). Both frameworks default to k3. Drag d:</p>
+
+        <div class="card">
+            <canvas id="kl-canvas" height="230" aria-label="KL estimator curves"></canvas>
+            <input type="range" id="kl-d" min="-1.5" max="1.5" step="0.05" value="0.6" aria-label="log-ratio d">
+            <p style="margin:4px 0 0; font-variant-numeric: tabular-nums" id="kl-read"></p>
+            <p class="note" id="kl-note" style="margin-bottom:0"></p>
+        </div>
+
+        <p class="note">Also non-equivalent: KL <em>in the reward</em> (classic RLHF — shapes advantages through the return) vs KL <em>in the loss</em> (GRPO — a direct gradient penalty). verl exposes both as config; TRL's GRPO uses in-loss.</p>
+
+        <h2 id="frameworks">6 · Two architectures, one problem</h2>
+
+        <details>
+            <summary>TRL — RL as a Trainer subclass</summary>
+            <p><code>GRPOTrainer</code> inherits from <code>transformers.Trainer</code>. That buys the whole HF ecosystem for free — accumulation, mixed precision, DeepSpeed/FSDP, checkpointing — and fixes the architecture: N identical data-parallel ranks, <em>everything</em> inlined into one training loop. No roles, no placement, no controller. Generation amortizes via a buffer (one call feeds <code>steps_per_generation × num_iterations</code> steps), and the step is strictly generate → train → sync — utilization sawtooths.</p>
+            <p>Its superpower is <strong>algorithmic surface area</strong>: a new algorithm is an <code>elif</code> in the loss —</p>
+<pre><code># the loss_type ladder, late 2026:
+grpo · dapo · dr_grpo · bnpo · cispo · sapo · vespo · luspo
+# + DAPO's epsilon_high, delta-clamp, 5 loss-normalization
+#   conventions as orthogonal config knobs</code></pre>
+            <p>Papers land in days. The price: a ~3,500-line trainer where 8 loss types × 3 generation backends × 3 ref strategies × 4 IS modes all interact.</p>
+        </details>
+
+        <details>
+            <summary>verl — RL as a dataflow, placement as configuration</summary>
+            <p>verl (the HybridFlow paper productionized) makes RL a <strong>distributed dataflow</strong>: a single-controller driver owns the loop, and it reads like pseudocode —</p>
+<pre><code>batch = self._compute_old_log_prob(batch)   # fans out to Ray workers
+batch = self._compute_ref_log_prob(batch)   # fans out to Ray workers
+batch = self._compute_advantage(batch)      # on the driver, pluggable
+batch = self._update_actor(batch)           # fans out to Ray workers</code></pre>
+            <p>Each call looks local but fans out to a Ray worker group running SPMD internally (FSDP/Megatron training, vLLM/SGLang rollout). Worker methods declare <em>how they distribute</em> via <code>@register(dispatch_mode=…)</code>; roles (actor, rollout, ref, critic, RM) map to GPU pools in config — colocating or dedicating GPUs per role is a config edit, not a refactor. Algorithms are <strong>registries, not subclasses</strong>: 14 advantage estimators, 13 policy losses, each a decorated ~50-line function; GRPO vs PPO is one config line. Async is first-class: three trainer modes, a staleness-tagged replay buffer, partial rollouts, an agent loop for multi-turn tool use.</p>
+            <p>The costs are what you'd predict: a vast Hydra config surface, silent Ray × NCCL × vLLM hangs as the top community complaint, OOM in the resharding path, and a version matrix that needs its own CI.</p>
+        </details>
+
+        <div class="tablewrap">
+            <table>
+                <tr><th></th><th>TRL</th><th>verl</th></tr>
+                <tr><td>Control plane</td><td>SPMD, no controller — N identical ranks</td><td>Single-controller driver + Ray worker groups</td></tr>
+                <tr><td>New algorithm</td><td><code>elif</code> in a 3.5k-line trainer</td><td>~50-line registered function + config string</td></tr>
+                <tr><td>Placement</td><td>None — every rank does everything</td><td>Roles → resource pools, in config</td></tr>
+                <tr><td>Training engine</td><td>DeepSpeed ZeRO / FSDP via accelerate</td><td>FSDP/FSDP2, Megatron (TP/PP/EP, MoE)</td></tr>
+                <tr><td>Weight sync</td><td>All params, every generation; NCCL or direct <code>load_weights</code></td><td>Lazy gather → bucketed CUDA-IPC; delta mode</td></tr>
+                <tr><td>Async</td><td>Experimental only</td><td>sync / one-step-off / multi-step-off, replay buffer</td></tr>
+                <tr><td>Sweet spot</td><td>1–8 GPUs, LoRA, fast loss iteration</td><td>32B+ dense/MoE, 100s–1000s GPUs</td></tr>
+                <tr><td>Failure modes</td><td>Sawtooth utilization, monolith, vLLM coupling</td><td>Resharding OOM, silent hangs, config sprawl</td></tr>
+            </table>
+        </div>
+
+        <div class="card">
+            <p style="margin-top:0"><strong>Convergent evolution.</strong> From opposite starting points, both frameworks independently arrived at: vLLM sleep/wake colocation with a starved KV budget (~0.3 vs the serving default 0.9) · recomputing old logprobs under the training engine · the LoRA-adapters-off free reference · k3 as default KL estimator · token- vs sequence-level IS switches (GSPO) · DAPO's tricks as config flags. When two systems with opposite control planes converge on the same six mechanisms, those aren't framework quirks — <strong>they're the invariants of the problem</strong>.</p>
+        </div>
+
+        <h2>7 · Which one, when</h2>
+        <div class="card"><strong>TRL</strong> — 1–8 GPUs, LoRA, iterating on losses/reward shaping weekly, HF-native stack. Unmatched algorithm coverage and time-to-first-run; PEFT integration is genuinely first-class.</div>
+        <div class="card"><strong>verl</strong> — 32B+, multi-node, MoE via Megatron, async or agentic rollouts, or when GPU utilization is the number your infra bill answers to. Budget real time for Ray debugging and config archaeology.</div>
+        <div class="card"><strong>The honest middle</strong> — prototype in TRL, graduate to verl when scale demands it. The concepts transfer almost one-to-one: both are answering the same exam paper.</div>
+
+        <h2 id="quiz">Quiz</h2>
+        <div id="quiz-root"></div>
+        <p class="score" id="quiz-score"></p>
+        <button class="ghost" id="quiz-reset">Reset quiz</button>
+
+        <footer>
+            Sources: TRL <code>grpo_trainer.py</code> / <code>vllm_generation.py</code> (v1.11+), verl <code>engine_workers.py</code> / <code>core_algos.py</code> (v0.9+), HybridFlow (arXiv:2409.19256).<br>
+            Personal explainer · unlisted · <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+
+    <script>
+    (function () {
+        "use strict";
+        function cssVar(name) {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        }
+        var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var darkMq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+
+        /* ---------- 1. GPU timeline ---------- */
+        var tlCanvas = document.getElementById("tl-canvas");
+        var tlModes = document.getElementById("tl-modes");
+        var tlLegend = document.getElementById("tl-legend");
+        var tlRead = document.getElementById("tl-read");
+        var tlState = { mode: "colo", t: 0, raf: null };
+        var PHASES = {
+            gen:   { label: "Generate", v: "--s1" },
+            score: { label: "Score",    v: "--s2" },
+            learn: { label: "Learn",    v: "--s3" },
+            sync:  { label: "Sync",     v: "--s4" },
+            idle:  { label: "Idle",     v: null }
+        };
+        // 20 time units = 2 RL steps
+        var TL = {
+            colo: {
+                rows: [ { name: "All GPUs", blocks: [["gen",5],["score",1],["learn",3],["sync",1],["gen",5],["score",1],["learn",3],["sync",1]] } ],
+                read: "One pool does everything in sequence. No idle GPUs — but generation and training never overlap, and you pay the engine-flip (sync) every step. TRL colocate / verl hybrid engine."
+            },
+            dsync: {
+                rows: [
+                    { name: "Rollout GPUs", blocks: [["gen",5],["idle",5],["gen",5],["idle",5]] },
+                    { name: "Train GPUs",   blocks: [["idle",5],["score",1],["learn",3],["sync",1],["idle",5],["score",1],["learn",3],["sync",1]] }
+                ],
+                read: "Split pools, stay synchronous: each pool idles ~50% of the time waiting for the other. Clean memory story, terrible utilization. TRL server mode is this shape."
+            },
+            dasync: {
+                rows: [
+                    { name: "Rollout GPUs", blocks: [["gen",5],["gen",5],["gen",5],["gen",5]] },
+                    { name: "Train GPUs",   blocks: [["idle",5],["score",1],["learn",3],["sync",1],["score",1],["learn",3],["sync",1],["score",1],["learn",3],["sync",1]] }
+                ],
+                read: "One-step-off: train on batch t while batch t+1 generates. After warm-up both pools stay busy — every batch is exactly one policy version stale. verl colocate_async / separate_async."
+            }
+        };
+        function tlUtil(row) {
+            var busy = 0, total = 0;
+            row.blocks.forEach(function (b) { total += b[1]; if (b[0] !== "idle") busy += b[1]; });
+            return Math.round(100 * busy / total);
+        }
+        function tlDraw() {
+            if (!tlCanvas) return;
+            var dpr = window.devicePixelRatio || 1;
+            var w = tlCanvas.clientWidth || 600;
+            var hCss = 150;
+            if (tlCanvas.width !== Math.round(w * dpr)) { tlCanvas.width = Math.round(w * dpr); tlCanvas.height = Math.round(hCss * dpr); }
+            var ctx = tlCanvas.getContext("2d");
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, w, hCss);
+            var cfg = TL[tlState.mode];
+            var rows = cfg.rows;
+            var labelW = 0;
+            var pad = 2, rowH = rows.length === 1 ? 54 : 40, gap = 14, top = 26;
+            ctx.font = "600 11px -apple-system, system-ui, sans-serif";
+            var muted = cssVar("--muted"), grid = cssVar("--grid");
+            // time axis label — right-aligned so it never collides with the row label
+            ctx.fillStyle = muted;
+            var tlab = "time → (two RL steps)";
+            ctx.fillText(tlab, Math.max(0, w - ctx.measureText(tlab).width), 12);
+            rows.forEach(function (row, ri) {
+                var y = top + ri * (rowH + gap + 14);
+                ctx.fillStyle = muted;
+                ctx.fillText(row.name + " · " + tlUtil(row) + "% busy", 0, y - 4);
+                var total = 0;
+                row.blocks.forEach(function (b) { total += b[1]; });
+                var x = 0;
+                row.blocks.forEach(function (b) {
+                    var bw = (b[1] / total) * w - pad;
+                    if (b[0] === "idle") {
+                        ctx.strokeStyle = grid;
+                        ctx.setLineDash([4, 4]);
+                        ctx.strokeRect(x + 0.5, y + 0.5, Math.max(bw, 1), rowH);
+                        ctx.setLineDash([]);
+                    } else {
+                        ctx.fillStyle = cssVar(PHASES[b[0]].v);
+                        ctx.beginPath();
+                        if (ctx.roundRect) { ctx.roundRect(x, y, Math.max(bw, 1), rowH, 4); ctx.fill(); }
+                        else { ctx.fillRect(x, y, Math.max(bw, 1), rowH); }
+                        if (bw > 46) {
+                            ctx.fillStyle = "#fff";
+                            ctx.fillText(PHASES[b[0]].label, x + 6, y + rowH / 2 + 4);
+                        }
+                    }
+                    x += bw + pad;
+                });
+            });
+            // playhead
+            if (!reduceMotion) {
+                var px = (tlState.t % 1) * w;
+                ctx.strokeStyle = cssVar("--fg");
+                ctx.globalAlpha = 0.55;
+                ctx.beginPath(); ctx.moveTo(px, top - 14); ctx.lineTo(px, hCss - 6); ctx.stroke();
+                ctx.globalAlpha = 1;
+            }
+        }
+        function tlLoop() {
+            tlState.t += 0.0022;
+            tlDraw();
+            tlState.raf = requestAnimationFrame(tlLoop);
+        }
+        function tlSetMode(m) {
+            tlState.mode = m;
+            if (tlModes) {
+                Array.prototype.forEach.call(tlModes.querySelectorAll("button"), function (b) {
+                    b.classList.toggle("active", b.getAttribute("data-mode") === m);
+                });
+            }
+            if (tlRead) tlRead.textContent = TL[m].read;
+            tlDraw();
+        }
+        if (tlCanvas && tlModes) {
+            tlModes.addEventListener("click", function (e) {
+                var b = e.target.closest("button");
+                if (b) tlSetMode(b.getAttribute("data-mode"));
+            });
+            if (tlLegend) {
+                ["gen", "score", "learn", "sync"].forEach(function (k) {
+                    var s = document.createElement("span");
+                    s.innerHTML = '<i class="chip" style="background:var(' + PHASES[k].v + ')"></i>' + PHASES[k].label;
+                    tlLegend.appendChild(s);
+                });
+                var idle = document.createElement("span");
+                idle.innerHTML = '<i class="chip" style="border:1px dashed var(--muted)"></i>Idle';
+                tlLegend.appendChild(idle);
+            }
+            tlSetMode("colo");
+            if (!reduceMotion) tlLoop();
+            window.addEventListener("resize", tlDraw);
+        }
+
+        /* ---------- 2. Memory calculator ---------- */
+        var SIZES = [1.5, 3, 7, 14, 32, 70];
+        var mc = {
+            size: 2, algo: "grpo", train: "full", ref: "full", rm: "model", vllm: "awake",
+            el: {
+                size: document.getElementById("mc-size"),
+                sizeLbl: document.getElementById("mc-size-lbl"),
+                bar: document.getElementById("mc-bar"),
+                rows: document.getElementById("mc-rows"),
+                total: document.getElementById("mc-total")
+            }
+        };
+        function segButtons(id, key) {
+            var root = document.getElementById(id);
+            if (!root) return;
+            root.addEventListener("click", function (e) {
+                var b = e.target.closest("button");
+                if (!b) return;
+                mc[key] = b.getAttribute("data-v");
+                Array.prototype.forEach.call(root.querySelectorAll("button"), function (x) {
+                    x.classList.toggle("active", x === b);
+                });
+                mcRender();
+            });
+        }
+        function setSeg(id, val) {
+            var root = document.getElementById(id);
+            if (!root) return;
+            Array.prototype.forEach.call(root.querySelectorAll("button"), function (x) {
+                x.classList.toggle("active", x.getAttribute("data-v") === val);
+            });
+        }
+        function mcCompute() {
+            var P = SIZES[mc.size]; // billions
+            var segs = [];
+            var w = 2 * P; // bf16 weights GB
+            segs.push({ nm: "Policy weights (bf16)", gb: w, v: "--s1" });
+            if (mc.train === "full") {
+                segs.push({ nm: "Policy grads (bf16)", gb: 2 * P, v: "--s2" });
+                segs.push({ nm: "Adam states (fp32 m+v+master)", gb: 12 * P, v: "--s3" });
+            } else {
+                segs.push({ nm: "LoRA grads+opt (~1% params)", gb: 0.16 * P, v: "--s3" });
+            }
+            if (mc.ref === "full") segs.push({ nm: "Reference (frozen copy)", gb: 2 * P, v: "--s4" });
+            if (mc.rm === "model") segs.push({ nm: "Reward model (same size)", gb: 2 * P, v: "--s5" });
+            if (mc.algo === "ppo") {
+                var cgb = mc.train === "full" ? 16 * P : 2.16 * P;
+                segs.push({ nm: "Critic (weights+grads+opt)", gb: cgb, v: "--s6" });
+            }
+            if (mc.vllm === "awake") segs.push({ nm: "vLLM engine (weights + KV)", gb: 2 * P + 16, v: "--s7" });
+            return segs;
+        }
+        function mcRender() {
+            if (!mc.el.bar) return;
+            var P = SIZES[mc.size];
+            if (mc.el.sizeLbl) mc.el.sizeLbl.textContent = "· " + P + "B params";
+            var segs = mcCompute();
+            var total = 0;
+            segs.forEach(function (s) { total += s.gb; });
+            mc.el.bar.innerHTML = "";
+            segs.forEach(function (s) {
+                var d = document.createElement("div");
+                d.style.flexGrow = String(Math.max(s.gb, total * 0.008));
+                d.style.background = "var(" + s.v + ")";
+                d.title = s.nm + " — " + s.gb.toFixed(1) + " GB";
+                mc.el.bar.appendChild(d);
+            });
+            mc.el.rows.innerHTML = "";
+            segs.forEach(function (s) {
+                var r = document.createElement("div");
+                r.className = "row";
+                r.innerHTML = '<i class="chip" style="background:var(' + s.v + ')"></i><span class="nm">' + s.nm + '</span><span class="gb">' + s.gb.toFixed(1) + " GB</span>";
+                mc.el.rows.appendChild(r);
+            });
+            var gpus = Math.max(1, Math.ceil(total / 80));
+            mc.el.total.innerHTML = total.toFixed(0) + " GB <small>≈ " + gpus + " × 80 GB H100" + (gpus > 1 ? "s" : "") + " just for weights &amp; states — before activations" +
+                (mc.ref === "lora" ? " · ref = adapters-off, 0 GB" : "") +
+                (mc.rm === "verifier" ? " · reward on CPU" : "") +
+                (mc.vllm === "sleep" ? " · vLLM freed during training (paid back at rollout time)" : "") + "</small>";
+        }
+        if (mc.el.size) {
+            mc.el.size.addEventListener("input", function () { mc.size = parseInt(mc.el.size.value, 10) || 0; mcRender(); });
+            segButtons("mc-algo", "algo");
+            segButtons("mc-train", "train");
+            segButtons("mc-ref", "ref");
+            segButtons("mc-rm", "rm");
+            segButtons("mc-vllm", "vllm");
+            var p23 = document.getElementById("mc-preset-2023");
+            var p25 = document.getElementById("mc-preset-2025");
+            if (p23) p23.addEventListener("click", function () {
+                mc.algo = "ppo"; mc.train = "full"; mc.ref = "full"; mc.rm = "model"; mc.vllm = "awake";
+                setSeg("mc-algo", "ppo"); setSeg("mc-train", "full"); setSeg("mc-ref", "full"); setSeg("mc-rm", "model"); setSeg("mc-vllm", "awake");
+                mcRender();
+            });
+            if (p25) p25.addEventListener("click", function () {
+                mc.algo = "grpo"; mc.train = "full"; mc.ref = "none"; mc.rm = "verifier"; mc.vllm = "sleep";
+                setSeg("mc-algo", "grpo"); setSeg("mc-train", "full"); setSeg("mc-ref", "none"); setSeg("mc-rm", "verifier"); setSeg("mc-vllm", "sleep");
+                mcRender();
+            });
+            mcRender();
+        }
+
+        /* ---------- 3. verl weight-sync stepper ---------- */
+        // segments: [label, GB, cssvar or "free"]
+        var WS_STEPS = [
+            { cap: "Step 0 — After the optimizer step. Training params + optimizer states resident; vLLM is asleep (level-2: weights AND KV cache freed).",
+              gpu: [["Train params", 14, "--s1"], ["Optimizer states", 30, "--s3"], ["free", 36, "free"]], cpu: [["free", 100, "free"]] },
+            { cap: "Step 1 — rollout.resume(tags=[\"weights\"]): wake only vLLM's weight allocation. KV cache stays freed.",
+              gpu: [["Train params", 14, "--s1"], ["Optimizer states", 30, "--s3"], ["vLLM weights", 14, "--s7"], ["free", 22, "free"]], cpu: [["free", 100, "free"]] },
+            { cap: "Step 2+3 — get_per_tensor_param(): lazy DTensor all-gather, per tensor, streamed into a fixed 2–4 GB CUDA-IPC bucket over ZMQ with acks. The full model never materializes twice.",
+              gpu: [["Train params", 14, "--s1"], ["Optimizer states", 30, "--s3"], ["bucket", 4, "--s2"], ["vLLM weights", 14, "--s7"], ["free", 18, "free"]], cpu: [["free", 100, "free"]] },
+            { cap: "Step 4 — Offload: training params + optimizer states move to CPU RAM. The GPU is now mostly empty.",
+              gpu: [["vLLM weights", 14, "--s7"], ["free", 66, "free"]], cpu: [["Train params + optim (44 GB)", 60, "--s1"], ["free", 40, "free"]] },
+            { cap: "Step 5 — rollout.resume(tags=[\"kv_cache\"]): allocate the KV cache LAST, into the space the training states vacated. Generation begins.",
+              gpu: [["vLLM weights", 14, "--s7"], ["KV cache", 48, "--s5"], ["free", 18, "free"]], cpu: [["Train params + optim (44 GB)", 60, "--s1"], ["free", 40, "free"]] }
+        ];
+        var WS_OOPS = { cap: "⚠️ Wrong order: allocate the 48 GB KV cache while 44 GB of training state is still resident → 14 + 30 + 48 = 92 GB > 80 GB. OOM. The pipeline order is load-bearing.",
+            gpu: [["Train params", 14, "--s1"], ["Optimizer states", 30, "--s3"], ["KV cache — doesn't fit!", 48, "--bad"]], cpu: [["free", 100, "free"]] };
+        var wsIdx = 0;
+        var wsGpu = document.getElementById("ws-gpu"), wsCpu = document.getElementById("ws-cpu"),
+            wsCap = document.getElementById("ws-cap"), wsLegendEl = document.getElementById("ws-legend");
+        function wsRenderBar(el, segs) {
+            el.innerHTML = "";
+            segs.forEach(function (s) {
+                var d = document.createElement("div");
+                d.style.flexGrow = String(s[1]);
+                if (s[2] === "free") { d.className = "free"; d.textContent = "free"; }
+                else { d.style.background = "var(" + s[2] + ")"; d.textContent = s[0]; }
+                d.title = s[0] + (s[2] === "free" ? "" : " — ~" + s[1] + " GB");
+                el.appendChild(d);
+            });
+        }
+        function wsRender(state, overflow) {
+            if (!wsGpu || !wsCpu || !wsCap) return;
+            wsRenderBar(wsGpu, state.gpu);
+            wsRenderBar(wsCpu, state.cpu);
+            wsCap.textContent = state.cap;
+            wsGpu.classList.remove("overflowing");
+            if (overflow) { void wsGpu.offsetWidth; wsGpu.classList.add("overflowing"); }
+        }
+        if (wsGpu && wsCpu) {
+            var wsPrev = document.getElementById("ws-prev"), wsNext = document.getElementById("ws-next"), wsOops = document.getElementById("ws-oops");
+            if (wsPrev) wsPrev.addEventListener("click", function () { wsIdx = Math.max(0, wsIdx - 1); wsRender(WS_STEPS[wsIdx]); });
+            if (wsNext) wsNext.addEventListener("click", function () { wsIdx = Math.min(WS_STEPS.length - 1, wsIdx + 1); wsRender(WS_STEPS[wsIdx]); });
+            if (wsOops) wsOops.addEventListener("click", function () { wsRender(WS_OOPS, true); });
+            if (wsLegendEl) {
+                [["--s1", "Training params/states"], ["--s3", "Optimizer"], ["--s2", "IPC bucket"], ["--s7", "vLLM weights"], ["--s5", "KV cache"]].forEach(function (pair) {
+                    var s = document.createElement("span");
+                    s.innerHTML = '<i class="chip" style="background:var(' + pair[0] + ')"></i>' + pair[1];
+                    wsLegendEl.appendChild(s);
+                });
+            }
+            wsRender(WS_STEPS[0]);
+        }
+
+        /* ---------- 4. staleness dial ---------- */
+        var ST = [
+            { name: "Fully synchronous, μ = 1", desc: "Generate a batch, take exactly one gradient step on it, sync, repeat.",
+              util: 55, stale: "None — perfectly on-policy.", prot: "PPO clip barely engages.", fw: "TRL default · verl sync mode." },
+            { name: "Batch reuse, μ > 1", desc: "One generation feeds μ optimizer passes (GRPO's μ / PPO epochs).",
+              util: 70, stale: "Same batch, up to μ versions of drift within it.", prot: "Clip ratio; sequence-level IS (GSPO) for long generations.", fw: "TRL num_iterations · verl ppo_epochs." },
+            { name: "One-step-off", desc: "Train on batch t while batch t+1 generates on other GPUs (or interleaved).",
+              util: 88, stale: "Everything is exactly 1 policy version stale.", prot: "IS against behavior π_old + the clip; bounded by construction.", fw: "verl colocate_async · TRL experimental async." },
+            { name: "Fully async rollout farm", desc: "Rollout workers stream trajectories into a buffer; trainer consumes continuously.",
+              util: 96, stale: "Unbounded — unless you bound it (verl replay buffer: drop groups > 8 versions old, or wait).", prot: "Staleness-tagged buffer + decoupled π_old (CPU snapshots) + sequence-level IS + partial-rollout accounting.", fw: "verl separate_async · PipelineRL-style systems." }
+        ];
+        var stDial = document.getElementById("st-dial");
+        function stRender() {
+            var s = ST[parseInt(stDial.value, 10) || 0];
+            var ids = { "st-name": s.name, "st-desc": s.desc, "st-stale": s.stale, "st-prot": s.prot, "st-fw": s.fw };
+            Object.keys(ids).forEach(function (k) {
+                var el = document.getElementById(k);
+                if (el) el.textContent = ids[k];
+            });
+            var m = document.getElementById("st-meter");
+            if (m) m.style.width = s.util + "%";
+        }
+        if (stDial) { stDial.addEventListener("input", stRender); stRender(); }
+
+        /* ---------- 5. KL playground ---------- */
+        var klCanvas = document.getElementById("kl-canvas"), klSlider = document.getElementById("kl-d"),
+            klRead = document.getElementById("kl-read"), klNote = document.getElementById("kl-note");
+        var KL = { xmin: -1.5, xmax: 1.5, ymin: -1.7, ymax: 2.2 };
+        function k1(d) { return -d; }
+        function k2(d) { return d * d / 2; }
+        function k3(d) { return Math.exp(d) - d - 1; }
+        function klDraw() {
+            if (!klCanvas) return;
+            var dpr = window.devicePixelRatio || 1;
+            var w = klCanvas.clientWidth || 600, h = 230;
+            if (klCanvas.width !== Math.round(w * dpr)) { klCanvas.width = Math.round(w * dpr); klCanvas.height = Math.round(h * dpr); }
+            var ctx = klCanvas.getContext("2d");
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, w, h);
+            var padL = 8, padR = 34, padT = 10, padB = 22;
+            function X(d) { return padL + (d - KL.xmin) / (KL.xmax - KL.xmin) * (w - padL - padR); }
+            function Y(v) { return padT + (KL.ymax - v) / (KL.ymax - KL.ymin) * (h - padT - padB); }
+            var grid = cssVar("--grid"), muted = cssVar("--muted");
+            // gridlines + baseline
+            ctx.strokeStyle = grid; ctx.lineWidth = 1;
+            [1, 2].forEach(function (v) { ctx.beginPath(); ctx.moveTo(padL, Y(v)); ctx.lineTo(w - padR, Y(v)); ctx.stroke(); });
+            ctx.strokeStyle = muted;
+            ctx.beginPath(); ctx.moveTo(padL, Y(0)); ctx.lineTo(w - padR, Y(0)); ctx.stroke(); // y=0
+            ctx.beginPath(); ctx.moveTo(X(0), padT); ctx.lineTo(X(0), h - padB); ctx.stroke(); // d=0
+            ctx.font = "600 11px -apple-system, system-ui, sans-serif";
+            ctx.fillStyle = muted;
+            ctx.fillText("0", X(0) + 4, h - padB + 14);
+            ctx.fillText("d = logπ_ref − logπ →", w - padR - 150, h - padB + 14);
+            ctx.fillText("1", padL, Y(1) - 3);
+            ctx.fillText("2", padL, Y(2) - 3);
+            var fns = [["k1", k1, "--s1"], ["k2", k2, "--s2"], ["k3", k3, "--s3"]];
+            fns.forEach(function (f) {
+                ctx.strokeStyle = cssVar(f[2]); ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (var i = 0; i <= 120; i++) {
+                    var d = KL.xmin + (KL.xmax - KL.xmin) * i / 120;
+                    var v = Math.max(KL.ymin, Math.min(KL.ymax, f[1](d)));
+                    if (i === 0) ctx.moveTo(X(d), Y(v)); else ctx.lineTo(X(d), Y(v));
+                }
+                ctx.stroke();
+                // direct label at right end
+                var endV = Math.max(KL.ymin + 0.1, Math.min(KL.ymax - 0.1, f[1](KL.xmax)));
+                ctx.fillStyle = cssVar(f[2]);
+                ctx.fillText(f[0], w - padR + 6, Y(endV) + 4);
+            });
+            // marker at slider d
+            var d0 = parseFloat(klSlider ? klSlider.value : "0.6");
+            fns.forEach(function (f) {
+                var v = f[1](d0);
+                if (v < KL.ymin || v > KL.ymax) return;
+                ctx.fillStyle = cssVar(f[2]);
+                ctx.beginPath(); ctx.arc(X(d0), Y(v), 5, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = cssVar("--card"); ctx.lineWidth = 2; ctx.stroke();
+            });
+            ctx.strokeStyle = muted; ctx.setLineDash([3, 3]);
+            ctx.beginPath(); ctx.moveTo(X(d0), padT); ctx.lineTo(X(d0), h - padB); ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        function klUpdate() {
+            if (!klSlider) return;
+            var d = parseFloat(klSlider.value);
+            if (klRead) klRead.textContent = "d = " + d.toFixed(2) + "   →   k1 = " + k1(d).toFixed(3) + " · k2 = " + k2(d).toFixed(3) + " · k3 = " + k3(d).toFixed(3);
+            if (klNote) {
+                klNote.textContent = k1(d) < -0.001
+                    ? "k1 is NEGATIVE here — as a loss term it would push the policy AWAY from the reference. k3 stays ≥ 0 and ≈ k2 near zero. That's why it's the default."
+                    : "Near d = 0, k3 ≈ k2 ≈ d²/2 — low variance, always non-negative. k1 is unbiased but noisy.";
+            }
+            klDraw();
+        }
+        if (klCanvas && klSlider) {
+            klSlider.addEventListener("input", klUpdate);
+            klCanvas.addEventListener("pointerdown", function (e) { klDrag(e); klCanvas.setPointerCapture(e.pointerId); });
+            klCanvas.addEventListener("pointermove", function (e) { if (e.buttons) klDrag(e); });
+            window.addEventListener("resize", klDraw);
+            klUpdate();
+        }
+        function klDrag(e) {
+            var r = klCanvas.getBoundingClientRect();
+            var frac = (e.clientX - r.left - 8) / (r.width - 42);
+            var d = KL.xmin + Math.max(0, Math.min(1, frac)) * (KL.xmax - KL.xmin);
+            klSlider.value = String(Math.round(d * 20) / 20);
+            klUpdate();
+        }
+
+        /* redraw canvases when the theme flips */
+        if (darkMq && darkMq.addEventListener) {
+            darkMq.addEventListener("change", function () { tlDraw(); klDraw(); });
+        }
+
+        /* ---------- 6. quiz ---------- */
+        var QUIZ = [
+            { q: "Why do RL frameworks run generation on vLLM/SGLang instead of the training framework's generate()?",
+              o: ["The training framework can't do sampling, only argmax",
+                  "Serving engines are 10–50× faster at autoregressive decode (continuous batching, paged KV cache)",
+                  "vLLM produces more accurate logprobs than FSDP"],
+              a: 1, why: "Decode is memory-bandwidth-bound and KV-cache-hungry — exactly what serving engines optimize. (And no: vLLM's logprobs are numerically WORSE for training — that's the recompute issue.)" },
+            { q: "GRPO's biggest systems (not algorithmic) win over PPO?",
+              o: ["It converges in fewer steps", "It removes the KL term", "It deletes the critic — removing an entire trained model's weights, grads, and optimizer state"],
+              a: 2, why: "The critic is a second trainable model (~16 bytes/param). Group-normalized rewards replace it with statistics." },
+            { q: "Why recompute old_log_probs under the training engine after vLLM generated the tokens?",
+              o: ["vLLM doesn't return logprobs", "Different kernels/precision make vLLM's logprobs numerically inconsistent with the trainer's forward — using them corrupts the PPO ratio", "It's faster than reading them from vLLM"],
+              a: 1, why: "Same tokens, different numbers. The corrupted ratio presents as slow, mysterious divergence. Both frameworks recompute (or explicitly IS-correct)." },
+            { q: "In verl's colocated weight-sync pipeline, why is the KV cache allocated last?",
+              o: ["The KV cache must be zeroed after weights load", "Training params/optimizer are still resident until step 4 — allocate the KV cache earlier and you OOM", "vLLM requires weights before it can size the cache"],
+              a: 1, why: "sleep → wake weights → gather → transfer → offload training state → THEN allocate KV into the vacated space. Try the “What if KV cache first?” button above." },
+            { q: "How does training with LoRA give you a free reference model?",
+              o: ["LoRA models don't need a KL term", "The base model with adapters disabled IS the original policy — reference logprobs are just a forward pass with adapters off", "The adapter is small enough to hold two copies"],
+              a: 1, why: "TRL keeps a frozen adapter named “ref” and switches; verl sets ref_in_actor when lora_rank > 0. Zero extra model memory." },
+            { q: "Why is k3 = e^d − d − 1 the default KL estimator in both frameworks?",
+              o: ["It's the only unbiased estimator", "It's exact, not an estimate", "Low variance and always ≥ 0 — unlike k1, which is noisy and can go negative as a loss term"],
+              a: 2, why: "k1 = −d is unbiased but high-variance and sign-flips; k3 is a low-variance, non-negative estimator of the same KL." },
+            { q: "What does one-step-off async training buy, and at what cost?",
+              o: ["Double throughput, zero downside", "Fills the generate/train bubble — every batch is exactly one policy version stale, corrected with IS + clipping", "Removes the need for weight sync"],
+              a: 1, why: "Train on batch t while t+1 generates. Staleness is bounded by construction at 1 version — the sweet spot before full async complexity." },
+            { q: "Your team: 6 GPUs, LoRA fine-tunes, trying a new loss variant every week. TRL or verl?",
+              o: ["verl — it's newer and faster", "TRL — algorithm breadth, HF-native, no Ray overhead; verl's power pays off at multi-node scale you don't have", "Neither — write it from scratch"],
+              a: 1, why: "verl's hybrid engine and placement freedom solve problems you don't have at 6 GPUs — and you'd inherit Ray debugging and Hydra config sprawl." }
+        ];
+        var quizRoot = document.getElementById("quiz-root"), quizScore = document.getElementById("quiz-score"), quizReset = document.getElementById("quiz-reset");
+        var answered = 0, correct = 0;
+        function quizRender() {
+            if (!quizRoot) return;
+            quizRoot.innerHTML = "";
+            answered = 0; correct = 0;
+            updateScore();
+            QUIZ.forEach(function (item, qi) {
+                var qd = document.createElement("div");
+                qd.className = "q";
+                var qp = document.createElement("p");
+                qp.className = "qq";
+                qp.textContent = (qi + 1) + ". " + item.q;
+                qd.appendChild(qp);
+                var opts = document.createElement("div");
+                opts.className = "opts";
+                item.o.forEach(function (opt, oi) {
+                    var b = document.createElement("button");
+                    b.textContent = opt;
+                    b.addEventListener("click", function () {
+                        if (qd.classList.contains("done")) return;
+                        qd.classList.add("done");
+                        answered++;
+                        if (oi === item.a) { correct++; b.classList.add("right"); }
+                        else {
+                            b.classList.add("wrong");
+                            var kids = opts.querySelectorAll("button");
+                            if (kids[item.a]) kids[item.a].classList.add("right");
+                        }
+                        updateScore();
+                    });
+                    opts.appendChild(b);
+                });
+                qd.appendChild(opts);
+                var why = document.createElement("p");
+                why.className = "why";
+                why.textContent = item.why;
+                qd.appendChild(why);
+                quizRoot.appendChild(qd);
+            });
+        }
+        function updateScore() {
+            if (quizScore) quizScore.textContent = answered === 0 ? "Score: —" : "Score: " + correct + " / " + answered + (answered === QUIZ.length ? (correct === QUIZ.length ? " — clean sweep 🎯" : " of " + QUIZ.length) : "");
+        }
+        if (quizRoot) {
+            quizRender();
+            if (quizReset) quizReset.addEventListener("click", quizRender);
+        }
+    })();
+    </script>
+</body>
+</html>
