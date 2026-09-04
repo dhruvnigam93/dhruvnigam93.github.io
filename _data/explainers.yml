@@ -126,3 +126,8 @@
   slug: rl-on-llms-systems-problem
   date: 2026-09-03
   description: "Why online RL is a training job + inference service welded together, and how TRL and verl resolve it — animated GPU-bubble timeline (colocate / disaggregate / one-step-off), four-model memory-ledger calculator with 2023-PPO vs 2025-R1 presets, verl's 5-step weight-sync stepper with an OOM trap, staleness dial, k1/k2/k3 KL playground, and an 8-question quiz."
+
+- title: "Disco — The Complete Loop Brief"
+  slug: disco-loop-brief
+  date: 2026-09-04
+  description: "briefs/disco.md + the Gemini deep research, phone-ready — purchase-flow step-through, revenue growth chart, Rokt comparison, the 10-item ML greenfield map, rank-score and 200ms-latency widgets, people dossiers in loop order, comp calculator with band logic, tap-to-strike question banks for Animesh and Gaurav, and a 9-question quiz."

@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>Disco — The Complete Loop Brief</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --good: #16a34a;
+            --bad: #dc2626;
+            --warn: #d97706;
+            --radius: 14px;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                --good: #4ade80;
+                --bad: #f87171;
+                --warn: #fbbf24;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: max(20px, env(safe-area-inset-top)) 20px 80px;
+        }
+        .back {
+            display: inline-block;
+            margin: 8px 0 20px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.3rem; margin: 2em 0 0.5em; scroll-margin-top: 16px; }
+        h3 { font-size: 1.05rem; margin: 1.4em 0 0.4em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        code {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.85em;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+        }
+        .card.accent { border-left: 4px solid var(--accent); }
+        .card.warn { border-left: 4px solid var(--warn); }
+        .card.good { border-left: 4px solid var(--good); }
+        details {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 0 18px;
+            margin: 12px 0;
+            background: var(--card);
+        }
+        summary {
+            cursor: pointer;
+            padding: 16px 0;
+            font-weight: 600;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after {
+            content: "+";
+            color: var(--muted);
+            font-size: 1.4rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        button {
+            font: inherit;
+            font-weight: 600;
+            color: #fff;
+            background: var(--accent);
+            border: none;
+            border-radius: 999px;
+            padding: 12px 22px;
+            min-height: 48px;
+            min-width: 48px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        button:active { transform: scale(0.96); }
+        .ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+        input[type="range"] { width: 100%; height: 44px; accent-color: var(--accent); }
+        footer {
+            margin-top: 3em;
+            padding-top: 1.2em;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+        /* pill nav */
+        .pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 6px; }
+        .pills a {
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 8px 14px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: var(--card);
+            color: var(--fg);
+        }
+        .pills a:active { opacity: 0.7; }
+        /* stat tiles */
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 1em 0; }
+        .stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
+        .stat b { display: block; font-size: 1.35rem; line-height: 1.2; color: var(--accent); }
+        .stat span { font-size: 0.8rem; color: var(--muted); }
+        /* tables */
+        .tablewrap { overflow-x: auto; margin: 1em 0; -webkit-overflow-scrolling: touch; }
+        table { border-collapse: collapse; width: 100%; font-size: 0.88rem; min-width: 480px; }
+        th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+        th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+        /* flow diagram */
+        .flownodes { display: flex; gap: 6px; margin: 12px 0; }
+        .fnode {
+            flex: 1; text-align: center; font-size: 0.72rem; font-weight: 600;
+            border: 2px solid var(--line); border-radius: 10px; padding: 10px 4px;
+            background: var(--bg); transition: border-color 0.35s, background 0.35s, transform 0.35s;
+        }
+        .fnode.lit { border-color: var(--accent); background: var(--card); transform: translateY(-3px); }
+        .fnode small { display: block; font-weight: 400; color: var(--muted); font-size: 0.64rem; }
+        .flowcap { min-height: 5.2em; font-size: 0.92rem; }
+        .steprow { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
+        .stepdots { flex: 1; text-align: center; color: var(--muted); font-size: 0.85rem; }
+        /* revenue bars */
+        .revchart { display: flex; align-items: flex-end; gap: 14px; height: 190px; margin: 14px 0 4px; }
+        .revcol { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; }
+        .revbar {
+            width: 100%; max-width: 84px; border-radius: 8px 8px 0 0;
+            background: var(--accent); opacity: 0.85; height: 2px;
+            transition: height 1s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .revbar.tgt { background: var(--warn); }
+        .revval { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
+        .revlab { font-size: 0.7rem; color: var(--muted); text-align: center; margin-top: 6px; line-height: 1.25; }
+        /* rank score widget */
+        .offergrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+        .offer { border: 2px solid var(--line); border-radius: var(--radius); padding: 12px; transition: border-color 0.3s; }
+        .offer.winner { border-color: var(--good); }
+        .offer h4 { margin: 0 0 4px; font-size: 0.95rem; }
+        .offer .ev { font-size: 1.25rem; font-weight: 700; }
+        .offer .win-badge { display: none; font-size: 0.7rem; font-weight: 700; color: var(--good); letter-spacing: 0.06em; }
+        .offer.winner .win-badge { display: inline; }
+        .evbarwrap { background: var(--line); border-radius: 6px; height: 10px; margin-top: 8px; overflow: hidden; }
+        .evbar { height: 100%; background: var(--accent); width: 0; transition: width 0.4s; border-radius: 6px; }
+        .offer.winner .evbar { background: var(--good); }
+        .sliderlab { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--muted); margin-top: 8px; }
+        .sliderlab b { color: var(--fg); }
+        /* latency widget */
+        .latbar { display: flex; height: 46px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); margin: 12px 0 6px; }
+        .latseg { position: relative; background: var(--line); }
+        .latseg .fill { position: absolute; inset: 0; background: var(--accent); transform: scaleX(0); transform-origin: left; }
+        .latseg.llm .fill { background: var(--warn); }
+        .latlegend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.75rem; color: var(--muted); margin: 8px 0; }
+        .latlegend span b { color: var(--fg); }
+        .latreadout { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.1rem; }
+        .latreadout.over { color: var(--warn); }
+        /* comp widget */
+        .compread { display: flex; gap: 12px; flex-wrap: wrap; margin: 10px 0; }
+        .compread .stat { flex: 1; min-width: 130px; }
+        .bandnote { font-size: 0.9rem; font-weight: 600; }
+        .bandnote.in { color: var(--good); }
+        .bandnote.stretch { color: var(--warn); }
+        /* checklists */
+        .check { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px dashed var(--line); cursor: pointer; }
+        .check input { width: 22px; height: 22px; margin-top: 4px; flex-shrink: 0; accent-color: var(--accent); }
+        .check.done .qtext { text-decoration: line-through; color: var(--muted); }
+        .qtext { font-size: 0.94rem; }
+        /* dossier tags */
+        .tag { display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); margin-left: 6px; }
+        .tag.crit { color: var(--bad); border-color: var(--bad); }
+        .tag.won { color: var(--good); border-color: var(--good); }
+        /* quiz */
+        .qcard { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 16px 18px; margin: 14px 0; }
+        .qcard .qq { font-weight: 600; margin-bottom: 10px; }
+        .qopt {
+            display: block; width: 100%; text-align: left; margin: 8px 0;
+            background: var(--bg); color: var(--fg); border: 1px solid var(--line);
+            border-radius: 10px; padding: 12px 14px; font-weight: 400; font-size: 0.95rem;
+        }
+        .qopt.correct { border-color: var(--good); background: color-mix(in srgb, var(--good) 12%, var(--bg)); font-weight: 600; }
+        .qopt.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 10%, var(--bg)); }
+        .qwhy { font-size: 0.86rem; color: var(--muted); margin-top: 8px; display: none; }
+        .qcard.answered .qwhy { display: block; }
+        .quizscore { font-weight: 700; font-size: 1.05rem; }
+        ul, ol { padding-left: 1.3em; }
+        li { margin: 0.35em 0; }
+        .small { font-size: 0.86rem; color: var(--muted); }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>Disco — The Complete Loop Brief</h1>
+        <p class="meta">Added 2026-09-04 · combines briefs/disco.md + Gemini deep research</p>
+
+        <div class="card accent">
+            <b>Status snapshot.</b> Tier 1 (remote ✓ + cash ✓ ≈ ₹1.3–1.4 Cr + LLM-insider ✗ = 2/3). Stage: <b>technical</b>, comp verbally aligned Sep 3. Remaining loop: <b>Gaurav → Vicki → Ryan Cook → likely Conner</b>. The one way to lose this: <b>be slow</b>. DB ID 42.
+        </div>
+
+        <nav class="pills">
+            <a href="#business">Business</a>
+            <a href="#scale">Scale</a>
+            <a href="#market">Market</a>
+            <a href="#ml">ML greenfield</a>
+            <a href="#serving">Serving math</a>
+            <a href="#people">People</a>
+            <a href="#comp">Comp</a>
+            <a href="#strategy">Strategy</a>
+            <a href="#questions">Question banks</a>
+            <a href="#stack">Stack</a>
+            <a href="#quiz">Quiz</a>
+        </nav>
+
+        <h2 id="business">1 · What Disco actually is</h2>
+        <p><b>One-liner:</b> a two-sided commerce-media network. At (and now before) checkout on one brand's store, shoppers see personalized paid offers from <i>other</i> brands, matched by ML over a 160M-profile purchase graph. Every transaction is a media moment; Disco monetizes it.</p>
+
+        <div class="card">
+            <b>Walk one purchase through the machine</b>
+            <div class="flownodes" id="flownodes">
+                <div class="fnode" data-n="0">🛒 Shopper<small>buys cookware</small></div>
+                <div class="fnode" data-n="1">🏪 Publisher<small>Caraway TYP</small></div>
+                <div class="fnode" data-n="2">🧠 Disco<small>matching engine</small></div>
+                <div class="fnode" data-n="3">📣 Advertiser<small>Fabletics</small></div>
+            </div>
+            <p class="flowcap" id="flowcap"></p>
+            <div class="steprow">
+                <button class="ghost" id="flowprev">&larr; Prev</button>
+                <div class="stepdots" id="flowdots"></div>
+                <button id="flownext">Next &rarr;</button>
+            </div>
+        </div>
+
+        <p><b>The economics, concretely.</b> Publishers get paid per load/interaction (~$0.50 per checkout offer, ~$0.25 per thank-you-page load — pure incremental margin on a page that earned nothing before). Advertisers pay only on outcomes (CPA/CPC/CPE) with 100% share of voice — no competing ad in the slot. Disco takes a cut of the flow; Justin: "every dollar we make is a rev-share with our partners." For calibration, Rokt — the category giant — publicly takes ~50% of ad spend. Middleman economics here are fat.</p>
+        <p><b>Identity is deterministic and first-party</b> — hashed email (SHA-256) at authenticated checkout is the join key; "zero cookies, zero fingerprinting, zero PII." Cookie death and ATT are a <i>tailwind</i>, not a threat.</p>
+
+        <h3>Product lines (org: platforms / consumer / ML-optimization)</h3>
+        <div class="tablewrap"><table>
+            <tr><th>Product</th><th>What it is</th></tr>
+            <tr><td><b>DiscoOffers</b></td><td>Core offers network: thank-you page, order tracking, checkout, email, SMS, apps</td></tr>
+            <tr><td><b>OffersAI</b></td><td>The matching/ranking engine — <b>this is the role.</b> Justin: "the trunk of the company"</td></tr>
+            <tr><td><b>DiscoBeat</b></td><td>Headless API so B2B2C SaaS platforms embed white-labeled offer monetization (Mindbody, Gopuff via Narvar/Seel)</td></tr>
+            <tr><td><b>DiscoMix</b></td><td>Yield auction for enterprise retailers — blends direct-sold + network demand across email/SMS/app</td></tr>
+            <tr><td><b>Rewarded</b></td><td>New consumer app (Rakuten/Honey-style). Edge: they already own distribution; competitors must buy it</td></tr>
+        </table></div>
+
+        <details>
+            <summary>The pivot story (why this 6-year-old company acts 1 year old)</summary>
+            <p>Founded ~2020 as <b>Co-op Commerce</b> by Conner Sherline. $1.45M pre-seed (2020) → $5.8M seed (Jun 2021, Sugar Capital + Bessemer) → <b>$20M Series A (Mar 2022, Felicis)</b>, with Shopify a strategic investor. ~$26M raised total.</p>
+            <p>~18 months ago the company plateaued at $8M revenue. Conner's line (via Justin): <b>"$8M is a hobby, not a company."</b> He pivoted from Shopify-native widget to a <b>headless commerce-media platform</b> (integrate any supply or demand partner), pushed out non-believers, and rebuilt the team over ~10 months. Justin joined ~May 2026 and ran a second round of "washing." Everyone left is post-pivot and hand-picked.</p>
+            <p>Conner's founding thesis, forged at Meta (5 yrs product marketing — watched CAC rise 30x on paid social) then Affirm (saw captive post-purchase attention going unmonetized): "democratize data" so independent merchants can fight P&amp;G-scale ad budgets.</p>
+        </details>
+
+        <h2 id="scale">2 · Scale &amp; financials</h2>
+        <div class="stats">
+            <div class="stat"><b>160M+</b><span>shopper profiles — full purchase history, exact identity (May 2026 PR said 150M)</span></div>
+            <div class="stat"><b>$60B+</b><span>GMV powered (PR: $50B+ historical txn data)</span></div>
+            <div class="stat"><b>1B+</b><span>transactions / year</span></div>
+            <div class="stat"><b>1,800+</b><span>network partners; 1,000+ premium DTC brands</span></div>
+            <div class="stat"><b>137%</b><span>YoY gross revenue growth (May 2026, public)</span></div>
+            <div class="stat"><b>~25</b><span>max product/eng headcount, ever — by philosophy</span></div>
+        </div>
+
+        <div class="card">
+            <b>The revenue line they'll expect you to know</b>
+            <div class="revchart" id="revchart">
+                <div class="revcol"><div class="revval" id="rv0">$8M</div><div class="revbar" data-v="8"></div><div class="revlab">plateau<br>("a hobby")</div></div>
+                <div class="revcol"><div class="revval">$13M</div><div class="revbar" data-v="13"></div><div class="revlab">last year<br>(actual)</div></div>
+                <div class="revcol"><div class="revval">$40M</div><div class="revbar tgt" data-v="40"></div><div class="revlab">this year<br>target (~3×)</div></div>
+                <div class="revcol"><div class="revval">$100M</div><div class="revbar tgt" data-v="100"></div><div class="revlab">next year<br>target</div></div>
+            </div>
+            <button class="ghost" id="revplay">▶ Play the growth</button>
+        </div>
+
+        <p><b>Balance sheet:</b> profitable, $12M in the bank (unspent), zero debt, every quarter of 2027 planned profitable. Case studies cite 5–7× ROAS and +10–30% AOV. Customers: Caraway, Lane Bryant, Chico's &amp; Talbots (Knitwell Group), Fabletics, Laura Geller, True Classic, Dagne Dover, Rhone, Lovevery; Gopuff order-status page (exclusive, Aug 2025), Mindbody's 2M+ MAU wellness users (Sep 2025), Narvar/Seel via Beat.</p>
+        <p><b>AI-native dev culture:</b> Linear agents review all PRs, eval loops auto-tune ML thresholds, the CEO and head of sales write code. They rebuilt the entire ad server in 5 weeks — that's what Animesh builds on.</p>
+
+        <details>
+            <summary>Risks to hold (and ask about smartly)</summary>
+            <ul>
+                <li>DTC mid-market churn — the base is fickle.</li>
+                <li>Shopify: both investor and latent competitor (Shop app / Shop Cash).</li>
+                <li>Consumer offer fatigue — the premium-curated vs spammy-affiliate line is the whole brand.</li>
+                <li>Rokt moving downmarket (it bought AfterSell + Canal for Shopify reach).</li>
+            </ul>
+        </details>
+
+        <h2 id="market">3 · Market &amp; competitors</h2>
+        <p>Retail media is ~$150–166B of global ad spend by 2025/26 and shifting from Phase 1 (endemic sponsored search on Amazon/Walmart) to <b>Phase 2: non-endemic, off-site, post-purchase</b> — exactly Disco's lane. Budgets are draining from Meta/Google toward transaction-moment "commerce media."</p>
+
+        <div class="tablewrap"><table>
+            <tr><th></th><th>Disco</th><th>Rokt (the 800-lb gorilla)</th></tr>
+            <tr><td>Revenue</td><td>$13M → $40M target</td><td>~$600M (2024, +43%), ~$900M run-rate late 2025, IPO expected 2026</td></tr>
+            <tr><td>Valuation</td><td>~$26M raised, profitable</td><td>$3.5B (Jan 2025 secondary) → reported $7.2B (Sep 2025)</td></tr>
+            <tr><td>Transactions</td><td>1B+/yr</td><td>13B+/yr, 165M MAU</td></tr>
+            <tr><td>ML</td><td>one advertiser×publisher model (today)</td><td>"Rokt Brain" — 1.95T data points/yr, &gt;$100M/yr R&amp;D</td></tr>
+            <tr><td>Position</td><td>headless, white-label, API-first; premium DTC/mid-market → up via Mix/Beat</td><td>enterprise (Uber, Ticketmaster, PayPal); heavy footprint, rigid ecosystem</td></tr>
+        </table></div>
+
+        <details>
+            <summary>The rest of the field</summary>
+            <ul>
+                <li><b>Fluent</b> (NASDAQ: FLNT) — legacy performance marketing pivoted to commerce media; $105M+ run-rate 2025; Authentic Brands (Reebok/Volcom) + Rebuy (12k Shopify merchants).</li>
+                <li><b>Moloco</b> — the ML-heavy one; powers "Costco Velocity" with outcome-based smart bidding. Watch their framing: real-time contextual adaptation, dynamic bid multipliers.</li>
+                <li><b>Criteo</b> — retail media incumbent. <b>AfterSell/UpCart</b> — same-store upsells (not cross-brand). <b>Carro</b> — cross-store dropshipping.</li>
+                <li>Disco's flank vs all of them: DiscoBeat's non-endemic SaaS enablement — monetize "billions in unmonetized touchpoints" the giants ignore.</li>
+            </ul>
+        </details>
+
+        <h2 id="ml">4 · The ML greenfield (the pitch)</h2>
+        <div class="card accent">
+            <b>The single most important fact</b> (Justin, verbatim): today's entire ML is one advertiser→publisher relationship model — <i>"does Levi's perform well on Gap? Nothing else. There's no other ML behind it."</i> The 160M-profile purchase graph is <b>completely unused</b>. They know it. This role exists to fix it.
+        </div>
+        <p><b>Constraints:</b> ~200ms standard serving budget; Justin is open to a ~1,500ms lane for LLM-overlay decisions (he name-dropped Qwen). He wants someone who "bleeds the lines together" between millisecond ML decisioning and LLM tooling.</p>
+
+        <details open>
+            <summary>Opportunity map — walk in with these (value order)</summary>
+            <ol>
+                <li><b>Shopper-level personalization</b> — sequence models / embeddings over purchase histories → p(convert | shopper, offer, context), replacing the advertiser×publisher matrix. This is LUMOS-shaped: one foundation model over all behavioral data replacing point models. Purchase data is the richest behavioral signal there is — the 10-year thesis, verbatim.</li>
+                <li><b>Explore/exploit for offer ranking</b> — contextual bandits for cold-start; only ~1,000 offers, so exploration is cheap and payoff fast.</li>
+                <li><b>Yield &amp; auction optimization (DiscoMix)</b> — bid shading, floor pricing, direct-sold vs network blending. Direct quant-trading mapping: budgeted allocation under uncertainty.</li>
+                <li><b>CPA bidding + budget pacing control plane</b> — the Dream11 "aggression parameter" story transplants 1:1: transparency + steerable autonomy for non-ML operators. Justin already loved this.</li>
+                <li><b>Incrementality / LTV</b> — uplift modeling ("did the offer <i>cause</i> the purchase?") = the measurement ammo GTM needs against Rokt.</li>
+                <li><b>LLM overlays</b> — per-shopper creative/CTA, semantic catalog matching, LLM priors for cold-start brands, agentic campaign setup ("launch in an hour").</li>
+                <li><b>Identity resolution</b> — entity matching across 160M deterministic profiles; graph quality is the moat.</li>
+                <li><b>Rewarded app feed</b> — consumer-scale real-time recommender.</li>
+                <li><b>Closed-loop evals</b> — self-tuning thresholds; you've built eval-gated pipelines.</li>
+                <li><b>Offer quality / brand-safety scoring</b> — protects the curated-premium positioning that separates them from spam.</li>
+            </ol>
+        </details>
+
+        <div class="card warn">
+            <b>Honest model-work check:</b> real in-house training (ranking, embeddings, propensity, auction) on a genuinely rich proprietary dataset — but <b>not</b> LLM pre/post-training. It's decisioning/recsys ML + an LLM application layer. Known trade; comp + remote + greenfield ownership is why this is being pursued.
+        </div>
+
+        <h2 id="serving">5 · Serving math you should be fluent in</h2>
+
+        <h3>The ranking objective</h3>
+        <p>The core task is multi-objective ranking: not CTR, but expected yield under brand-safety guardrails:</p>
+        <p style="text-align:center"><code>Rank = p(click | u, c) × p(conv | u, c, click) × Bid</code></p>
+        <p>where <code>u</code> = user features from the identity graph, <code>c</code> = publisher context. Typical stack: two-tower retrieval for candidates, GBDTs or sequential models for final scoring, strict calibration, IPS replay for offline eval before A/B.</p>
+
+        <div class="card">
+            <b>Feel it: make Offer A win the slot</b>
+            <p class="small">Offer B is fixed: 2.5% click × 20% conv × $45 CPA bid = <b>$0.225</b> expected value per impression. Raw CTR doesn't win — the product does.</p>
+            <div class="offergrid">
+                <div class="offer" id="offerA">
+                    <h4>Offer A (yours) <span class="win-badge">WINS SLOT</span></h4>
+                    <div class="ev" id="evA">$0.192</div>
+                    <div class="evbarwrap"><div class="evbar" id="barA"></div></div>
+                </div>
+                <div class="offer" id="offerB">
+                    <h4>Offer B (fixed) <span class="win-badge">WINS SLOT</span></h4>
+                    <div class="ev">$0.225</div>
+                    <div class="evbarwrap"><div class="evbar" id="barB"></div></div>
+                </div>
+            </div>
+            <div class="sliderlab"><span>p(click): <b id="clickV">4.0%</b></span></div>
+            <input type="range" id="clickS" min="5" max="80" value="40" aria-label="p click, tenths of a percent">
+            <div class="sliderlab"><span>p(conv | click): <b id="convV">12%</b></span></div>
+            <input type="range" id="convS" min="2" max="40" value="12" aria-label="p conversion, percent">
+            <div class="sliderlab"><span>Advertiser CPA bid: <b id="bidV">$40</b></span></div>
+            <input type="range" id="bidS" min="5" max="90" value="40" aria-label="bid dollars">
+        </div>
+
+        <h3>The latency budget</h3>
+        <p>Industry standard for post-purchase surfaces: end-to-end under <b>200ms</b> so the receipt page never feels slow, with the ML pipeline itself usually budgeted ~130ms. Pre-computed embeddings live in a hot feature store (Redis-class); nothing heavy happens on the request path.</p>
+        <div class="card">
+            <b>Where 200ms goes</b>
+            <div class="latbar" id="latbar"></div>
+            <div class="latlegend" id="latlegend"></div>
+            <p><span class="latreadout" id="latread">0 ms</span> <span class="small" id="latnote"></span></p>
+            <div class="steprow">
+                <button id="latplay">▶ Run a request</button>
+                <button class="ghost" id="latllm">Add LLM lane (Qwen)</button>
+            </div>
+        </div>
+
+        <h2 id="people">6 · People — loop order, and how to win each</h2>
+
+        <div class="card warn">
+            <b>Identity trap:</b> public search returns a "Gaurav Mahajan" RL researcher (Mistral/Yale/UCSD) and a biochemist. <b>Not verified as him.</b> His only verified role: Engineering Lead, Integrations (Disco dev docs, incl. Salesforce Commerce Cloud beta). Do not assume a PhD or research background in the room.
+        </div>
+
+        <details open>
+            <summary>Gaurav Mahajan — Head of Engineering <span class="tag crit">NEXT UP · CRITICAL</span></summary>
+            <p><b>Verified:</b> Engineering Lead for Integrations — hands-on owner of order-data ingestion, SDKs, attribution, SFCC beta. NJ, Eastern time.</p>
+            <p><b>Likely cares:</b> real-time systems, pragmatism, speed, how ML plugs into the 5-week ad server.</p>
+            <p><b>Lead with:</b> Prosperity 0→1 platform ($500M automated loans), Dream11 pricing control plane, shipping velocity. Be the <b>architect-who-ships</b>, not the researcher.</p>
+        </details>
+        <details>
+            <summary>Ryan Cook — VP GTM <span class="tag crit">CRITICAL</span></summary>
+            <p><b>Verified:</b> 20+ yrs ad tech — enterprise sales leadership at Teads, Digital Turbine, Criteo; four acquisitions. Public stances: "the next SaaS business model won't be based on seats" (AI kills seat licensing → SaaS must monetize authenticated relationships + transaction proximity); the next retail-media wave is <b>non-endemic demand</b>, flexible, brand-safe, partner-controlled. Uses Claude + Lovable for GTM tooling himself.</p>
+            <p><b>He is the internal customer of ML. Speak revenue, not models:</b> ROAS, CPA efficiency, incrementality proof advertisers believe, publisher yield. The daily-P&amp;L-to-CXO Dream11 story. Give him sales ammo: "ML that closes deals."</p>
+        </details>
+        <details>
+            <summary>Conner Sherline — Founder/CEO</summary>
+            <p><b>Verified:</b> 5 yrs Meta (product marketing — watched CAC rise 30x), then Affirm (saw untapped post-purchase attention). In-the-weeds builder — writes code, ships models through AI agents, gets mistaken for the product team. 3 kids incl. a newborn. Does off-cycle comp bumps personally.</p>
+            <p><b>The meeting is "food for his brain":</b> he wants the big AI-direction conversation. Lead with the data-underutilization thesis (your stated 10-year hypothesis) + LUMOS as existence proof. His frames: "every transaction is a media moment," "democratizing data" for independents.</p>
+        </details>
+        <details>
+            <summary>Justin Silberman — VP Product &amp; AI <span class="tag won">ALREADY WON</span></summary>
+            <p>18 yrs ad tech; joined Jul 2026 from Epic Games (Director of PM, Fortnite ecosystem — launched Sponsored Row, their first ad product). "Money guy." The role reports to / partners with him.</p>
+            <p><b>His public philosophy</b> (Advertising Week, Aug 2026 — "Stop building ad products like it's 2019"): the PM→eng handoff is dead. New loop: build a working reference with agents → run evals on real data → prove the outcome → hand eng something that already works. <b>"The eval is the spec."</b> Advantage isn't frontier models ("everyone has the models now") but how you wire agents, design evals, build guardrails. Align with him on eval design and orchestration. Keep feeding the quant framing — he explicitly liked it.</p>
+        </details>
+        <details>
+            <summary>The rest of the cast</summary>
+            <ul>
+                <li><b>Vicki</b> — AI product engineer (contractor, India, ~3 mo in). Peer + culture check: US-overlap hours, contractor mechanics, what shipping actually feels like.</li>
+                <li><b>Claudia Esber</b> — Dir People Ops, NYC-north. Ally; prompt and warm. Route scheduling through her aggressively.</li>
+                <li><b>Animesh</b> — DS, the referrer, ex-colleague, India. Built the ML infra, working on embeddings. Inside channel.</li>
+                <li><b>Peter</b> — outgoing DS lead (→ Taiwan, green-card driven). What he leaves = the starting codebase.</li>
+                <li><b>David Coleman</b> — Head of Sales (Jul 2026), advertiser-facing. <b>Meghan Jacobi</b> — Enterprise Sales Dir, Supply (Jul 2026, ex-PubMatic): enterprise supply expansion.</li>
+            </ul>
+        </details>
+
+        <h2 id="comp">7 · Comp state (locked Sep 3)</h2>
+        <ul>
+            <li><b>Range:</b> $150–170K <b>OTE</b> = base + 10–15% bonus + equity (unusual for a contractor role — added because "this role is critical").</li>
+            <li><b>Base $150–160K explicitly on the table.</b> Comp reviews 2×/year + off-cycle bumps by Conner.</li>
+            <li>Vs floor ($140K base min / $170K OTE fixed-heavy): <b>clears comfortably</b>.</li>
+        </ul>
+
+        <div class="card">
+            <b>Play with the offer math</b>
+            <div class="sliderlab"><span>Base: <b id="baseV">$155K</b></span></div>
+            <input type="range" id="baseS" min="140" max="170" value="155" aria-label="base salary thousands">
+            <div class="sliderlab"><span>Bonus: <b id="bonusV">12%</b></span></div>
+            <input type="range" id="bonusS" min="10" max="15" value="12" aria-label="bonus percent">
+            <div class="compread">
+                <div class="stat"><b id="oteV">$173.6K</b><span>OTE (base + bonus)</span></div>
+                <div class="stat"><b id="crV">₹1.51 Cr</b><span>at ₹87/$ · equity extra</span></div>
+            </div>
+            <p class="bandnote" id="bandnote"></p>
+        </div>
+
+        <div class="card warn">
+            <b>Negotiation posture:</b> do NOT push 160 now. Win Gaurav + Ryan + Conner first, then anchor base at $155–160K at offer stage. Note the math they haven't confronted: $160K base + 10–15% = $176–184K OTE, <i>above their stated band</i> — Claudia deferred that to "later conversations," which means stretch exists. And: enthusiasm-leverage already got given away with Claudia once. With the rest of the loop — impressive, not eager.
+        </div>
+
+        <h2 id="strategy">8 · Process read &amp; strategy</h2>
+        <div class="card accent">
+            <b>The read:</b> they're pacing to mid-Oct because <i>you</i> asked for mid-Oct — and using the slack to run other candidates (Claudia said so openly: "we're still talking to other candidates… but we're especially excited about you"). The counter-move is not moving the start date; it's <b>finishing the loop fast</b> so you're the benchmark every other candidate gets measured against — then holding the offer while LiveKit / EnCharge / Twilio mature.
+        </div>
+        <p><b>Positioning for the whole loop — startup narrative + money narrative, in this order:</b></p>
+        <ol>
+            <li>Dream11 pricing control plane (+ quant framing)</li>
+            <li>LUMOS (data-underutilization thesis)</li>
+            <li>Prosperity 0→1 platform</li>
+        </ol>
+        <p><b>De-emphasize:</b> voice AI, LLM research depth — not this buyer.</p>
+        <div class="tablewrap"><table>
+            <tr><th>Action</th><th>Due</th></tr>
+            <tr><td>Send Claudia 2–3 Gaurav slots (your 6:30–8 PM IST = 9–10:30 AM ET); ask to sequence Ryan Cook same week or right after</td><td>Sep 4</td></tr>
+            <tr><td>Animesh call — run the question bank below</td><td>Sep 4</td></tr>
+        </table></div>
+
+        <h2 id="questions">9 · Question banks <span class="small">(tap to strike through — saved on this device)</span></h2>
+        <h3>For Animesh (people first — you want to impress Gaurav &amp; Ryan)</h3>
+        <div id="animeshQs"></div>
+        <h3>For Gaurav (draft — refine after Animesh)</h3>
+        <div id="gauravQs"></div>
+
+        <h2 id="stack">10 · Stack &amp; open questions</h2>
+        <div class="tablewrap"><table>
+            <tr><th>Layer</th><th>Observed (job posts / dev docs)</th></tr>
+            <tr><td>Cloud</td><td>AWS: EC2, Lambda, Aurora, Redshift, DynamoDB, ECS/EKS, S3, CloudFront</td></tr>
+            <tr><td>Languages</td><td>Python, Kotlin, Java, C# (backend) · JS/Next.js/React (front)</td></tr>
+            <tr><td>Data &amp; messaging</td><td>PostgreSQL, MySQL, Elasticsearch, Cassandra, Redis, Kafka, RabbitMQ</td></tr>
+            <tr><td>DevOps</td><td>Terraform, Docker, K8s (EKS), Jenkins, GitLab CI</td></tr>
+            <tr><td>Observability</td><td>Datadog, Prometheus/Grafana, ELK, OpenTelemetry, Sentry</td></tr>
+            <tr><td>Architecture</td><td>Microservices, REST + gRPC internal</td></tr>
+            <tr><td>Integrations</td><td>Shopify app (OAuth) · WebSDK/API (GTM snippet + S2S conversion tracking) · Salesforce Commerce Cloud cartridge (beta — Gaurav's project)</td></tr>
+        </table></div>
+        <p class="small"><b>The posted AI/ML mandate</b> (Rippling ATS): own the "AI operating system" end-to-end — model-agnostic orchestration (swap LLM vendors instantly), agent graphs automating ad ops / bid tuning / creative, and the eval loops that make agent output safe to ship.</p>
+        <details>
+            <summary>Still unverified — don't quote these back</summary>
+            <ul>
+                <li>Gaurav's pre-Disco background (ask Animesh).</li>
+                <li>Conner's exact Meta/Affirm dates — likely right, verify before quoting.</li>
+                <li>Contractor mechanics: entity, payment rails, equity instrument for a non-US contractor (options? phantom?). Ask Claudia at offer stage.</li>
+                <li>"Rewarded" app traction — site doesn't mention it yet (very new).</li>
+                <li>Whether "DiscoFeed" branding is fully retired (site says DiscoOffers everywhere; May 2026 PR still counted "DiscoFeed loads" — 105M, +1,000% YoY).</li>
+            </ul>
+        </details>
+
+        <h2 id="quiz">11 · Quiz — are you loop-ready?</h2>
+        <p class="quizscore" id="quizscore">Score: 0 / 0</p>
+        <div id="quiz"></div>
+        <button class="ghost" id="quizreset">Reset quiz</button>
+
+        <footer>
+            Personal explainer · unlisted · <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+
+    <script>
+    (function () {
+        "use strict";
+
+        /* ---------- flow stepper ---------- */
+        var flowSteps = [
+            { lit: [0], cap: "1 · A shopper finishes checkout at Caraway. Authenticated email gets SHA-256-hashed — that hash is the identity key. No cookies, no fingerprinting." },
+            { lit: [0, 1], cap: "2 · Caraway's thank-you page is the publisher surface. Until now this page earned $0. Caraway gets paid ~$0.25 per offer load here (~$0.50 on checkout surfaces) — pure incremental margin." },
+            { lit: [2], cap: "3 · Disco looks the hash up in the 160M-profile purchase graph — every item, price, date, ship-to — and ranks ~1,000 live offers. Today that ranking is ONE advertiser×publisher model. That's the greenfield." },
+            { lit: [2, 3], cap: "4 · Fabletics wins the slot with 100% share of voice — no competing ad next to it. Case studies: 5–7× ROAS for advertisers, +10–30% AOV for publishers." },
+            { lit: [0, 1, 2, 3], cap: "5 · Money flow: Fabletics pays only on outcome (CPA/CPC/CPE) → Disco takes a cut → Caraway gets its per-load fee. “Every dollar we make is a rev-share with our partners.” Rokt takes ~50% of ad spend in this seat." }
+        ];
+        var flowIdx = 0;
+        var nodes = document.querySelectorAll("#flownodes .fnode");
+        var flowcap = document.getElementById("flowcap");
+        var flowdots = document.getElementById("flowdots");
+        function drawFlow() {
+            if (!flowcap || !nodes.length) return;
+            var step = flowSteps[flowIdx];
+            for (var i = 0; i < nodes.length; i++) {
+                nodes[i].classList.toggle("lit", step.lit.indexOf(i) !== -1);
+            }
+            flowcap.textContent = step.cap;
+            if (flowdots) flowdots.textContent = (flowIdx + 1) + " / " + flowSteps.length;
+        }
+        var fPrev = document.getElementById("flowprev");
+        var fNext = document.getElementById("flownext");
+        if (fPrev) fPrev.addEventListener("click", function () { flowIdx = (flowIdx - 1 + flowSteps.length) % flowSteps.length; drawFlow(); });
+        if (fNext) fNext.addEventListener("click", function () { flowIdx = (flowIdx + 1) % flowSteps.length; drawFlow(); });
+        drawFlow();
+
+        /* ---------- revenue bars ---------- */
+        var revplay = document.getElementById("revplay");
+        function playRev() {
+            var bars = document.querySelectorAll("#revchart .revbar");
+            for (var i = 0; i < bars.length; i++) bars[i].style.height = "2px";
+            setTimeout(function () {
+                var maxH = 150;
+                for (var j = 0; j < bars.length; j++) {
+                    var v = parseFloat(bars[j].getAttribute("data-v") || "0");
+                    bars[j].style.height = Math.max(4, (v / 100) * maxH) + "px";
+                }
+            }, 60);
+        }
+        if (revplay) revplay.addEventListener("click", playRev);
+        playRev();
+
+        /* ---------- rank score widget ---------- */
+        var clickS = document.getElementById("clickS"), convS = document.getElementById("convS"), bidS = document.getElementById("bidS");
+        var EV_B = 0.025 * 0.20 * 45; /* 0.225 */
+        function fmt$(x) { return "$" + x.toFixed(3); }
+        function drawRank() {
+            if (!clickS || !convS || !bidS) return;
+            var pc = parseInt(clickS.value, 10) / 1000;   /* slider is tenths of % */
+            var pv = parseInt(convS.value, 10) / 100;
+            var bid = parseInt(bidS.value, 10);
+            var ev = pc * pv * bid;
+            var cV = document.getElementById("clickV"), vV = document.getElementById("convV"), bV = document.getElementById("bidV");
+            if (cV) cV.textContent = (pc * 100).toFixed(1) + "%";
+            if (vV) vV.textContent = Math.round(pv * 100) + "%";
+            if (bV) bV.textContent = "$" + bid;
+            var evA = document.getElementById("evA");
+            if (evA) evA.textContent = fmt$(ev);
+            var mx = Math.max(ev, EV_B) * 1.15;
+            var barA = document.getElementById("barA"), barB = document.getElementById("barB");
+            if (barA) barA.style.width = Math.min(100, (ev / mx) * 100) + "%";
+            if (barB) barB.style.width = Math.min(100, (EV_B / mx) * 100) + "%";
+            var oA = document.getElementById("offerA"), oB = document.getElementById("offerB");
+            if (oA) oA.classList.toggle("winner", ev > EV_B);
+            if (oB) oB.classList.toggle("winner", EV_B >= ev);
+        }
+        [clickS, convS, bidS].forEach(function (s) { if (s) s.addEventListener("input", drawRank); });
+        drawRank();
+
+        /* ---------- latency widget ---------- */
+        var SEGS = [
+            { n: "Gateway", ms: 10 }, { n: "Identity lookup", ms: 20 }, { n: "Feature fetch", ms: 30 },
+            { n: "Candidate gen", ms: 40 }, { n: "Scoring", ms: 40 }, { n: "Auction", ms: 20 }, { n: "Render", ms: 40 }
+        ];
+        var LLM_SEG = { n: "LLM overlay (Qwen)", ms: 1300, llm: true };
+        var latLLM = false, latAnim = null;
+        var latbar = document.getElementById("latbar"), latlegend = document.getElementById("latlegend");
+        var latread = document.getElementById("latread"), latnote = document.getElementById("latnote");
+        function segList() { return latLLM ? SEGS.concat([LLM_SEG]) : SEGS; }
+        function buildLat() {
+            if (!latbar || !latlegend) return;
+            var segs = segList(), total = 0, i;
+            for (i = 0; i < segs.length; i++) total += segs[i].ms;
+            latbar.innerHTML = "";
+            latlegend.innerHTML = "";
+            for (i = 0; i < segs.length; i++) {
+                var d = document.createElement("div");
+                d.className = "latseg" + (segs[i].llm ? " llm" : "");
+                d.style.width = (segs[i].ms / total * 100) + "%";
+                d.style.borderRight = "1px solid var(--bg)";
+                var f = document.createElement("div");
+                f.className = "fill";
+                d.appendChild(f);
+                latbar.appendChild(d);
+                var lg = document.createElement("span");
+                lg.innerHTML = "<b>" + segs[i].ms + "ms</b> " + segs[i].n;
+                latlegend.appendChild(lg);
+            }
+            if (latread) latread.textContent = "0 ms";
+            if (latread) latread.classList.toggle("over", false);
+            if (latnote) latnote.textContent = latLLM
+                ? "— the ~1,500ms lane Justin floated for LLM-overlay decisions. Fine for slower surfaces (email, campaign setup), never for the receipt page."
+                : "— budget: 200ms end-to-end. The ML pipeline itself typically gets ~130ms.";
+        }
+        function runLat() {
+            if (!latbar) return;
+            if (latAnim) { cancelAnimationFrame(latAnim); latAnim = null; }
+            var segs = segList(), total = 0, i;
+            for (i = 0; i < segs.length; i++) total += segs[i].ms;
+            var fills = latbar.querySelectorAll(".fill");
+            for (i = 0; i < fills.length; i++) { fills[i].style.transition = "none"; fills[i].style.transform = "scaleX(0)"; }
+            var t0 = null, SLOW = latLLM ? 1.6 : 8; /* ms of animation per ms of budget */
+            function frame(ts) {
+                if (t0 === null) t0 = ts;
+                var elapsed = (ts - t0) / SLOW;
+                var acc = 0;
+                for (var k = 0; k < segs.length; k++) {
+                    var frac = Math.max(0, Math.min(1, (elapsed - acc) / segs[k].ms));
+                    if (fills[k]) fills[k].style.transform = "scaleX(" + frac + ")";
+                    acc += segs[k].ms;
+                }
+                var shown = Math.min(total, Math.round(elapsed));
+                if (latread) {
+                    latread.textContent = shown + " ms";
+                    latread.classList.toggle("over", shown > 200);
+                }
+                if (elapsed < total) latAnim = requestAnimationFrame(frame);
+            }
+            latAnim = requestAnimationFrame(frame);
+        }
+        var latplay = document.getElementById("latplay"), latllmBtn = document.getElementById("latllm");
+        if (latplay) latplay.addEventListener("click", runLat);
+        if (latllmBtn) latllmBtn.addEventListener("click", function () {
+            latLLM = !latLLM;
+            latllmBtn.textContent = latLLM ? "Back to 200ms lane" : "Add LLM lane (Qwen)";
+            buildLat(); runLat();
+        });
+        buildLat();
+
+        /* ---------- comp calculator ---------- */
+        var baseS = document.getElementById("baseS"), bonusS = document.getElementById("bonusS");
+        function drawComp() {
+            if (!baseS || !bonusS) return;
+            var base = parseInt(baseS.value, 10), bonus = parseInt(bonusS.value, 10);
+            var ote = base * (1 + bonus / 100);
+            var cr = ote * 1000 * 87 / 10000000;
+            var bV = document.getElementById("baseV"), boV = document.getElementById("bonusV");
+            var oV = document.getElementById("oteV"), cV = document.getElementById("crV"), note = document.getElementById("bandnote");
+            if (bV) bV.textContent = "$" + base + "K";
+            if (boV) boV.textContent = bonus + "%";
+            if (oV) oV.textContent = "$" + ote.toFixed(1) + "K";
+            if (cV) cV.textContent = "₹" + cr.toFixed(2) + " Cr";
+            if (note) {
+                if (ote > 170) {
+                    note.className = "bandnote stretch";
+                    note.textContent = "Above their stated $150–170K OTE band — this is exactly the stretch Claudia deferred to “later conversations.” Earn it with the loop first.";
+                } else {
+                    note.className = "bandnote in";
+                    note.textContent = "Inside the verbal band, and clears your floor ($140K base / $170K OTE) " + (base >= 150 ? "with the base in the explicitly-offered $150–160K zone." : "— but base below $150K leaves offered money on the table.");
+                }
+            }
+        }
+        [baseS, bonusS].forEach(function (s) { if (s) s.addEventListener("input", drawComp); });
+        drawComp();
+
+        /* ---------- checklists ---------- */
+        var ANIMESH = [
+            "Gaurav: background, what he probes, what's impressed/annoyed him in candidates. Systems purist or pragmatist? Deep DSA/distributed, or architecture-conversation style?",
+            "Ryan Cook: what does GTM complain about — measurement credibility? offer quality? losing to Rokt? (Whatever it is = your talking point.)",
+            "Conner: is his conversation an evaluation or a sell? What ideas light him up?",
+            "Who has real veto power in the loop?",
+            "Other candidates: how far along, what profile?",
+            "Peter's exit: what did he do well, what should the next lead do differently?",
+            "Exact stack: cloud, languages, warehouse, streaming, feature/serving infra, model frameworks. What was the new ad server built on?",
+            "What does the 200ms serving path look like today — where does the advertiser×publisher model actually run?",
+            "His embeddings work: what's built, what's blocked, what's handed over day 1?",
+            "Data reality check: how clean/joined is the 160M graph really? Identity-resolution quality — what's the usable number?",
+            "The 'eval loops / agents review PRs' claims — how real day-to-day?",
+            "GPU access / infra headroom for heavier models, or CPU-only serving?",
+            "Does he know the budget ceiling — is $160K base drama-free?",
+            "Can the loop compress — Gaurav + Ryan same week?"
+        ];
+        var GAURAV = [
+            "How do eng and ML interface — who owns the serving path, who owns experimentation infra?",
+            "The 5-week ad-server rebuild: architecture choices, what he'd do differently, what's next?",
+            "What breaks first on the $40M→$100M path — where's the debt?",
+            "The 25-person cap: how the AI-native workflow actually runs (agents on PRs, eval loops) — and where it fails?",
+            "Is the 1,500ms LLM lane real from an infra standpoint?",
+            "First 90 days: what does he want from this role — and how do eng and the ML lead avoid stepping on each other?"
+        ];
+        var LS_KEY = "disco-brief-checks";
+        var saved = {};
+        try { saved = JSON.parse(localStorage.getItem(LS_KEY) || "{}") || {}; } catch (e) { saved = {}; }
+        function saveChecks() { try { localStorage.setItem(LS_KEY, JSON.stringify(saved)); } catch (e) {} }
+        function buildChecks(list, mountId, prefix) {
+            var mount = document.getElementById(mountId);
+            if (!mount) return;
+            list.forEach(function (q, i) {
+                var key = prefix + i;
+                var row = document.createElement("label");
+                row.className = "check" + (saved[key] ? " done" : "");
+                var cb = document.createElement("input");
+                cb.type = "checkbox";
+                cb.checked = !!saved[key];
+                var txt = document.createElement("span");
+                txt.className = "qtext";
+                txt.textContent = (i + 1) + ". " + q;
+                row.appendChild(cb);
+                row.appendChild(txt);
+                cb.addEventListener("change", function () {
+                    saved[key] = cb.checked;
+                    row.classList.toggle("done", cb.checked);
+                    saveChecks();
+                });
+                mount.appendChild(row);
+            });
+        }
+        buildChecks(ANIMESH, "animeshQs", "a");
+        buildChecks(GAURAV, "gauravQs", "g");
+
+        /* ---------- quiz ---------- */
+        var QUIZ = [
+            {
+                q: "What does Disco's production ML consist of today?",
+                opts: ["A two-tower retrieval + GBDT ranking stack", "One advertiser×publisher relationship model — nothing else", "An LLM re-ranker over the offer catalog", "Contextual bandits per publisher surface"],
+                a: 1,
+                why: "Justin, verbatim: “does Levi's perform well on Gap? Nothing else.” The 160M-profile graph is unused — that's the entire pitch for the role."
+            },
+            {
+                q: "The two serving budgets Justin gave:",
+                opts: ["100ms hard, no slow lane", "~200ms standard + ~1,500ms lane for LLM-overlay decisions", "~500ms standard + 5s for LLMs", "~50ms in-auction only"],
+                a: 1,
+                why: "200ms is the standard path; he floated ~1,500ms for LLM overlays and name-dropped Qwen."
+            },
+            {
+                q: "The revenue line to recite:",
+                opts: ["$8M → $13M → $40M target → $100M target", "$13M → $26M → $52M", "$8M → $20M → $60M", "$5M → $13M → $30M → $80M"],
+                a: 0,
+                why: "$8M plateau (“a hobby, not a company”) → $13M last year → $40M target this year (~3×) → $100M next. 137% YoY was the public May 2026 number."
+            },
+            {
+                q: "Ryan Cook is best won by talking about…",
+                opts: ["Sequence-model architectures", "ROAS, CPA efficiency, and incrementality proof advertisers believe", "The GRPO pipeline", "Kubernetes cost savings"],
+                a: 1,
+                why: "He's VP GTM — the internal customer of ML. Revenue language, not model language. “ML that closes deals.”"
+            },
+            {
+                q: "What's actually verified about Gaurav Mahajan?",
+                opts: ["PhD in RL (Mistral/Yale/UCSD)", "Ex-Google Brain", "Engineering Lead for Integrations at Disco (dev docs, SFCC beta)", "Former Rokt architect"],
+                a: 2,
+                why: "The RL researcher of the same name is a different-person trap flagged in the deep research. Assume only: hands-on integrations lead. Ask Animesh for the rest."
+            },
+            {
+                q: "The core ranking objective in this category:",
+                opts: ["Maximize CTR", "p(click) × p(conv | click) × Bid, calibrated, under brand-safety guardrails", "Minimize latency", "Maximize impressions served"],
+                a: 1,
+                why: "Expected yield per impression — which is why a lower-CTR offer with better conversion and bid can win the slot."
+            },
+            {
+                q: "Disco's counter-positioning vs Rokt (~$600M rev, 13B txns) is:",
+                opts: ["Cheaper CPMs", "Bigger identity graph", "Headless, white-label, API-first — non-endemic monetization for SaaS/mid-market Rokt ignores", "On-prem deployment"],
+                a: 2,
+                why: "Rokt is enterprise, heavy-footprint, ecosystem-controlled. DiscoBeat/DiscoMix flank via flexible embedded monetization."
+            },
+            {
+                q: "The comp posture for the rest of the loop:",
+                opts: ["Push $160K base with Gaurav directly", "Don't push now — win Gaurav/Ryan/Conner, then anchor $155–160K base at offer stage", "Accept $150K immediately", "Ask for equity instead of base"],
+                a: 1,
+                why: "$160K base + bonus already busts their stated OTE band — the stretch exists but has to be earned by the loop. Impressive, not eager."
+            },
+            {
+                q: "Justin's product philosophy, in his own words:",
+                opts: ["“Ship fast, break things”", "“The eval is the spec”", "“Models are the moat”", "“PMs write the roadmap”"],
+                a: 1,
+                why: "Build a working reference with agents → eval on real data → hand eng something that already functions. And: advantage is wiring agents + evals + guardrails, since “everyone has the models now.”"
+            }
+        ];
+        var quizMount = document.getElementById("quiz");
+        var scoreEl = document.getElementById("quizscore");
+        var answered = 0, correct = 0;
+        function drawScore() { if (scoreEl) scoreEl.textContent = "Score: " + correct + " / " + answered + (answered === QUIZ.length ? "  — " + (correct === QUIZ.length ? "loop-ready." : "reread the misses.") : ""); }
+        function buildQuiz() {
+            if (!quizMount) return;
+            quizMount.innerHTML = "";
+            answered = 0; correct = 0; drawScore();
+            QUIZ.forEach(function (item, qi) {
+                var card = document.createElement("div");
+                card.className = "qcard";
+                var qq = document.createElement("div");
+                qq.className = "qq";
+                qq.textContent = (qi + 1) + ". " + item.q;
+                card.appendChild(qq);
+                var done = false;
+                item.opts.forEach(function (opt, oi) {
+                    var b = document.createElement("button");
+                    b.className = "qopt";
+                    b.textContent = opt;
+                    b.addEventListener("click", function () {
+                        if (done) return;
+                        done = true;
+                        answered++;
+                        card.classList.add("answered");
+                        var btns = card.querySelectorAll(".qopt");
+                        if (oi === item.a) { correct++; b.classList.add("correct"); }
+                        else { b.classList.add("wrong"); if (btns[item.a]) btns[item.a].classList.add("correct"); }
+                        drawScore();
+                    });
+                    card.appendChild(b);
+                });
+                var why = document.createElement("div");
+                why.className = "qwhy";
+                why.textContent = item.why;
+                card.appendChild(why);
+                quizMount.appendChild(card);
+            });
+        }
+        var quizreset = document.getElementById("quizreset");
+        if (quizreset) quizreset.addEventListener("click", buildQuiz);
+        buildQuiz();
+    })();
+    </script>
+</body>
+</html>
