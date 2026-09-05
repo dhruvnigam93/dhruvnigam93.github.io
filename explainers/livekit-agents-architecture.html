@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>LiveKit Agents: the architecture map</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --accent2: #059669;
+            --warn: #b45309;
+            --bad: #dc2626;
+            --card: #f7f7f8;
+            --radius: 14px;
+            --seg-stt: #7c3aed;
+            --seg-wait: #b45309;
+            --seg-llm: #2563eb;
+            --seg-tts: #059669;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --accent2: #34d399;
+                --warn: #fbbf24;
+                --bad: #f87171;
+                --card: #171a20;
+                --seg-stt: #a78bfa;
+                --seg-wait: #fbbf24;
+                --seg-llm: #6ea8fe;
+                --seg-tts: #34d399;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: max(20px, env(safe-area-inset-top)) 20px 80px;
+        }
+        .back {
+            display: inline-block;
+            margin: 8px 0 20px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.3rem; margin: 2em 0 0.5em; }
+        h3 { font-size: 1.05rem; margin: 1.4em 0 0.4em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        code {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.85em;
+        }
+        pre {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            overflow-x: auto;
+            font-size: 0.85em;
+        }
+        pre code { background: none; border: none; padding: 0; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+        }
+        details {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 0 18px;
+            margin: 12px 0;
+            background: var(--card);
+        }
+        summary {
+            cursor: pointer;
+            padding: 16px 0;
+            font-weight: 600;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after {
+            content: "+";
+            color: var(--muted);
+            font-size: 1.4rem;
+            line-height: 1;
+        }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        button {
+            font: inherit;
+            font-weight: 600;
+            color: #fff;
+            background: var(--accent);
+            border: none;
+            border-radius: 999px;
+            padding: 12px 22px;
+            min-height: 48px;
+            min-width: 48px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        button:active { transform: scale(0.96); }
+        .ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+        input[type="range"] { width: 100%; height: 44px; }
+        footer {
+            margin-top: 3em;
+            padding-top: 1.2em;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+        /* pill nav */
+        .pills {
+            display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 6px;
+        }
+        .pills a {
+            text-decoration: none; font-size: 0.85rem; font-weight: 600;
+            border: 1px solid var(--line); border-radius: 999px;
+            padding: 8px 14px; color: var(--accent); background: var(--card);
+            min-height: 40px; display: inline-flex; align-items: center;
+        }
+        /* two-planes diagram */
+        .planes { margin: 1em 0; }
+        .planebox {
+            border: 1px solid var(--line); border-radius: var(--radius);
+            padding: 10px 14px; text-align: center; background: var(--card);
+        }
+        .planebox b { display: block; font-size: 0.95rem; }
+        .planebox small { color: var(--muted); font-size: 0.75rem; line-height: 1.3; display: block; }
+        .flowrow { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+        .flowrow .planebox { flex: 1; min-width: 0; }
+        .track {
+            flex: 0 0 64px; position: relative; height: 4px;
+            background: var(--line); border-radius: 2px; overflow: visible;
+        }
+        .track .dot {
+            position: absolute; top: -4px; left: 0; width: 12px; height: 12px;
+            border-radius: 50%; background: var(--accent);
+            animation: slide 2.4s linear infinite;
+        }
+        .track .dot.rev { background: var(--accent2); animation-direction: reverse; animation-delay: -1.2s; }
+        @keyframes slide { from { left: 0; } to { left: 52px; } }
+        @media (prefers-reduced-motion: reduce) { .track .dot { animation: none; } }
+        .planebox small { overflow-wrap: break-word; }
+        @media (max-width: 480px) {
+            .flowrow { gap: 5px; }
+            .flowrow .planebox { padding: 8px 6px; }
+            .planebox small { font-size: 0.66rem; }
+            .track { flex: 0 0 30px; }
+            .track .dot { width: 10px; height: 10px; }
+            @keyframes slide { from { left: 0; } to { left: 20px; } }
+        }
+        /* primitive explorer */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+        .chip {
+            background: var(--card); color: var(--fg);
+            border: 1px solid var(--line); border-radius: 999px;
+            padding: 10px 16px; min-height: 44px; font-weight: 600; font-size: 0.9rem;
+        }
+        .chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .panel { min-height: 130px; }
+        .panel .role { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+        /* pipeline diagram */
+        .pipe { display: flex; align-items: stretch; gap: 6px; margin: 12px 0; flex-wrap: wrap; }
+        .stage {
+            flex: 1; min-width: 90px; border: 1.5px solid var(--line); border-radius: 10px;
+            background: var(--card); padding: 8px 10px; text-align: center; font-size: 0.85rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .stage b { display: block; font-size: 0.9rem; }
+        .stage small { color: var(--muted); font-size: 0.72rem; line-height: 1.25; display: block; }
+        .stage.hot { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
+        .arrow { align-self: center; color: var(--muted); font-size: 1.1rem; flex: 0 0 auto; }
+        .shared {
+            border: 1.5px dashed var(--accent2); border-radius: 10px; padding: 8px 12px;
+            text-align: center; font-size: 0.82rem; color: var(--fg); margin-top: 10px; background: transparent;
+        }
+        .seg-toggle { display: flex; gap: 8px; margin: 10px 0; }
+        .seg-toggle button { flex: 1; }
+        .seg-toggle button.off { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+        /* stepper */
+        .stepbox { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 14px 16px; margin: 12px 0; }
+        .stepbox .stitle { font-weight: 700; margin-bottom: 4px; }
+        .stepbox .sdesc { font-size: 0.92rem; }
+        .transcript {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.82rem; background: var(--bg); border: 1px solid var(--line);
+            border-radius: 8px; padding: 8px 10px; margin: 10px 0; min-height: 40px;
+        }
+        .comps { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+        .comp {
+            flex: 1; min-width: 70px; text-align: center; font-size: 0.78rem; font-weight: 600;
+            border: 1.5px solid var(--line); border-radius: 8px; padding: 6px 4px;
+            background: var(--bg); transition: all 0.3s; color: var(--muted);
+        }
+        .comp.hot { border-color: var(--accent); color: var(--fg); background: var(--card);
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
+        .meter { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 6px 0 2px; }
+        .meter > div { height: 100%; width: 0%; background: var(--accent); border-radius: 5px; transition: width 0.4s; }
+        .ctl { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+        .ctl button { flex: 1; min-width: 90px; }
+        /* latency sim */
+        .simrow { margin: 10px 0 2px; }
+        .simrow label { font-size: 0.88rem; font-weight: 600; display: flex; justify-content: space-between; }
+        .simrow label span { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+        .bar {
+            display: flex; height: 34px; border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--line); margin: 6px 0 2px; background: var(--bg);
+        }
+        .bar > div { height: 100%; transition: width 0.35s; min-width: 0; }
+        .bar .s-stt { background: var(--seg-stt); }
+        .bar .s-wait { background: var(--seg-wait); }
+        .bar .s-llm { background: var(--seg-llm); }
+        .bar .s-tts { background: var(--seg-tts); }
+        .barlabel { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--muted); }
+        .barlabel b { color: var(--fg); font-variant-numeric: tabular-nums; }
+        .legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.78rem; color: var(--muted); margin: 8px 0; }
+        .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+        .savings { font-weight: 700; color: var(--accent2); font-size: 0.95rem; }
+        /* tables */
+        .tablewrap { overflow-x: auto; margin: 1em 0; -webkit-overflow-scrolling: touch; }
+        table { border-collapse: collapse; font-size: 0.82rem; min-width: 560px; width: 100%; }
+        th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+        th { background: var(--card); }
+        /* quiz */
+        .q { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 14px 16px; margin: 14px 0; }
+        .q .qt { font-weight: 700; margin-bottom: 10px; font-size: 0.95rem; }
+        .q .opts { display: flex; flex-direction: column; gap: 8px; }
+        .q .opts button {
+            background: var(--bg); color: var(--fg); border: 1px solid var(--line);
+            border-radius: 10px; text-align: left; font-weight: 500; font-size: 0.9rem;
+            padding: 12px 14px; min-height: 48px;
+        }
+        .q .opts button.right { border-color: var(--accent2); background: color-mix(in srgb, var(--accent2) 14%, var(--bg)); }
+        .q .opts button.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--bg)); }
+        .q .why { font-size: 0.85rem; color: var(--muted); margin-top: 8px; display: none; }
+        .q .why.show { display: block; }
+        .score { font-weight: 700; font-size: 1.05rem; margin: 14px 0; }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>LiveKit Agents: the architecture map</h1>
+        <p class="meta">Added 2026-09-05</p>
+
+        <p>Why does LiveKit's agent framework feel so clean for voice? Because it splits the problem into
+        two planes, makes every pipeline stage an async stream with the same shape, and treats
+        turn-taking as a first-class ML problem instead of a VAD timeout. This page maps the core
+        primitives, the model-swap trick, the turn-taking machinery, and LiveKit's own models
+        (EOT, BVC) — with knobs you can play with.</p>
+
+        <div class="pills">
+            <a href="#planes">Big picture</a>
+            <a href="#primitives">Primitives</a>
+            <a href="#pipeline">Pipeline swap</a>
+            <a href="#turns">Turn-taking</a>
+            <a href="#latency">Latency sim</a>
+            <a href="#models">LiveKit's models</a>
+            <a href="#deploy">Deployment</a>
+            <a href="#quiz">Quiz</a>
+        </div>
+
+        <h2 id="planes">1 &middot; The big picture: two planes, one trick</h2>
+        <p>LiveKit is <b>two decoupled planes</b>. The <b>media plane</b> is an open-source
+        (Apache&nbsp;2.0, Go) <b>SFU</b> — a WebRTC media server you can self-host, or use as LiveKit
+        Cloud's global edge network. The <b>agent plane</b> is the Python framework
+        (<code>livekit/agents</code>).</p>
+        <div class="planes">
+            <div class="flowrow">
+                <div class="planebox"><b>&#128100; User</b><small>phone / browser<br>WebRTC client</small></div>
+                <div class="track"><span class="dot"></span><span class="dot rev"></span></div>
+                <div class="planebox"><b>&#127760; SFU</b><small>media plane<br>open source / Cloud edge</small></div>
+                <div class="track"><span class="dot"></span><span class="dot rev"></span></div>
+                <div class="planebox"><b>&#129302; Agent</b><small>joins the room as a<br><b>WebRTC participant</b></small></div>
+            </div>
+        </div>
+        <div class="card"><b>The one trick that buys all the cleanliness:</b> your agent is just another
+        participant in the room. Jitter buffers, codecs, reconnection, global routing — all of it is the
+        SFU's problem. The framework only has to solve what happens between "audio frames in" and
+        "audio frames out."</div>
+
+        <h2 id="primitives">2 &middot; Core primitives</h2>
+        <p>Tap each primitive to see its role. The spine:
+        <b>Agent = what</b> (persona, tools, models) &middot; <b>AgentSession = how</b> (orchestration)
+        &middot; <b>Worker = where</b> (deployment).</p>
+        <div class="chips" id="prim-chips"></div>
+        <div class="card panel" id="prim-panel">
+            <div class="role" id="prim-role"></div>
+            <p id="prim-desc" style="margin-top:6px"></p>
+        </div>
+
+        <h2 id="pipeline">3 &middot; One Agent, two architectures</h2>
+        <p>The most elegant move in the framework: <code>Agent(llm=...)</code> accepts either an
+        <code>LLM</code> (cascaded pipeline) or a <code>RealtimeModel</code> (speech-to-speech like
+        OpenAI Realtime / Gemini Live). Toggle between them — notice what <i>doesn't</i> change.</p>
+        <div class="seg-toggle">
+            <button id="btn-cascaded">Cascaded</button>
+            <button id="btn-realtime" class="off">Realtime S2S</button>
+        </div>
+        <div id="pipe-cascaded">
+            <div class="pipe">
+                <div class="stage hot"><b>STT</b><small>audio &rarr; text<br>streaming events</small></div>
+                <div class="arrow">&rarr;</div>
+                <div class="stage hot"><b>LLM</b><small>text &rarr; text<br>ChatChunk stream</small></div>
+                <div class="arrow">&rarr;</div>
+                <div class="stage hot"><b>TTS</b><small>text &rarr; audio<br>frame stream</small></div>
+            </div>
+            <pre><code>session = AgentSession(
+    stt=deepgram.STT(), llm=openai.LLM(), tts=cartesia.TTS(),
+    vad=silero.VAD.load(), turn_detection=TurnDetector())</code></pre>
+        </div>
+        <div id="pipe-realtime" style="display:none">
+            <div class="pipe">
+                <div class="stage hot" style="flex:2"><b>RealtimeModel</b><small>audio &rarr; audio, one model<br>push_audio() / generate_reply() / interrupt()</small></div>
+            </div>
+            <pre><code>session = AgentSession(
+    llm=openai.realtime.RealtimeModel())  # that's the whole swap</code></pre>
+        </div>
+        <div class="shared">shared in <b>both</b> modes: turn detection &middot; interruption handling &middot; tools &amp; MCP &middot; ChatContext &middot; events &amp; metrics</div>
+        <p><code>AgentActivity</code> branches on <code>isinstance(llm, RealtimeModel)</code> internally,
+        but the Agent you wrote, your tools, and all the turn-taking machinery carry over. Swapping a
+        3-model pipeline for a speech-to-speech model is a one-line change.</p>
+
+        <h2 id="turns">4 &middot; Turn-taking: the hardest problem in voice</h2>
+        <p>VAD alone can't tell <i>"I went to the store..."</i> (thinking) from
+        <i>"I went to the store."</i> (done). LiveKit layers a <b>semantic end-of-turn (EOT) model</b>
+        on top of VAD's acoustic signal. Step through one exchange:</p>
+
+        <div class="stepbox">
+            <div class="stitle" id="st-title"></div>
+            <div class="sdesc" id="st-desc"></div>
+            <div class="transcript" id="st-transcript"></div>
+            <div class="comps">
+                <div class="comp" id="c-vad">VAD</div>
+                <div class="comp" id="c-stt">STT</div>
+                <div class="comp" id="c-eot">EOT model</div>
+                <div class="comp" id="c-gen">LLM + TTS</div>
+            </div>
+            <div id="st-probwrap" style="display:none">
+                <div style="font-size:0.8rem;color:var(--muted)">P(turn is done) = <b id="st-prob" style="color:var(--fg)"></b></div>
+                <div class="meter"><div id="st-meterfill"></div></div>
+            </div>
+            <div class="ctl">
+                <button class="ghost" id="st-prev">&larr; Prev</button>
+                <button id="st-next">Next &rarr;</button>
+                <button class="ghost" id="st-auto">Auto-play</button>
+            </div>
+            <div style="font-size:0.8rem;color:var(--muted);margin-top:8px" id="st-count"></div>
+        </div>
+
+        <h3>The EOT dial: probability &rarr; patience</h3>
+        <p>The endpointing delay scales with what the EOT model believes (defaults:
+        <code>min_delay</code> 0.5s, <code>max_delay</code> 3.0s). Drag the model's confidence:</p>
+        <div class="card">
+            <div class="simrow">
+                <label>EOT model: P(user is done) <span id="eot-p">0.90</span></label>
+                <input type="range" id="eot-slider" min="0" max="100" value="90">
+            </div>
+            <div class="bar" style="height:22px"><div class="s-wait" id="eot-bar" style="width:10%"></div></div>
+            <div class="barlabel"><span>agent waits &asymp; <b id="eot-wait">0.53 s</b> before speaking</span><span>max 3.0 s</span></div>
+            <p style="font-size:0.82rem;color:var(--muted);margin-bottom:0">High confidence &rarr; respond fast (snappy).
+            Low confidence &rarr; hold on, the user is probably mid-thought (no interruption).
+            Curve here is illustrative; <code>DynamicEndpointing</code> additionally adapts to each speaker's real pause rhythm with a moving average.</p>
+        </div>
+
+        <div class="card"><b>Also in the box:</b> an ML <b>interruption classifier</b> that tells real
+        barge-ins from backchannels ("uh-huh", "yeah") so the agent doesn't stop talking every time you
+        nod audibly — with plain-VAD fallback and false-interruption resume.</div>
+
+        <h2 id="latency">5 &middot; Latency simulator: why preemptive generation exists</h2>
+        <p>After the user stops speaking, the reply latency is a chain: STT finalizes the transcript,
+        the endpointing wait confirms the turn, the LLM produces its first token, TTS produces first
+        audio. LiveKit's <b>preemptive generation</b> (on by default) starts the LLM speculatively
+        <i>during</i> the endpointing wait, on STT's <code>PREFLIGHT_TRANSCRIPT</code> — and throws the
+        result away if the user keeps talking. Play with real numbers:</p>
+        <div class="card">
+            <div class="simrow">
+                <label>STT finalization <span id="v-stt">150 ms</span></label>
+                <input type="range" id="r-stt" min="50" max="400" step="10" value="150">
+            </div>
+            <div class="simrow">
+                <label>Endpointing wait <span id="v-wait">500 ms</span></label>
+                <input type="range" id="r-wait" min="200" max="3000" step="50" value="500">
+            </div>
+            <div class="simrow">
+                <label>LLM time-to-first-token <span id="v-llm">600 ms</span></label>
+                <input type="range" id="r-llm" min="100" max="1500" step="25" value="600">
+            </div>
+            <div class="simrow">
+                <label>TTS time-to-first-audio <span id="v-tts">200 ms</span></label>
+                <input type="range" id="r-tts" min="50" max="500" step="10" value="200">
+            </div>
+            <div class="legend">
+                <span><i style="background:var(--seg-stt)"></i>STT</span>
+                <span><i style="background:var(--seg-wait)"></i>endpoint wait</span>
+                <span><i style="background:var(--seg-llm)"></i>LLM</span>
+                <span><i style="background:var(--seg-tts)"></i>TTS</span>
+            </div>
+            <div style="font-size:0.85rem;font-weight:600;margin-top:8px">Without preemptive generation</div>
+            <div class="bar" id="bar-off">
+                <div class="s-stt"></div><div class="s-wait"></div><div class="s-llm"></div><div class="s-tts"></div>
+            </div>
+            <div class="barlabel"><span>user stops &rarr; first audio out</span><b id="t-off">1450 ms</b></div>
+            <div style="font-size:0.85rem;font-weight:600;margin-top:12px">With preemptive generation (LLM overlaps the wait)</div>
+            <div class="bar" id="bar-on">
+                <div class="s-stt"></div><div class="s-wait"></div><div class="s-llm"></div><div class="s-tts"></div>
+            </div>
+            <div class="barlabel"><span>LLM shows only the part left over after the wait</span><b id="t-on">950 ms</b></div>
+            <p class="savings" id="t-saved">Saved: 500 ms (34%)</p>
+            <p style="font-size:0.82rem;color:var(--muted);margin-bottom:0">Simplified sequential model.
+            If the user resumes speaking, the speculative generation is discarded (bounded retries per turn).
+            The same idea extends to preemptive TTS.</p>
+        </div>
+        <div class="card"><b>The other latency weapons:</b> pre-warmed job processes (models loaded,
+        connections open <i>before</i> a user joins), <code>LLM.prewarm()</code> for DNS/TLS,
+        local ONNX EOT on CPU in a separate inference process, and dynamic endpointing that learns each
+        speaker's pause rhythm.</div>
+
+        <h2 id="models">6 &middot; LiveKit's own models — and where they run</h2>
+        <div class="tablewrap">
+            <table>
+                <tr><th>Model</th><th>What it does</th><th>Architecture</th><th>Runs where</th><th>License</th></tr>
+                <tr>
+                    <td><b>Turn detector (EOT)</b></td>
+                    <td>Reads the transcript, predicts "is this thought complete?"</td>
+                    <td>Small transformer, <b>text-only</b> (orig. ~135M, SmolLM2-based). Last 6 turns / 128 tokens of ChatContext.</td>
+                    <td><b>v1-mini:</b> int8 ONNX, locally on CPU in the worker. <b>v1 (cloud):</b> LiveKit's inference gateway, adds backchannel prob; sticky fallback to local.</td>
+                    <td>Open weights, proprietary Model License — LiveKit Agents only</td>
+                </tr>
+                <tr>
+                    <td><b>BVC</b> (background voice cancellation)</td>
+                    <td>Removes background <b>voices</b> (TV, other speakers), not just noise, before VAD/STT hear them</td>
+                    <td>Krisp Viva tech (commercial SDK), closed-source binary</td>
+                    <td>Server-side in the agent process, as an audio frame processor on inbound audio</td>
+                    <td>Proprietary, effectively LiveKit-Cloud-gated</td>
+                </tr>
+                <tr>
+                    <td><b>Interruption classifier</b></td>
+                    <td>Real barge-in vs backchannel ("uh-huh")</td>
+                    <td>ML classifier (details not public)</td>
+                    <td>Adaptive mode; VAD fallback</td>
+                    <td>&mdash;</td>
+                </tr>
+                <tr>
+                    <td><b>Silero VAD</b></td>
+                    <td>Acoustic speech / silence detection — the default VAD</td>
+                    <td>Community ONNX model</td>
+                    <td>Local, CPU</td>
+                    <td>Open</td>
+                </tr>
+            </table>
+        </div>
+        <details>
+            <summary>Why is the EOT model text-only? (and why that's clever)</summary>
+            <p>It piggybacks on work already done: STT is already producing a live transcript, so the EOT
+            model gets rich <i>semantic</i> context (the last 6 turns through a chat template) for free,
+            and a ~135M model quantized to int8 runs in tens of milliseconds on CPU — no GPU in the
+            serving path. The trade-off: it can't hear prosody (rising intonation, trailing-off), which
+            is what the audio-capable cloud v1 variant adds.</p>
+        </details>
+        <details>
+            <summary>Why does BVC run server-side, before VAD/STT?</summary>
+            <p>Because the failure mode of background voices isn't annoyance — it's <b>false turns</b>.
+            A TV voice in the background trips VAD, pollutes the transcript, and makes the agent respond
+            to someone who isn't there. Scrubbing the audio before the VAD/STT stage kills the problem at
+            the source instead of patching it downstream.</p>
+        </details>
+        <details>
+            <summary>The business-model read</summary>
+            <p>The transport is Apache 2.0; the <i>intelligence</i> is the funnel. EOT weights are open
+            but licensed for use only inside LiveKit Agents; BVC needs Cloud credentials even when the
+            binary runs on your box; and <b>LiveKit Inference</b> (Oct 2025) is a hosted gateway — one
+            LiveKit API key for Deepgram / OpenAI / Cartesia / ElevenLabs etc., billed on the Cloud
+            invoice (<code>inference.LLM(model="gpt-4o")</code> instead of provider SDKs). Open
+            transport, proprietary intelligence.</p>
+        </details>
+
+        <h2 id="deploy">7 &middot; Deployment: workers, jobs, and one process per session</h2>
+        <div class="card">
+            <p style="margin-top:0"><b>Job flow:</b></p>
+            <p style="font-size:0.92rem">1&nbsp;&middot;&nbsp;Worker opens an <b>outbound WebSocket</b> to the LiveKit server and registers (reports load).<br>
+            2&nbsp;&middot;&nbsp;A user joins a room &rarr; server dispatches a <b>JobRequest</b> to an available worker.<br>
+            3&nbsp;&middot;&nbsp;The worker's <code>ProcPool</code> hands the job to a <b>pre-warmed subprocess</b>.<br>
+            4&nbsp;&middot;&nbsp;Your entrypoint runs: build an <code>AgentSession</code>, <code>session.start(room, agent)</code>.<br>
+            5&nbsp;&middot;&nbsp;The session joins the room as a participant; audio flows.</p>
+        </div>
+        <details>
+            <summary>Why one process per session?</summary>
+            <p>Voice latency is a <b>tail-latency</b> problem. A GIL stall from another session's tool
+            call, or a memory spike from a model load, becomes an audible dropout. Process isolation
+            makes sessions blast-proof against each other, and the pre-warm hook
+            (<code>prewarm_fnc</code>) hides model-loading and connection setup from the first turn.
+            Heavy local inference (the EOT ONNX model) runs in a <i>separate inference process</i>
+            shared over IPC, so it never blocks an audio loop. Deploy anywhere — it's just a Python
+            process — or use LiveKit Cloud Agents managed compute.</p>
+        </details>
+
+        <h2>8 &middot; Why the abstraction is clean — the checklist</h2>
+        <div class="card">
+            <p style="margin:0.2em 0"><b>1. Async iterables all the way down.</b> Frames, speech events, chat chunks, synthesized audio — every stage streams; composition is just async generators.</p>
+            <p style="margin:0.2em 0"><b>2. One stream lifecycle.</b> Every <code>.stream()</code> pushes input via a channel and iterates output; the framework owns retries + metrics, plugins own provider logic.</p>
+            <p style="margin:0.2em 0"><b>3. Named override points, not middleware.</b> Override <code>stt_node</code> / <code>llm_node</code> / <code>tts_node</code> on your Agent and wrap the default — no ordering hell.</p>
+            <p style="margin:0.2em 0"><b>4. Capability objects.</b> <code>STTCapabilities</code> / <code>RealtimeCapabilities</code> let the framework adapt per provider (auto stream-adapters, server vs local turn detection) instead of dumbing the interface down.</p>
+            <p style="margin:0.2em 0"><b>5. Fallback adapters.</b> N providers behind one interface with automatic failover — the rest of the framework can't tell.</p>
+            <p style="margin:0.2em 0"><b>6. Three-state config.</b> <code>NOT_GIVEN</code> &ne; <code>None</code>: omitted means inherit (agent &rarr; session &rarr; auto), <code>None</code> means explicitly off.</p>
+        </div>
+
+        <h2 id="quiz">9 &middot; Quiz</h2>
+        <p>Ten seconds a question. Instant feedback.</p>
+        <div id="quiz"></div>
+        <div class="score" id="quiz-score"></div>
+        <button class="ghost" id="quiz-reset">Reset quiz</button>
+
+        <footer>
+            Personal explainer · unlisted · <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+
+    <script>
+        (function () {
+            "use strict";
+
+            /* ---------- primitives explorer ---------- */
+            var prims = [
+                { name: "Agent", role: "The WHAT — a configuration object", desc: "Bundles instructions, tools, and model refs (STT/LLM/TTS/VAD). It runs nothing itself. Declares overridable pipeline nodes (stt_node, llm_node, tts_node) with defaults, plus lifecycle hooks like on_enter and on_user_turn_completed." },
+                { name: "AgentSession", role: "The HOW — the runtime container", desc: "Wires I/O, models, turn detection, interruption, tool execution, and metrics together; emits every public event. Session-level model params are defaults; the active Agent's fields override them." },
+                { name: "AgentActivity", role: "Internal — one per active Agent", desc: "Owns the live pipeline: STT stream, turn-detector stream, speech scheduling queue, preemptive generation. Agent handoff = drain the old activity, build a new one. This is where the isinstance(llm, RealtimeModel) branch lives." },
+                { name: "Worker", role: "The WHERE — deployment & dispatch", desc: "Registers with the LiveKit server over an outbound WebSocket, reports load, receives job dispatches, and manages a ProcPool of pre-warmed subprocesses (one per session)." },
+                { name: "JobContext", role: "Per-job handle", desc: "Handed to your entrypoint for each job: the Room, participant info, and the InferenceExecutor for running local model inference (like the EOT ONNX model) over IPC." },
+                { name: "RoomIO", role: "The bridge", desc: "Adapts LiveKit room tracks to the framework's AudioInput/AudioOutput/Text abstractions. Swap it out for telephony or custom I/O without touching the pipeline." },
+                { name: "AgentTask", role: "Fire-and-forget sub-job", desc: "An Agent subclass with a complete()/Future protocol — run a side task (e.g. mid-call summarization) without disturbing the main conversation loop." }
+            ];
+            var chipsEl = document.getElementById("prim-chips");
+            var roleEl = document.getElementById("prim-role");
+            var descEl = document.getElementById("prim-desc");
+            if (chipsEl && roleEl && descEl) {
+                prims.forEach(function (p, i) {
+                    var b = document.createElement("button");
+                    b.className = "chip" + (i === 0 ? " on" : "");
+                    b.textContent = p.name;
+                    b.addEventListener("click", function () {
+                        var all = chipsEl.querySelectorAll(".chip");
+                        for (var j = 0; j < all.length; j++) all[j].classList.remove("on");
+                        b.classList.add("on");
+                        roleEl.textContent = p.role;
+                        descEl.textContent = p.desc;
+                    });
+                    chipsEl.appendChild(b);
+                });
+                roleEl.textContent = prims[0].role;
+                descEl.textContent = prims[0].desc;
+            }
+
+            /* ---------- pipeline toggle ---------- */
+            var bC = document.getElementById("btn-cascaded");
+            var bR = document.getElementById("btn-realtime");
+            var pC = document.getElementById("pipe-cascaded");
+            var pR = document.getElementById("pipe-realtime");
+            function setMode(realtime) {
+                if (!pC || !pR || !bC || !bR) return;
+                pC.style.display = realtime ? "none" : "";
+                pR.style.display = realtime ? "" : "none";
+                bC.classList.toggle("off", realtime);
+                bR.classList.toggle("off", !realtime);
+            }
+            if (bC) bC.addEventListener("click", function () { setMode(false); });
+            if (bR) bR.addEventListener("click", function () { setMode(true); });
+
+            /* ---------- turn-taking stepper ---------- */
+            var steps = [
+                { t: "Step 1 — user is speaking", d: "Audio frames stream in from the room. VAD probability is high; STT emits interim transcripts as words arrive.", tr: "“I want to book a flight to…” (interim)", hot: ["c-vad", "c-stt"], p: null },
+                { t: "Step 2 — user pauses", d: "VAD detects silence. But silence is only an acoustic signal — it can't say whether the THOUGHT is finished.", tr: "“I want to book a flight to…”  [silence]", hot: ["c-vad"], p: null },
+                { t: "Step 3 — semantic check", d: "The EOT model reads the last 6 turns (≤128 tokens) through a chat template and scores the pause: P(done) = 0.14. That trailing “to…” looks unfinished.", tr: "EOT input: …last 6 turns… “I want to book a flight to”", hot: ["c-eot"], p: 0.14 },
+                { t: "Step 4 — the agent holds", d: "Low confidence → endpointing stretches toward max_delay (3.0 s). The agent stays quiet instead of barging in mid-thought.", tr: "[agent waiting — no interruption]", hot: ["c-eot"], p: 0.14 },
+                { t: "Step 5 — user resumes", d: "“…Tokyo, next Friday.” The hold paid off: no awkward talk-over, and the transcript continues in the same turn.", tr: "“I want to book a flight to Tokyo, next Friday.”", hot: ["c-vad", "c-stt"], p: null },
+                { t: "Step 6 — pause again, EOT agrees", d: "New silence, new score: P(done) = 0.93. A complete request. Endpointing collapses to min_delay (0.5 s).", tr: "EOT: “…flight to Tokyo, next Friday.” → done", hot: ["c-vad", "c-eot"], p: 0.93 },
+                { t: "Step 7 — reply was already brewing", d: "Preemptive generation had kicked off the LLM on the preliminary transcript during the wait. First TTS audio plays almost immediately after the turn is confirmed.", tr: "Agent: “Sure — Tokyo next Friday. One-way or round trip?”", hot: ["c-gen"], p: 0.93 }
+            ];
+            var si = 0, autoTimer = null;
+            var stT = document.getElementById("st-title"), stD = document.getElementById("st-desc"),
+                stTr = document.getElementById("st-transcript"), stPW = document.getElementById("st-probwrap"),
+                stP = document.getElementById("st-prob"), stM = document.getElementById("st-meterfill"),
+                stC = document.getElementById("st-count");
+            var compIds = ["c-vad", "c-stt", "c-eot", "c-gen"];
+            function renderStep() {
+                var s = steps[si];
+                if (!s || !stT) return;
+                stT.textContent = s.t;
+                stD.textContent = s.d;
+                stTr.textContent = s.tr;
+                compIds.forEach(function (id) {
+                    var el = document.getElementById(id);
+                    if (el) el.classList.toggle("hot", s.hot.indexOf(id) !== -1);
+                });
+                if (s.p !== null && stPW && stP && stM) {
+                    stPW.style.display = "";
+                    stP.textContent = s.p.toFixed(2);
+                    stM.style.width = (s.p * 100) + "%";
+                } else if (stPW) {
+                    stPW.style.display = "none";
+                }
+                if (stC) stC.textContent = (si + 1) + " / " + steps.length;
+            }
+            function stopAuto() {
+                if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+                var ab = document.getElementById("st-auto");
+                if (ab) ab.textContent = "Auto-play";
+            }
+            var prevB = document.getElementById("st-prev"), nextB = document.getElementById("st-next"), autoB = document.getElementById("st-auto");
+            if (prevB) prevB.addEventListener("click", function () { stopAuto(); si = (si - 1 + steps.length) % steps.length; renderStep(); });
+            if (nextB) nextB.addEventListener("click", function () { stopAuto(); si = (si + 1) % steps.length; renderStep(); });
+            if (autoB) autoB.addEventListener("click", function () {
+                if (autoTimer) { stopAuto(); return; }
+                autoB.textContent = "Stop";
+                autoTimer = setInterval(function () { si = (si + 1) % steps.length; renderStep(); }, 2200);
+            });
+            renderStep();
+
+            /* ---------- EOT dial ---------- */
+            var eotS = document.getElementById("eot-slider"), eotP = document.getElementById("eot-p"),
+                eotW = document.getElementById("eot-wait"), eotB = document.getElementById("eot-bar");
+            function renderEot() {
+                if (!eotS || !eotP || !eotW || !eotB) return;
+                var p = parseInt(eotS.value, 10) / 100;
+                var minD = 0.5, maxD = 3.0;
+                var wait = minD + (maxD - minD) * Math.pow(1 - p, 1.6);
+                eotP.textContent = p.toFixed(2);
+                eotW.textContent = wait.toFixed(2) + " s";
+                eotB.style.width = ((wait / maxD) * 100) + "%";
+            }
+            if (eotS) eotS.addEventListener("input", renderEot);
+            renderEot();
+
+            /* ---------- latency simulator ---------- */
+            var ids = ["stt", "wait", "llm", "tts"];
+            function val(id) {
+                var el = document.getElementById("r-" + id);
+                return el ? parseInt(el.value, 10) : 0;
+            }
+            function renderSim() {
+                var stt = val("stt"), wait = val("wait"), llm = val("llm"), tts = val("tts");
+                var vs = { stt: stt, wait: wait, llm: llm, tts: tts };
+                ids.forEach(function (id) {
+                    var lab = document.getElementById("v-" + id);
+                    if (lab) lab.textContent = vs[id] + " ms";
+                });
+                var totalOff = stt + wait + llm + tts;
+                var llmOn = Math.max(0, llm - wait);
+                var totalOn = stt + wait + llmOn + tts;
+                var scale = totalOff > 0 ? totalOff : 1;
+                function setBar(barId, segs) {
+                    var bar = document.getElementById(barId);
+                    if (!bar) return;
+                    var kids = bar.children;
+                    for (var i = 0; i < kids.length && i < segs.length; i++) {
+                        kids[i].style.width = (segs[i] / scale * 100) + "%";
+                    }
+                }
+                setBar("bar-off", [stt, wait, llm, tts]);
+                setBar("bar-on", [stt, wait, llmOn, tts]);
+                var tOff = document.getElementById("t-off"), tOn = document.getElementById("t-on"), tS = document.getElementById("t-saved");
+                if (tOff) tOff.textContent = totalOff + " ms";
+                if (tOn) tOn.textContent = totalOn + " ms";
+                if (tS) {
+                    var saved = totalOff - totalOn;
+                    var pct = totalOff > 0 ? Math.round(saved / totalOff * 100) : 0;
+                    tS.textContent = saved > 0 ? ("Saved: " + saved + " ms (" + pct + "%)") : "Saved: 0 ms — the wait is longer than LLM TTFT, so the LLM already finished hiding";
+                }
+            }
+            ids.forEach(function (id) {
+                var el = document.getElementById("r-" + id);
+                if (el) el.addEventListener("input", renderSim);
+            });
+            renderSim();
+
+            /* ---------- quiz ---------- */
+            var quiz = [
+                { q: "What is an Agent in LiveKit Agents?", o: ["The runtime loop that schedules audio", "A configuration object: instructions, tools, model refs — activated by an AgentSession", "A subprocess managed by the worker", "The WebRTC media server"], a: 1, w: "Agent = WHAT (declaration). AgentSession = HOW (runtime). Worker = WHERE (deployment)." },
+                { q: "How does an agent receive the user's audio?", o: ["Via a REST webhook per utterance", "The SFU pushes raw RTP to the worker's public IP", "The agent joins the room as a regular WebRTC participant", "Through a Kafka topic of audio chunks"], a: 2, w: "The agent is just another participant — so transport (jitter, codecs, reconnection) is entirely the SFU's problem." },
+                { q: "What input does the local turn-detector (EOT) model use?", o: ["Raw audio spectrograms", "Text only: the last ~6 turns / 128 tokens of the transcript", "VAD probabilities over the last 2 seconds", "Pitch and prosody features"], a: 1, w: "It's text-only — it piggybacks on the STT transcript. Prosody is the trade-off; the cloud v1 variant adds audio." },
+                { q: "Where does v1-mini EOT inference run?", o: ["On LiveKit's GPU cluster", "In the user's browser", "Locally on CPU (int8 ONNX), in a separate inference process in the worker", "Inside the LLM provider's API"], a: 2, w: "~tens of ms on CPU, no GPU in the serving path, shared over IPC so it never blocks an audio loop." },
+                { q: "What does preemptive generation do?", o: ["Caches the LLM's answers to common questions", "Starts LLM inference speculatively during the endpointing wait, discarding it if the user resumes", "Generates the next question the user will ask", "Streams TTS before the LLM finishes"], a: 1, w: "It overlaps LLM time-to-first-token with the endpointing delay — triggered by STT's PREFLIGHT_TRANSCRIPT." },
+                { q: "Why one OS process per session?", o: ["Python can't run two sessions in one process", "Security sandboxing of user audio", "Voice is a tail-latency problem: one session's GIL stall or memory spike must not cause dropouts in another", "It's required by WebRTC"], a: 2, w: "Process isolation + pre-warmed ProcPool = blast-proof sessions and no cold start on the first turn." },
+                { q: "What is BVC and where does it run?", o: ["Open-source echo cancellation in the browser", "Background voice cancellation (Krisp-based, closed binary), server-side on inbound audio before VAD/STT", "A TTS post-processor for warmth", "A codec for low bandwidth"], a: 1, w: "It removes background VOICES so they never trip VAD or pollute the transcript — and it's effectively Cloud-gated." },
+                { q: "Switching a cascaded (STT→LLM→TTS) agent to speech-to-speech requires…", o: ["Rewriting the Agent with the realtime API", "Changing llm= to a RealtimeModel — turn-taking, tools, and events carry over", "A different framework (realtime isn't supported)", "Deploying to LiveKit Cloud"], a: 1, w: "AgentActivity branches on isinstance(llm, RealtimeModel); everything else is shared machinery." },
+                { q: "The EOT model's weights are…", o: ["Fully Apache 2.0", "Closed — API access only", "Open to download, but licensed for use only with LiveKit Agents", "Public domain"], a: 2, w: "Open transport, proprietary intelligence: the Model License restricts the weights to the LiveKit Agents framework." }
+            ];
+            var quizEl = document.getElementById("quiz");
+            var scoreEl = document.getElementById("quiz-score");
+            var resetEl = document.getElementById("quiz-reset");
+            var answered = 0, correct = 0;
+            function renderQuiz() {
+                if (!quizEl || !scoreEl) return;
+                answered = 0; correct = 0;
+                quizEl.innerHTML = "";
+                scoreEl.textContent = "Score: 0 / " + quiz.length;
+                quiz.forEach(function (item, qi) {
+                    var box = document.createElement("div");
+                    box.className = "q";
+                    var qt = document.createElement("div");
+                    qt.className = "qt";
+                    qt.textContent = (qi + 1) + ". " + item.q;
+                    box.appendChild(qt);
+                    var opts = document.createElement("div");
+                    opts.className = "opts";
+                    var why = document.createElement("div");
+                    why.className = "why";
+                    why.textContent = item.w;
+                    var done = false;
+                    item.o.forEach(function (opt, oi) {
+                        var b = document.createElement("button");
+                        b.textContent = opt;
+                        b.addEventListener("click", function () {
+                            if (done) return;
+                            done = true;
+                            answered++;
+                            if (oi === item.a) {
+                                b.classList.add("right");
+                                correct++;
+                            } else {
+                                b.classList.add("wrong");
+                                var kids = opts.children;
+                                if (kids[item.a]) kids[item.a].classList.add("right");
+                            }
+                            why.classList.add("show");
+                            scoreEl.textContent = "Score: " + correct + " / " + quiz.length +
+                                (answered === quiz.length ? (correct === quiz.length ? "  — perfect." : "  — done.") : "");
+                        });
+                        opts.appendChild(b);
+                    });
+                    box.appendChild(opts);
+                    box.appendChild(why);
+                    quizEl.appendChild(box);
+                });
+            }
+            if (resetEl) resetEl.addEventListener("click", renderQuiz);
+            renderQuiz();
+        })();
+    </script>
+</body>
+</html>

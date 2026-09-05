@@ -131,3 +131,8 @@
   slug: disco-loop-brief
   date: 2026-09-04
   description: "briefs/disco.md + the Gemini deep research, phone-ready — purchase-flow step-through, revenue growth chart, Rokt comparison, the 10-item ML greenfield map, rank-score and 200ms-latency widgets, people dossiers in loop order, comp calculator with band logic, tap-to-strike question banks for Animesh and Gaurav, and a 9-question quiz."
+
+- title: "LiveKit Agents: the architecture map"
+  slug: livekit-agents-architecture
+  date: 2026-09-05
+  description: "Core primitives (Agent / AgentSession / Worker), the one-line cascaded-to-realtime swap, turn-taking machinery with an EOT-probability dial and latency simulator, LiveKit's own models (EOT, BVC) and where they run — plus a 9-question quiz."
