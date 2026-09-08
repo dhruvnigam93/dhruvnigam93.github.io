@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "PyTorch DL Interview Cram"
+  slug: pytorch-dl-interview-cram
+  date: 2026-09-08
+  description: "Night-before sheet for a deep-learning coding interview — dropout (where/why + a live train-vs-eval toggle), the canonical train/eval loop, module-vs-functional, ModuleList/Sequential, attention from scratch with a 9-step shape walkthrough, positional embeddings (learned/sinusoidal/RoPE) with a sinusoidal heatmap, LayerNorm-vs-RMSNorm-vs-BatchNorm, the PyTorch transformer class zoo (Encoder/EncoderLayer/Decoder), a vision+VLM crash course (ViT patch embedding, OCR-free extraction, DETR/IoU/mAP), the exact bugs from my drill, and a 10-question quiz."
+
 - title: "Which Test? Relationships & Drift"
   slug: stats-tests-relationships-drift
   date: 2026-09-02

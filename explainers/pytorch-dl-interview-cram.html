@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>PyTorch DL Interview Cram</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --good: #16a34a;
+            --bad: #dc2626;
+            --warn: #d97706;
+            --card: #f7f7f8;
+            --radius: 14px;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --good: #4ade80;
+                --bad: #f87171;
+                --warn: #fbbf24;
+                --card: #171a20;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: max(20px, env(safe-area-inset-top)) 20px 80px;
+        }
+        .back {
+            display: inline-block;
+            margin: 8px 0 20px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.35rem; margin: 1.8em 0 0.5em; scroll-margin-top: 12px; }
+        h3 { font-size: 1.08rem; margin: 1.2em 0 0.3em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        ul, ol { padding-left: 1.2em; }
+        li { margin: 0.35em 0; }
+        code {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.82em;
+        }
+        pre {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            overflow-x: auto;
+            font-size: 0.8em;
+            line-height: 1.5;
+        }
+        pre code { background: none; border: none; padding: 0; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+        }
+        .card.good { border-left: 4px solid var(--good); }
+        .card.bad  { border-left: 4px solid var(--bad); }
+        .card.warn { border-left: 4px solid var(--warn); }
+        .tag { font-weight:700; }
+        .tag.g { color: var(--good); }
+        .tag.b { color: var(--bad); }
+        .tag.w { color: var(--warn); }
+        details {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 0 18px;
+            margin: 12px 0;
+            background: var(--card);
+        }
+        summary {
+            cursor: pointer;
+            padding: 16px 0;
+            font-weight: 600;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after { content: "+"; color: var(--muted); font-size: 1.4rem; line-height: 1; }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        button {
+            font: inherit; font-weight: 600; color: #fff; background: var(--accent);
+            border: none; border-radius: 999px; padding: 10px 18px;
+            min-height: 44px; cursor: pointer; touch-action: manipulation;
+        }
+        button:active { transform: scale(0.96); }
+        .ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+        input[type="range"] { width: 100%; height: 44px; }
+        .pills { display:flex; flex-wrap:wrap; gap:8px; margin: 14px 0 6px; }
+        .pills a {
+            text-decoration:none; font-size:0.82rem; color:var(--fg);
+            background:var(--card); border:1px solid var(--line);
+            border-radius:999px; padding:7px 13px;
+        }
+        .tablewrap { overflow-x:auto; -webkit-overflow-scrolling:touch; margin:1em 0; }
+        table { border-collapse: collapse; width:100%; font-size:0.86rem; min-width: 480px; }
+        th, td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+        th { background: var(--card); }
+        .ctrlrow { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:10px 0; }
+        .readout { font-family: ui-monospace, Menlo, monospace; font-size:0.85rem; color:var(--muted); }
+        .cells { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0; }
+        .cell {
+            width:52px; height:44px; border-radius:8px; display:flex; align-items:center;
+            justify-content:center; font-family:ui-monospace,Menlo,monospace; font-size:0.8rem;
+            border:1px solid var(--line); background:var(--card); transition: all .25s ease;
+        }
+        .cell.dropped { opacity:0.28; background:transparent; color:var(--muted); text-decoration:line-through; }
+        .cell.kept { background:color-mix(in srgb, var(--accent) 18%, transparent); border-color:var(--accent); }
+        canvas { width:100%; height:auto; border:1px solid var(--line); border-radius:var(--radius); display:block; }
+        .step {
+            border:1px solid var(--line); border-radius:var(--radius); background:var(--card);
+            padding:14px 16px; margin:12px 0; min-height: 120px;
+        }
+        .step .shape { font-family:ui-monospace,Menlo,monospace; color:var(--accent); font-size:0.85rem; }
+        .quiz-q { border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; margin:14px 0; background:var(--card); }
+        .quiz-q .opt {
+            display:block; width:100%; text-align:left; margin:8px 0; padding:12px 14px;
+            border:1px solid var(--line); border-radius:10px; background:var(--bg); color:var(--fg);
+            font-weight:500; cursor:pointer; min-height:48px;
+        }
+        .quiz-q .opt:hover { border-color:var(--accent); }
+        .quiz-q .opt.correct { border-color:var(--good); background:color-mix(in srgb, var(--good) 15%, transparent); }
+        .quiz-q .opt.wrong { border-color:var(--bad); background:color-mix(in srgb, var(--bad) 15%, transparent); }
+        .quiz-q .opt:disabled { cursor:default; }
+        .explain { font-size:0.85rem; color:var(--muted); margin-top:8px; display:none; }
+        .explain.show { display:block; }
+        #score { font-weight:700; font-size:1.1rem; }
+        footer {
+            margin-top: 3em; padding-top: 1.2em; border-top: 1px solid var(--line);
+            color: var(--muted); font-size: 0.85rem;
+        }
+        .kbd { font-family:ui-monospace,Menlo,monospace; font-size:0.82em; }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>PyTorch DL Interview Cram</h1>
+        <p class="meta">Added 2026-09-08 · transformer building blocks, PyTorch API traps, and a vision/VLM crash course — the night-before sheet.</p>
+
+        <div class="pills">
+            <a href="#pitfalls">Your pitfalls</a>
+            <a href="#dropout">Dropout</a>
+            <a href="#loop">Training loop</a>
+            <a href="#modfunc">Module vs functional</a>
+            <a href="#containers">ModuleList/Sequential</a>
+            <a href="#attn">Attention</a>
+            <a href="#pos">Positional</a>
+            <a href="#norm">LayerNorm/RMSNorm</a>
+            <a href="#classes">PyTorch transformer API</a>
+            <a href="#vision">Images &amp; VLMs</a>
+            <a href="#grab">Grab-bag</a>
+            <a href="#quiz">Quiz</a>
+        </div>
+
+        <div class="card">
+            <strong>How to read this:</strong> the canonical code blocks are the ones to be able to write
+            <em>from memory, no autocomplete</em>. Everything else is "know it well enough to talk about it."
+            Play the widgets — they encode the exact things you slipped on.
+        </div>
+
+        <!-- ================= PITFALLS ================= -->
+        <h2 id="pitfalls">0. The bugs you actually hit (fix these reflexes)</h2>
+        <p>These are yours, from the drill. Each is a one-line reflex to internalize.</p>
+
+        <div class="card bad">
+            <span class="tag b">lr = Config.epochs</span> — you passed <code>8</code> as the learning rate → the
+            model diverged, 46% acc. <strong>Reflex:</strong> read from the <em>instance</em> <code>cfg.lr</code>,
+            never the class <code>Config</code>. And an LR of 8 is absurd — from-scratch transformers live at
+            <code>1e-3 … 3e-4</code>.
+        </div>
+        <div class="card bad">
+            <span class="tag b">torch.max(logits).index</span> — <code>torch.max(x)</code> with no <code>dim</code>
+            returns the <em>global</em> max scalar; <code>.index</code> isn't a thing.
+            <strong>Reflex for predictions:</strong> <code>preds = logits.argmax(dim=-1)</code> → shape <code>[B]</code>.
+        </div>
+        <div class="card bad">
+            <span class="tag b">nn.Sequential([...])</span> — takes <code>*args</code>, not a list, and auto-chains.
+            When you hand-loop with residuals/masks you want <code>nn.ModuleList([...])</code>. (§4)
+        </div>
+        <div class="card bad">
+            <span class="tag b">nn.LayerNorm()</span> — needs <code>normalized_shape</code>: <code>nn.LayerNorm(d_model)</code>.
+        </div>
+        <div class="card bad">
+            <span class="tag b">x_in += layer(x)</span> — two bugs: you fed raw token IDs <code>x</code> instead of the
+            embedded <code>x_in</code>, and <code>TransformerEncoderLayer</code> already adds its own residual, so
+            <code>+=</code> double-counts. Just <code>x_in = layer(x_in)</code>.
+        </div>
+        <div class="card warn">
+            <span class="tag w">silent training</span> — you printed nothing, so a diverging loss was invisible.
+            <strong>Always</strong> print per-epoch loss; it turns "why is acc bad?" into a 5-second diagnosis.
+        </div>
+        <div class="card warn">
+            <span class="tag w">missing model.train()/eval()</span> — matters the moment you have dropout (§1).
+        </div>
+
+        <!-- ================= DROPOUT ================= -->
+        <h2 id="dropout">1. Dropout — what, where, why</h2>
+        <p><strong>What:</strong> during <em>training only</em>, randomly zero each activation with probability
+        <code>p</code>, then scale the survivors by <code>1/(1-p)</code> ("inverted dropout") so the expected sum is
+        unchanged. At <em>eval</em> it's the identity (nothing dropped, no scaling). That scaling is exactly why you
+        don't touch anything at test time.</p>
+        <p><strong>Why:</strong> stops neurons co-adapting; approximates averaging an ensemble of sub-networks →
+        regularization. It's a lever you pull when <em>train acc ≫ val acc</em>.</p>
+
+        <div class="card">
+            <strong>Where to put it (transformer):</strong>
+            <ul>
+                <li>on the sum of <em>token + positional</em> embeddings,</li>
+                <li>on the <em>attention probabilities</em> (after softmax),</li>
+                <li>on each <em>sub-layer output</em> before the residual add (residual dropout),</li>
+                <li>inside the <em>FFN</em>, after the activation.</li>
+            </ul>
+            <strong>Not</strong> on the final logits. Typical <code>p</code>: 0.1 for LLMs, up to 0.3–0.5 in small MLPs.
+        </div>
+
+        <div class="card warn">
+            <strong>The trap:</strong> <code>nn.Dropout</code> respects <code>model.train()/eval()</code> automatically.
+            <code>F.dropout(x)</code> does <strong>not</strong> unless you pass <code>training=self.training</code>.
+            Prefer the module. And if you forget <code>model.eval()</code>, dropout stays on at inference → noisy,
+            worse predictions (one of your minor misses).
+        </div>
+
+        <h3>Play with it</h3>
+        <p>12 activations, all <code>1.0</code>. Watch how train mode zeroes ~<code>p</code> of them and scales the rest
+        by <code>1/(1-p)</code> — and how the <em>sum</em> stays ~12, so eval needs no correction.</p>
+        <div class="ctrlrow">
+            <button id="dropModeBtn">mode: train</button>
+            <button id="dropResample" class="ghost">resample mask</button>
+        </div>
+        <div class="ctrlrow">
+            <span class="readout">p = <span id="dropPval">0.30</span></span>
+            <input type="range" id="dropP" min="0" max="0.9" step="0.05" value="0.3">
+        </div>
+        <div class="cells" id="dropCells"></div>
+        <div class="readout" id="dropSum"></div>
+
+        <!-- ================= TRAINING LOOP ================= -->
+        <h2 id="loop">2. The canonical training + eval loop</h2>
+        <p>Memorize this shape. The three lines that <em>must</em> be in this order per step:
+        <code>zero_grad → backward → step</code>.</p>
+<pre><code>model.train()
+opt = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=0.01)
+
+for epoch in range(cfg.epochs):
+    running = 0.0
+    for xb, yb in train_loader:
+        xb, yb = xb.to(device), yb.to(device)
+
+        logits = model(xb)                     # forward
+        loss   = F.cross_entropy(logits, yb)   # raw logits + int targets
+
+        opt.zero_grad()                        # clear old grads (they accumulate!)
+        loss.backward()                        # compute new grads
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # optional, stabilizes
+        opt.step()                             # update weights
+
+        running += loss.item() * xb.size(0)
+    print(f"epoch {epoch}: loss {running/len(train_loader.dataset):.4f}")   # SEE the loss</code></pre>
+
+<pre><code>@torch.no_grad()                # no autograd graph -> faster, less memory
+def evaluate(model, loader, device):
+    model.eval()                # turn OFF dropout / use running BN stats
+    correct = total = 0
+    for xb, yb in loader:
+        xb, yb = xb.to(device), yb.to(device)
+        preds = model(xb).argmax(dim=-1)      # NOT torch.max(...).index
+        correct += (preds == yb).sum().item()
+        total   += yb.size(0)
+    return correct / total</code></pre>
+
+        <div class="card">
+            <strong>Why <code>zero_grad</code> at all?</strong> PyTorch <em>accumulates</em> grads into
+            <code>.grad</code> on every <code>backward()</code>. Skip zeroing and you sum this step's grads onto last
+            step's → garbage updates. (Accumulation is a feature — it's how you fake a big batch across micro-batches.)
+        </div>
+        <div class="card">
+            <strong>Numbers to know:</strong> AdamW <code>lr</code> ≈ <code>3e-4</code> (transformers) to
+            <code>1e-3</code> (small models); <code>weight_decay</code> ≈ <code>0.01–0.1</code>;
+            real training uses <strong>warmup + cosine decay</strong>. <code>cross_entropy</code> wants
+            <em>raw logits</em> (it does <code>log_softmax</code> inside) and <em>integer</em> class targets — never
+            softmax before it.
+        </div>
+
+        <!-- ================= MODULE VS FUNCTIONAL ================= -->
+        <h2 id="modfunc">3. <code>nn.Module</code> vs <code>torch.nn.functional</code></h2>
+        <p>Same math, different packaging. The rule is about <strong>state</strong>.</p>
+        <div class="card good">
+            <strong>Use the Module (<code>nn.X</code>)</strong> when the op owns <em>parameters</em> or has
+            <em>train/eval-dependent behavior</em>: <code>nn.Linear</code>, <code>nn.Conv2d</code>,
+            <code>nn.LayerNorm</code>, <code>nn.Embedding</code>, <code>nn.Dropout</code>, <code>nn.BatchNorm2d</code>,
+            <code>nn.MultiheadAttention</code>. Create in <code>__init__</code> so params register + move with
+            <code>.to(device)</code>.
+        </div>
+        <div class="card good">
+            <strong>Use functional (<code>F.x</code>)</strong> for stateless ops: <code>F.relu</code>,
+            <code>F.gelu</code>, <code>F.softmax</code>, <code>F.cross_entropy</code>,
+            <code>F.scaled_dot_product_attention</code>, <code>F.normalize</code>. Fine to call directly in
+            <code>forward</code>.
+        </div>
+        <div class="card warn">
+            <strong>The classic bug:</strong> <code>F.dropout(x)</code> and <code>F.batch_norm(...)</code> ignore
+            <code>model.train()/eval()</code> unless you thread the flag through yourself. Stateful op → reach for the
+            Module. Activations like ReLU/GELU have no state, so either form is fine (module version is handy inside
+            <code>nn.Sequential</code>).
+        </div>
+
+        <!-- ================= CONTAINERS ================= -->
+        <h2 id="containers">4. <code>ModuleList</code> vs <code>Sequential</code> vs <code>ModuleDict</code></h2>
+        <div class="tablewrap">
+        <table>
+            <tr><th>Container</th><th>Has its own <code>forward</code>?</th><th>Use when</th></tr>
+            <tr><td><code>nn.Sequential(*mods)</code></td><td><span class="tag g">Yes</span> — calls them in order</td>
+                <td>Simple linear pipeline, no custom logic. <em>Takes <code>*args</code>, not a list.</em></td></tr>
+            <tr><td><code>nn.ModuleList([...])</code></td><td><span class="tag b">No</span> — you loop over it</td>
+                <td>You need custom flow between layers: residuals, passing a mask, cross-attention, early exit. <strong>What transformer stacks use.</strong></td></tr>
+            <tr><td><code>nn.ModuleDict({...})</code></td><td><span class="tag b">No</span></td>
+                <td>Named/branchy submodules you index by key.</td></tr>
+        </table>
+        </div>
+        <div class="card bad">
+            <strong>Never use a plain Python <code>list</code></strong> of modules — its params don't register, so
+            they won't train and won't <code>.to(device)</code>. Always wrap in <code>ModuleList</code>/<code>Sequential</code>.
+        </div>
+<pre><code># Sequential: it runs the chain for you
+mlp = nn.Sequential(nn.Linear(d, 4*d), nn.GELU(), nn.Linear(4*d, d))
+y = mlp(x)
+
+# ModuleList: YOU write the forward (needed for residuals / masks)
+self.blocks = nn.ModuleList([Block(cfg) for _ in range(n)])
+for blk in self.blocks:
+    x = blk(x, mask)          # <- custom args between layers</code></pre>
+
+        <!-- ================= ATTENTION ================= -->
+        <h2 id="attn">5. Canonical attention (from scratch)</h2>
+        <p>The equation: <code>Attention(Q,K,V) = softmax(QKᵀ / √d_k) · V</code>. The <code>√d_k</code> keeps score
+        variance ~1 so softmax doesn't saturate into one-hot at large <code>d</code>.</p>
+<pre><code>class MultiHeadSelfAttention(nn.Module):
+    def __init__(self, d_model, nhead, dropout=0.0):
+        super().__init__()
+        assert d_model % nhead == 0
+        self.h, self.dh = nhead, d_model // nhead
+        self.qkv  = nn.Linear(d_model, 3 * d_model)
+        self.proj = nn.Linear(d_model, d_model)
+        self.drop = nn.Dropout(dropout)
+
+    def forward(self, x, mask=None):            # x: [B, T, D]
+        B, T, D = x.shape
+        q, k, v = self.qkv(x).chunk(3, dim=-1)  # each [B, T, D]
+        # [B,T,D] -> [B,h,T,dh]
+        split = lambda t: t.view(B, T, self.h, self.dh).transpose(1, 2)
+        q, k, v = split(q), split(k), split(v)
+
+        att = (q @ k.transpose(-2, -1)) / self.dh**0.5   # [B,h,T,T]
+        if mask is not None:
+            att = att.masked_fill(mask == 0, float('-inf'))
+        att = self.drop(att.softmax(dim=-1))
+        out = att @ v                             # [B,h,T,dh]
+        out = out.transpose(1, 2).contiguous().view(B, T, D)  # back to [B,T,D]
+        return self.proj(out)</code></pre>
+        <div class="card good">
+            <strong>In real code, prefer the fused kernel:</strong>
+            <code>F.scaled_dot_product_attention(q, k, v, is_causal=True, dropout_p=p)</code> — that's FlashAttention
+            under the hood (faster, less memory). Say this in the interview; then show you can still hand-roll it.
+        </div>
+
+        <h3>Shape walkthrough</h3>
+        <p>The reshapes are where everyone (you included) slips. Step through with a concrete
+        <code>B=2, T=5, D=8, h=2</code>.</p>
+        <div class="step" id="attnStep"></div>
+        <div class="ctrlrow">
+            <button id="attnPrev" class="ghost">‹ prev</button>
+            <button id="attnNext">next ›</button>
+            <span class="readout" id="attnIdx"></span>
+        </div>
+
+        <!-- ================= POSITIONAL ================= -->
+        <h2 id="pos">6. Positional embeddings</h2>
+        <p>Attention is <em>permutation-invariant</em> — with no position signal, "dog bites man" = "man bites dog".
+        So we inject position. Four flavors worth naming:</p>
+        <div class="tablewrap">
+        <table>
+            <tr><th>Type</th><th>How</th><th>Notes / who uses it</th></tr>
+            <tr><td>Learned absolute</td><td><code>nn.Embedding(max_len, d)</code>, added to token emb</td>
+                <td>Simplest (what your classifier would use). Capped at <code>max_len</code>, no extrapolation. BERT, GPT-2, ViT.</td></tr>
+            <tr><td>Sinusoidal</td><td>fixed sin/cos at geometric frequencies</td>
+                <td>No params, extrapolates a bit. Original "Attention Is All You Need".</td></tr>
+            <tr><td><strong>RoPE</strong> (rotary)</td><td>rotate q,k by a position-dependent angle <em>inside attention</em></td>
+                <td>Encodes <em>relative</em> position, great long-context extrapolation. <strong>LLaMA, Qwen → so Nanonets' Qwen2.5-VL base.</strong></td></tr>
+            <tr><td>ALiBi</td><td>add a linear distance penalty to attention scores</td>
+                <td>No embedding at all; cheap length extrapolation.</td></tr>
+        </table>
+        </div>
+        <div class="card">
+            <strong>Say this:</strong> modern LLMs mostly moved from added absolute embeddings to <strong>RoPE</strong>,
+            because relative position generalizes to longer sequences than trained on. Sinusoidal is the thing to be
+            able to sketch.
+        </div>
+<pre><code># Learned absolute — the 2-liner you'd write live
+self.pos = nn.Embedding(max_len, d_model)
+pos = torch.arange(T, device=x.device)          # [T]
+h = self.tok(x) + self.pos(pos)                 # broadcast over batch</code></pre>
+
+        <h3>Sinusoidal, visualized</h3>
+        <p>Rows = positions (0 at top), columns = feature dims. Low dims oscillate fast, high dims slow — every position
+        gets a unique "barcode". Drag to highlight one position's pattern.</p>
+        <canvas id="peCanvas" width="640" height="320" aria-label="sinusoidal positional encoding heatmap"></canvas>
+        <div class="ctrlrow">
+            <span class="readout">position = <span id="pePos">0</span></span>
+            <input type="range" id="pePosSlider" min="0" max="47" step="1" value="0">
+        </div>
+
+        <!-- ================= NORM ================= -->
+        <h2 id="norm">7. LayerNorm vs RMSNorm vs BatchNorm</h2>
+        <div class="tablewrap">
+        <table>
+            <tr><th></th><th>Normalizes over</th><th>Formula (per token)</th><th>Where</th></tr>
+            <tr><td><strong>LayerNorm</strong></td><td>feature dim, per sample</td>
+                <td><code>(x−μ)/√(σ²+ε)·γ + β</code></td><td>Transformers. Batch-independent → good for variable length.</td></tr>
+            <tr><td><strong>RMSNorm</strong></td><td>feature dim, per sample</td>
+                <td><code>x/√(mean(x²)+ε)·γ</code> — <em>no mean-subtraction, no β</em></td>
+                <td>Cheaper, works as well. LLaMA, Qwen, most modern LLMs.</td></tr>
+            <tr><td><strong>BatchNorm</strong></td><td>batch dim, per feature</td>
+                <td>uses batch mean/var; running stats at eval</td>
+                <td>CNNs. Bad for transformers / small batch / variable length.</td></tr>
+        </table>
+        </div>
+        <div class="card">
+            <strong>RMSNorm in 4 lines</strong> (know why it's cheaper: drops the mean and the bias):
+<pre><code>class RMSNorm(nn.Module):
+    def __init__(self, d, eps=1e-6):
+        super().__init__(); self.g = nn.Parameter(torch.ones(d)); self.eps = eps
+    def forward(self, x):
+        rms = x.pow(2).mean(-1, keepdim=True).add(self.eps).rsqrt()
+        return x * rms * self.g</code></pre>
+        </div>
+        <div class="card good">
+            <strong>Pre-norm vs post-norm:</strong> pre-norm (<code>norm_first=True</code>, norm <em>inside</em> the
+            residual branch) trains deep stacks stably — the modern default, and what you set. Original post-norm needs
+            LR warmup or it diverges.
+        </div>
+
+        <!-- ================= PYTORCH CLASSES ================= -->
+        <h2 id="classes">8. PyTorch transformer classes — who's who</h2>
+        <p>The names trip people up. <em>Layer = one block; the un-suffixed class = a stack of them.</em></p>
+        <div class="tablewrap">
+        <table>
+            <tr><th>Class</th><th>What it is</th></tr>
+            <tr><td><code>nn.MultiheadAttention</code></td><td>Just the attention op (with in/out projections).</td></tr>
+            <tr><td><code>nn.TransformerEncoderLayer</code></td><td><strong>One</strong> encoder block: self-attn + FFN + 2 norms + residuals. <em>(what you used)</em></td></tr>
+            <tr><td><code>nn.TransformerEncoder</code></td><td>A <strong>stack</strong> of N encoder layers. You could've passed this one layer + <code>num_layers</code> instead of a ModuleList.</td></tr>
+            <tr><td><code>nn.TransformerDecoderLayer</code></td><td><strong>One</strong> decoder block: <em>masked</em> self-attn + <em>cross</em>-attn (over encoder output) + FFN.</td></tr>
+            <tr><td><code>nn.TransformerDecoder</code></td><td>A stack of decoder layers.</td></tr>
+            <tr><td><code>nn.Transformer</code></td><td>Full encoder→decoder (seq2seq, e.g. translation).</td></tr>
+        </table>
+        </div>
+        <div class="card">
+            <strong>Encoder layer vs decoder layer — the two differences:</strong>
+            <ol>
+                <li>Decoder self-attn is <strong>causally masked</strong> (can't peek ahead); encoder is bidirectional.</li>
+                <li>Decoder has an <strong>extra cross-attention</strong> where Q comes from the decoder and K,V from the
+                encoder's output ("memory"). Encoder has none.</li>
+            </ol>
+        </div>
+        <div class="card">
+            <strong>Which architecture for what:</strong>
+            <ul>
+                <li><strong>Encoder-only</strong> (BERT, ViT) → understanding / classification / embeddings. <em>Your document classifier is here — correct choice.</em></li>
+                <li><strong>Decoder-only</strong> (GPT, LLaMA, Qwen) → generation.</li>
+                <li><strong>Encoder–decoder</strong> (T5, original Transformer) → seq2seq (translate, summarize).</li>
+            </ul>
+        </div>
+
+        <!-- ================= VISION ================= -->
+        <h2 id="vision">9. Images &amp; VLMs — the vision crash course</h2>
+        <p>Nanonets is a document-AI / VLM shop (their OCR is fine-tuned <strong>Qwen2.5-VL</strong>). You don't need to
+        be a CV expert — you need to <em>talk credibly</em> and connect it to what you know. The bridge:
+        <strong>a ViT turns an image into a sequence of tokens, then it's just the transformer you already built.</strong></p>
+
+        <details>
+            <summary>Image tensors &amp; preprocessing (the concrete gotchas)</summary>
+            <ul>
+                <li><strong>Layout is channels-first:</strong> <code>[B, C, H, W]</code> in PyTorch (not <code>[B,H,W,C]</code> like TF/NumPy). Mixing these up is the #1 image bug.</li>
+                <li><strong>Preprocess:</strong> resize → to tensor (scales to <code>[0,1]</code>) → normalize with dataset mean/std. ImageNet: <code>mean=[0.485,0.456,0.406]</code>, <code>std=[0.229,0.224,0.225]</code>.</li>
+                <li><strong>Augment (train only):</strong> random crop/flip/color-jitter; for documents: rotation, blur, noise, but <em>not</em> horizontal flip (text would reverse).</li>
+            </ul>
+<pre><code>from torchvision import transforms as T
+tf = T.Compose([T.Resize((224,224)), T.ToTensor(),
+                T.Normalize([0.485,0.456,0.406], [0.229,0.224,0.225])])</code></pre>
+        </details>
+
+        <details>
+            <summary>CNN basics (Conv2d, output size, ResNet)</summary>
+            <ul>
+                <li><code>nn.Conv2d(in_ch, out_ch, kernel, stride, padding)</code> — slides a small filter; <strong>weight sharing</strong> gives translation invariance and few params.</li>
+                <li><strong>Output size:</strong> <code>out = (W − K + 2P)/S + 1</code>. "same" padding when <code>P=(K−1)/2, S=1</code>.</li>
+                <li><strong>ResNet</strong> = the workhorse backbone; residual connections let you train very deep nets (same idea as transformer residuals). BatchNorm lives here, not in transformers.</li>
+                <li>Pooling / stride shrink spatial size; channels grow with depth.</li>
+            </ul>
+        </details>
+
+        <details>
+            <summary>ViT — "an image is worth 16×16 words" (the bridge)</summary>
+            <ol>
+                <li>Split the image into fixed patches (e.g. 16×16). Each patch is flattened + linearly projected → a
+                    <strong>patch embedding</strong>. Trick: that's literally a <code>Conv2d(3, d, kernel=16, stride=16)</code>.</li>
+                <li>You now have a <em>sequence</em> of patch tokens. Prepend a <code>[CLS]</code> token, add positional
+                    embeddings.</li>
+                <li>Run a <strong>standard transformer encoder</strong> (the one you built). Classify from the
+                    <code>[CLS]</code> token (or mean-pool).</li>
+            </ol>
+            <p>So your text classifier and a ViT are the <em>same encoder</em> — only the tokenizer differs (BPE tokens
+            vs patch embeddings).</p>
+        </details>
+
+        <details>
+            <summary>VLMs — how Nanonets' OCR-free extraction works</summary>
+            <ol>
+                <li><strong>Vision encoder</strong> (a ViT) turns the document image into visual tokens.</li>
+                <li>A <strong>projector/adapter</strong> (small MLP) maps those into the LLM's text-embedding space.</li>
+                <li>Visual tokens are <strong>concatenated with the text prompt</strong> ("extract the invoice fields as
+                JSON") and fed to a <strong>decoder LLM</strong> (Qwen2.5), which generates the answer.</li>
+            </ol>
+            <p><strong>"OCR-free"</strong> = no separate text-detection+recognition pipeline; the model reads pixels and
+            emits structured text end-to-end. Contrast with <strong>traditional OCR</strong>: detect text boxes →
+            recognize each (CRNN + CTC loss) → post-process. Trade-off talking point: VLMs handle layout/tables/context
+            far better but cost more compute and can <em>hallucinate</em> — hence confidence scores + human-in-the-loop.</p>
+        </details>
+
+        <details>
+            <summary>Detection &amp; the metrics to name-drop</summary>
+            <ul>
+                <li><strong>Table / object detection:</strong> predict bounding boxes + classes. Models: <strong>DETR</strong>
+                    (transformer-based, set prediction + Hungarian matching), Faster R-CNN, YOLO.</li>
+                <li><strong>IoU</strong> (intersection-over-union) measures box overlap; <strong>mAP</strong> (mean average
+                    precision) is the standard detection metric.</li>
+                <li><strong>DocVQA</strong> is the benchmark for document-understanding VLMs (the one Nanonets quotes).</li>
+                <li>If asked "classify document images": fine-tune a <em>pretrained</em> ResNet/ViT (transfer learning) —
+                    don't train from scratch. Freeze the backbone, train the head first, then unfreeze.</li>
+            </ul>
+        </details>
+
+        <div class="card good">
+            <strong>If a vision question comes and you're unsure:</strong> anchor to what you know — "an image becomes a
+            sequence of patch tokens, then it's the same transformer encoder; the differences are channels-first tensors,
+            normalization stats, and using a pretrained backbone via transfer learning." That framing alone reads as
+            competent.
+        </div>
+
+        <!-- ================= GRAB BAG ================= -->
+        <h2 id="grab">10. Grab-bag they might probe</h2>
+        <details>
+            <summary>Overfitting vs underfitting — diagnose &amp; fix</summary>
+            <p><strong>Train ≫ val (overfit):</strong> more data / augmentation → dropout → weight decay → early stopping
+            → smaller model → label smoothing. Pull in that rough order.</p>
+            <p><strong>Train also bad (underfit):</strong> bigger model, train longer, higher LR, <em>less</em>
+            regularization, better features/tokenization, check the data pipeline.</p>
+        </details>
+        <details>
+            <summary>Optimizer / schedule / precision</summary>
+            <ul>
+                <li><strong>AdamW</strong> = Adam with <em>decoupled</em> weight decay (correct L2). Default for transformers.</li>
+                <li><strong>Schedule:</strong> linear <em>warmup</em> then cosine decay. Warmup avoids early divergence.</li>
+                <li><strong>Grad clipping:</strong> <code>clip_grad_norm_(params, 1.0)</code> to tame spikes.</li>
+                <li><strong>Mixed precision:</strong> <code>torch.autocast</code> + <code>GradScaler</code> (fp16) or bf16 —
+                    ~2× faster, half the memory.</li>
+                <li><strong>Grad accumulation:</strong> sum grads over k micro-batches, step once → simulate batch k× bigger.</li>
+            </ul>
+        </details>
+        <details>
+            <summary>Tensor reflexes (no-autocomplete survival kit)</summary>
+            <ul>
+                <li>Predicted class: <code>logits.argmax(dim=-1)</code>.</li>
+                <li>Python number out of a 0-dim tensor: <code>.item()</code>.</li>
+                <li>Detach from graph: <code>.detach()</code>; disable grad: <code>with torch.no_grad():</code> / <code>@torch.no_grad()</code>.</li>
+                <li>Reshape needs contiguous after <code>transpose/permute</code>: <code>.contiguous().view(...)</code> or just <code>.reshape(...)</code>.</li>
+                <li>Move data <em>and</em> model to the same device; mismatch is a top runtime error.</li>
+                <li><code>cross_entropy</code>: raw logits <code>[B,C]</code> + int targets <code>[B]</code>. Never pre-softmax.</li>
+                <li>Broadcasting: <code>[B,1,T,T]</code> masks broadcast over heads <code>[B,h,T,T]</code>.</li>
+            </ul>
+        </details>
+        <details>
+            <summary>KV-cache &amp; inference (Nanonets serves at scale — likely follow-up)</summary>
+            <p><strong>KV-cache:</strong> in autoregressive <em>decoding</em>, cache each step's K and V so you don't
+            recompute attention over the whole prefix every token → O(T) not O(T²) per step. Applies to
+            <em>decoders</em>, not your encoder classifier. Memory cost grows with sequence × layers × heads → the thing
+            <strong>PagedAttention/vLLM</strong> manages.</p>
+            <p><strong>Serving levers:</strong> quantization (INT8/FP16/bf16), continuous batching, ONNX/TensorRT export,
+            distillation to a smaller model. Nanonets' pitch — a 3–4B model beating a 72B — is basically this: right-size
+            + fine-tune + serve efficiently.</p>
+        </details>
+
+        <!-- ================= QUIZ ================= -->
+        <h2 id="quiz">11. Quiz — 10 questions</h2>
+        <p>Instant feedback, running score. Aim for 9+ before you sleep.</p>
+        <div id="quiz"></div>
+        <div class="ctrlrow">
+            <span id="score">0 / 0</span>
+            <button id="quizReset" class="ghost">reset</button>
+        </div>
+
+        <footer>
+            Personal explainer · unlisted · <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+
+    <script>
+    (function () {
+        "use strict";
+        var css = function (name) {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        };
+
+        /* ---------------- Dropout demo ---------------- */
+        (function () {
+            var N = 12, mode = "train", p = 0.3, mask = [];
+            var btn = document.getElementById("dropModeBtn");
+            var reBtn = document.getElementById("dropResample");
+            var slider = document.getElementById("dropP");
+            var pval = document.getElementById("dropPval");
+            var cellsEl = document.getElementById("dropCells");
+            var sumEl = document.getElementById("dropSum");
+            if (!cellsEl) return;
+
+            function resample() {
+                mask = [];
+                for (var i = 0; i < N; i++) mask.push(Math.random() < p ? 0 : 1);
+            }
+            function render() {
+                var scale = 1 / (1 - p);
+                cellsEl.innerHTML = "";
+                var sum = 0;
+                for (var i = 0; i < N; i++) {
+                    var d = document.createElement("div");
+                    d.className = "cell";
+                    if (mode === "eval") {
+                        d.classList.add("kept");
+                        d.textContent = "1.00";
+                        sum += 1;
+                    } else if (mask[i] === 0) {
+                        d.classList.add("dropped");
+                        d.textContent = "0";
+                    } else {
+                        d.classList.add("kept");
+                        var v = scale;
+                        d.textContent = v.toFixed(2);
+                        sum += v;
+                    }
+                    cellsEl.appendChild(d);
+                }
+                if (mode === "eval") {
+                    sumEl.textContent = "eval: nothing dropped, no scaling. sum = " + sum.toFixed(1) + " (matches input).";
+                } else {
+                    var kept = mask.reduce(function (a, b) { return a + b; }, 0);
+                    sumEl.textContent = "train: " + (N - kept) + " dropped, survivors ×" + scale.toFixed(2) +
+                        ". sum = " + sum.toFixed(1) + " ≈ " + N + " (expectation preserved).";
+                }
+            }
+            btn.addEventListener("click", function () {
+                mode = (mode === "train") ? "eval" : "train";
+                btn.textContent = "mode: " + mode;
+                reBtn.style.display = (mode === "train") ? "" : "none";
+                render();
+            });
+            reBtn.addEventListener("click", function () { resample(); render(); });
+            slider.addEventListener("input", function () {
+                p = parseFloat(slider.value); pval.textContent = p.toFixed(2);
+                resample(); render();
+            });
+            resample(); render();
+        })();
+
+        /* ---------------- Attention shape stepper ---------------- */
+        (function () {
+            var steps = [
+                { t: "Input", s: "x : [B=2, T=5, D=8]", d: "A batch of 2 sequences, 5 tokens each, each token an 8-dim vector." },
+                { t: "QKV projection", s: "qkv(x) : [2, 5, 24] → chunk → q,k,v each [2, 5, 8]", d: "One Linear makes Q,K,V at once (3×D=24), then split into three [B,T,D]." },
+                { t: "Split into heads", s: "view + transpose → [2, 2, 5, 4]", d: "[B,T,D] → [B,T,h,dh] → transpose(1,2) → [B,h,T,dh]. h=2 heads of dh=4. Heads attend independently." },
+                { t: "Scores", s: "q @ kᵀ / √dh → [2, 2, 5, 5]", d: "Every token scores against every token → a T×T matrix per head. √dh = √4 = 2 keeps variance sane." },
+                { t: "Mask (optional)", s: "masked_fill(future, -inf) → [2, 2, 5, 5]", d: "For causal/decoder attention, set future positions to −inf so softmax zeroes them. Encoder skips this." },
+                { t: "Softmax", s: "softmax(dim=-1) → [2, 2, 5, 5]", d: "Normalize over the last dim (the keys) → each row sums to 1 = attention weights." },
+                { t: "Weighted sum", s: "att @ v → [2, 2, 5, 4]", d: "Mix the value vectors by the weights → per-head output [B,h,T,dh]." },
+                { t: "Merge heads", s: "transpose + reshape → [2, 5, 8]", d: "[B,h,T,dh] → transpose(1,2) → contiguous → view [B,T,D]. Concatenate heads back to D=8." },
+                { t: "Output projection", s: "proj(out) → [2, 5, 8]", d: "Final Linear mixes head outputs. Same shape as input → stacks cleanly with residuals." }
+            ];
+            var i = 0;
+            var box = document.getElementById("attnStep");
+            var idx = document.getElementById("attnIdx");
+            var prev = document.getElementById("attnPrev");
+            var next = document.getElementById("attnNext");
+            if (!box) return;
+            function render() {
+                var st = steps[i];
+                box.innerHTML = "<strong>" + (i + 1) + ". " + st.t + "</strong>" +
+                    "<div class='shape'>" + st.s + "</div><p style='margin:.5em 0 0'>" + st.d + "</p>";
+                idx.textContent = (i + 1) + " / " + steps.length;
+                prev.disabled = (i === 0);
+                next.disabled = (i === steps.length - 1);
+            }
+            prev.addEventListener("click", function () { if (i > 0) { i--; render(); } });
+            next.addEventListener("click", function () { if (i < steps.length - 1) { i++; render(); } });
+            render();
+        })();
+
+        /* ---------------- Sinusoidal positional encoding heatmap ---------------- */
+        (function () {
+            var canvas = document.getElementById("peCanvas");
+            if (!canvas) return;
+            var ctx = canvas.getContext("2d");
+            var POS = 48, DIM = 64;
+            var highlight = 0;
+            var slider = document.getElementById("pePosSlider");
+            var posLabel = document.getElementById("pePos");
+
+            function pe(pos, i) {
+                var denom = Math.pow(10000, (2 * Math.floor(i / 2)) / DIM);
+                return (i % 2 === 0) ? Math.sin(pos / denom) : Math.cos(pos / denom);
+            }
+            function lerp(a, b, t) { return a + (b - a) * t; }
+            function hexToRgb(h) {
+                h = h.replace('#', '');
+                if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+                return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+            }
+            function draw() {
+                var W = canvas.width, H = canvas.height;
+                var cw = W / DIM, ch = H / POS;
+                var bg = hexToRgb(css('--card') || '#ffffff');
+                var acc = hexToRgb(css('--accent') || '#2563eb');
+                var neg = hexToRgb(css('--bad') || '#dc2626');
+                ctx.clearRect(0, 0, W, H);
+                for (var p = 0; p < POS; p++) {
+                    for (var d = 0; d < DIM; d++) {
+                        var v = pe(p, d);              // [-1,1]
+                        var t = Math.abs(v);
+                        var target = v >= 0 ? acc : neg;
+                        var r = Math.round(lerp(bg[0], target[0], t));
+                        var g = Math.round(lerp(bg[1], target[1], t));
+                        var b = Math.round(lerp(bg[2], target[2], t));
+                        ctx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
+                        ctx.fillRect(d * cw, p * ch, cw + 1, ch + 1);
+                    }
+                }
+                // highlight row
+                ctx.strokeStyle = css('--fg') || '#000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(0, highlight * ch, W, ch);
+            }
+            slider.addEventListener("input", function () {
+                highlight = parseInt(slider.value, 10);
+                posLabel.textContent = highlight;
+                draw();
+            });
+            draw();
+            if (window.matchMedia) {
+                var mq = window.matchMedia("(prefers-color-scheme: dark)");
+                if (mq.addEventListener) mq.addEventListener("change", draw);
+                else if (mq.addListener) mq.addListener(draw);
+            }
+        })();
+
+        /* ---------------- Quiz ---------------- */
+        (function () {
+            var Q = [
+                { q: "You call evaluate() and accuracy is randomly noisy run-to-run. Most likely cause?",
+                  opts: ["Learning rate too low", "Forgot model.eval(), so dropout is still active", "Wrong optimizer", "Missing weight decay"],
+                  a: 1, e: "Dropout (and BatchNorm) behave differently in train vs eval; model.eval() turns dropout off." },
+                { q: "What does dropout do to the SURVIVING activations during training?",
+                  opts: ["Nothing", "Scales them by 1/(1-p)", "Scales them by p", "Clips them to [0,1]"],
+                  a: 1, e: "Inverted dropout scales survivors by 1/(1-p) so the expected sum is unchanged — hence no correction needed at eval." },
+                { q: "You need custom residual logic between transformer blocks. Which container?",
+                  opts: ["nn.Sequential", "a Python list", "nn.ModuleList", "nn.ModuleDict"],
+                  a: 2, e: "ModuleList registers params but has no forward, so you loop and add residuals/masks yourself. Sequential auto-chains; a plain list won't register params." },
+                { q: "Which respects model.train()/eval() automatically?",
+                  opts: ["F.dropout(x)", "nn.Dropout(p)", "both", "neither"],
+                  a: 1, e: "nn.Dropout reads self.training. F.dropout ignores it unless you pass training=self.training — the classic bug." },
+                { q: "Why divide attention scores by √d_k?",
+                  opts: ["To normalize to [0,1]", "To keep score variance ~1 so softmax doesn't saturate", "To save memory", "It's required by the mask"],
+                  a: 1, e: "Dot products grow with dimension; scaling keeps variance ~1 so gradients through softmax stay healthy." },
+                { q: "To get predicted classes from logits [B, C]:",
+                  opts: ["torch.max(logits).index", "logits.argmax(dim=-1)", "logits.softmax(dim=-1)", "logits.sum(dim=-1)"],
+                  a: 1, e: "argmax over the class dim gives [B] predictions. torch.max(logits) with no dim is a global scalar — your exact bug." },
+                { q: "How does RMSNorm differ from LayerNorm?",
+                  opts: ["It normalizes over the batch", "It skips mean-subtraction and the β bias", "It uses running statistics", "It only works on images"],
+                  a: 1, e: "RMSNorm divides by the RMS (no centering) and drops β — cheaper, and standard in LLaMA/Qwen." },
+                { q: "What makes a decoder layer different from an encoder layer?",
+                  opts: ["Nothing", "Causal-masked self-attention + an extra cross-attention", "It has no FFN", "It uses BatchNorm"],
+                  a: 1, e: "Decoders mask the future and add cross-attention over the encoder's output (memory). Encoders are bidirectional, no cross-attn." },
+                { q: "In a ViT, the patch-embedding step is equivalent to…",
+                  opts: ["A BatchNorm", "A Conv2d with kernel=stride=patch_size", "An RNN", "Max pooling"],
+                  a: 1, e: "Non-overlapping patch projection = Conv2d(3, d, kernel=P, stride=P). Then it's a standard transformer encoder." },
+                { q: "PyTorch image tensors are laid out as:",
+                  opts: ["[B, H, W, C]", "[B, C, H, W]", "[C, B, H, W]", "[H, W, C, B]"],
+                  a: 1, e: "Channels-first: [B, C, H, W]. Confusing it with TF/NumPy's [B,H,W,C] is the #1 image bug." }
+            ];
+            var host = document.getElementById("quiz");
+            var scoreEl = document.getElementById("score");
+            var resetBtn = document.getElementById("quizReset");
+            if (!host) return;
+            var answered, score;
+
+            function build() {
+                answered = 0; score = 0;
+                host.innerHTML = "";
+                scoreEl.textContent = "0 / 0";
+                Q.forEach(function (item, qi) {
+                    var box = document.createElement("div");
+                    box.className = "quiz-q";
+                    var h = document.createElement("p");
+                    h.style.fontWeight = "600";
+                    h.style.margin = "0 0 4px";
+                    h.textContent = (qi + 1) + ". " + item.q;
+                    box.appendChild(h);
+                    item.opts.forEach(function (opt, oi) {
+                        var b = document.createElement("button");
+                        b.className = "opt";
+                        b.textContent = opt;
+                        b.addEventListener("click", function () {
+                            if (box.dataset.done) return;
+                            box.dataset.done = "1";
+                            answered++;
+                            var kids = box.querySelectorAll(".opt");
+                            kids.forEach(function (k) { k.disabled = true; });
+                            if (oi === item.a) { b.classList.add("correct"); score++; }
+                            else { b.classList.add("wrong"); kids[item.a].classList.add("correct"); }
+                            var ex = box.querySelector(".explain");
+                            ex.classList.add("show");
+                            scoreEl.textContent = score + " / " + answered;
+                        });
+                        box.appendChild(b);
+                    });
+                    var ex = document.createElement("div");
+                    ex.className = "explain";
+                    ex.textContent = item.e;
+                    box.appendChild(ex);
+                    host.appendChild(box);
+                });
+            }
+            resetBtn.addEventListener("click", build);
+            build();
+        })();
+    })();
+    </script>
+</body>
+</html>
