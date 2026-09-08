@@ -70,6 +70,8 @@
             padding: 1px 6px;
             font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
             font-size: 0.82em;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
         pre {
             background: var(--card);
@@ -80,7 +82,7 @@
             font-size: 0.8em;
             line-height: 1.5;
         }
-        pre code { background: none; border: none; padding: 0; }
+        pre code { background: none; border: none; padding: 0; overflow-wrap: normal; word-break: normal; }
         .card {
             background: var(--card);
             border: 1px solid var(--line);
@@ -188,7 +190,9 @@
             <a href="#pos">Positional</a>
             <a href="#norm">LayerNorm/RMSNorm</a>
             <a href="#classes">PyTorch transformer API</a>
+            <a href="#fulltf">Full transformer</a>
             <a href="#vision">Images &amp; VLMs</a>
+            <a href="#cnn">CNN blocks</a>
             <a href="#grab">Grab-bag</a>
             <a href="#quiz">Quiz</a>
         </div>
@@ -511,8 +515,83 @@ h = self.tok(x) + self.pos(pos)                 # broadcast over batch</code></p
             </ul>
         </div>
 
+        <!-- ================= FULL TRANSFORMER ================= -->
+        <h2 id="fulltf">9. Assemble a full transformer (encoder + decoder)</h2>
+        <p>One reusable attention module powers all three attention types — just pass <code>q,k,v</code>
+        separately: self-attn is <code>(x,x,x)</code>, cross-attn is <code>(decoder, memory, memory)</code>.</p>
+<pre><code>class MultiHeadAttention(nn.Module):
+    def __init__(self, d_model, nhead, dropout=0.1):
+        super().__init__()
+        assert d_model % nhead == 0
+        self.h, self.dh = nhead, d_model // nhead
+        self.wq = nn.Linear(d_model, d_model); self.wk = nn.Linear(d_model, d_model)
+        self.wv = nn.Linear(d_model, d_model); self.wo = nn.Linear(d_model, d_model)
+        self.drop = nn.Dropout(dropout)
+    def forward(self, q, k, v, mask=None):          # q:[B,Tq,D]  k,v:[B,Tk,D]
+        B, Tq, Tk = q.size(0), q.size(1), k.size(1)
+        split = lambda x,T: x.view(B,T,self.h,self.dh).transpose(1,2)   # [B,h,T,dh]
+        q,k,v = split(self.wq(q),Tq), split(self.wk(k),Tk), split(self.wv(v),Tk)
+        s = (q @ k.transpose(-2,-1)) / self.dh**0.5                     # [B,h,Tq,Tk]
+        if mask is not None: s = s.masked_fill(mask == 0, float('-inf'))
+        o = self.drop(s.softmax(-1)) @ v                               # [B,h,Tq,dh]
+        o = o.transpose(1,2).contiguous().view(B, Tq, self.h*self.dh)
+        return self.wo(o)</code></pre>
+
+        <h3>Encoder layer vs decoder layer</h3>
+        <p>The decoder block has the two things the encoder lacks: a <strong>causal</strong> self-attn and a
+        <strong>cross</strong>-attn over the encoder's output.</p>
+<pre><code>class EncoderLayer(nn.Module):          # self-attn + FFN  (pre-norm)
+    def forward(self, x, src_mask=None):
+        h = self.n1(x); x = x + self.drop(self.attn(h, h, h, src_mask))
+        x = x + self.drop(self.ff(self.n2(x)));  return x
+
+class DecoderLayer(nn.Module):          # MASKED self-attn + CROSS-attn + FFN
+    def forward(self, x, memory, tgt_mask=None, mem_mask=None):
+        h = self.n1(x); x = x + self.drop(self.self_attn(h, h, h, tgt_mask))            # causal
+        h = self.n2(x); x = x + self.drop(self.cross_attn(h, memory, memory, mem_mask)) # to encoder
+        x = x + self.drop(self.ff(self.n3(x)));  return x</code></pre>
+
+        <h3>Stacks + the masks (where seq2seq gets fiddly)</h3>
+<pre><code>class Encoder(nn.Module):               # emb*&#8730;d + pos -> N EncoderLayers -> norm
+    def forward(self, src, src_mask=None):
+        x = self.pos(self.emb(src) * self.scale)
+        for l in self.layers: x = l(x, src_mask)
+        return self.norm(x)
+
+class Decoder(nn.Module):               # ... -> N DecoderLayers -> norm -> Linear(vocab)
+    def forward(self, tgt, memory, tgt_mask=None, mem_mask=None):
+        x = self.pos(self.emb(tgt) * self.scale)
+        for l in self.layers: x = l(x, memory, tgt_mask, mem_mask)
+        return self.out(self.norm(x))                       # logits [B,T,vocab]
+
+def pad_mask(seq, pad=0):    # [B,T] -> [B,1,1,T]  True = NOT padding
+    return (seq != pad).unsqueeze(1).unsqueeze(2)
+def causal_mask(T, device): # [1,1,T,T] lower-triangular, True = allowed
+    return torch.tril(torch.ones(T, T, device=device, dtype=torch.bool)).view(1,1,T,T)
+
+# forward:
+src_mask = pad_mask(src)                                    # encoder: pad only
+tgt_mask = pad_mask(tgt) &amp; causal_mask(tgt.size(1), tgt.device)   # decoder: pad AND causal
+memory   = encoder(src, src_mask)
+logits   = decoder(tgt, memory, tgt_mask, src_mask)        # cross-attn masks the source</code></pre>
+        <div class="card">
+            <strong>Mask cheat:</strong> encoder self-attn = padding only (bidirectional); decoder self-attn =
+            padding <em>and</em> causal (no peeking ahead); cross-attn masks the <em>source</em> padding
+            (queries = target, keys = encoder memory). Also scale embeddings by <code>&#8730;d_model</code> (Vaswani),
+            and this is pre-norm.
+        </div>
+        <div class="card warn">
+            <strong>&#9888; Built-in <code>nn.Transformer</code> flips the convention:</strong> there,
+            <code>True</code> in <code>attn_mask</code>/<code>key_padding_mask</code> means <em>block this</em>
+            (opposite of the hand-rolled <em>True = keep</em>), and you build the causal mask with
+            <code>nn.Transformer.generate_square_subsequent_mask(T)</code>. Mixing the two silently trains garbage.
+        </div>
+        <div class="card good">
+            Verified end-to-end: <code>Transformer(src, tgt)</code> &#8594; logits <code>[B, Tt, tgt_vocab]</code>.
+        </div>
+
         <!-- ================= VISION ================= -->
-        <h2 id="vision">9. Images &amp; VLMs — the vision crash course</h2>
+        <h2 id="vision">10. Images &amp; VLMs — the vision crash course</h2>
         <p>Nanonets is a document-AI / VLM shop (their OCR is fine-tuned <strong>Qwen2.5-VL</strong>). You don't need to
         be a CV expert — you need to <em>talk credibly</em> and connect it to what you know. The bridge:
         <strong>a ViT turns an image into a sequence of tokens, then it's just the transformer you already built.</strong></p>
@@ -587,8 +666,58 @@ tf = T.Compose([T.Resize((224,224)), T.ToTensor(),
             competent.
         </div>
 
+        <!-- ================= CNN BLOCKS ================= -->
+        <h2 id="cnn">11. CNN blocks — Conv / BatchNorm / Dropout in code</h2>
+        <p>The canonical vision block is <strong>Conv &#8594; BN &#8594; ReLU</strong>. Conv gets
+        <code>bias=False</code> because BatchNorm's &beta; already adds a bias.</p>
+<pre><code>def conv_bn_relu(cin, cout, k=3, s=1, p=1):
+    return nn.Sequential(
+        nn.Conv2d(cin, cout, k, s, p, bias=False),   # bias=False: BN's beta subsumes it
+        nn.BatchNorm2d(cout),
+        nn.ReLU(inplace=True),
+    )</code></pre>
+
+        <p><strong>ResNet basic block</strong> — the canonical residual conv assembly (project the skip when the
+        shape changes):</p>
+<pre><code>class BasicBlock(nn.Module):
+    def __init__(self, cin, cout, stride=1):
+        super().__init__()
+        self.conv1, self.bn1 = nn.Conv2d(cin,cout,3,stride,1,bias=False), nn.BatchNorm2d(cout)
+        self.conv2, self.bn2 = nn.Conv2d(cout,cout,3,1,1,bias=False),     nn.BatchNorm2d(cout)
+        self.short = nn.Sequential()
+        if stride != 1 or cin != cout:               # skip must match shape
+            self.short = nn.Sequential(nn.Conv2d(cin,cout,1,stride,bias=False), nn.BatchNorm2d(cout))
+    def forward(self, x):
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        return F.relu(out + self.short(x))           # residual, THEN activation</code></pre>
+
+        <p><strong>Small classifier</strong> — dropout lives in the <em>head</em>, not between conv+BN layers:</p>
+<pre><code>self.features = nn.Sequential(
+    conv_bn_relu(3, 32),  nn.MaxPool2d(2),           # -> [B,32,16,16]
+    conv_bn_relu(32, 64), nn.MaxPool2d(2),           # -> [B,64,8,8]
+    conv_bn_relu(64,128), nn.AdaptiveAvgPool2d(1),   # -> [B,128,1,1]
+)
+self.head = nn.Sequential(nn.Flatten(), nn.Dropout(0.5), nn.Linear(128, num_classes))</code></pre>
+
+        <div class="tablewrap">
+        <table>
+            <tr><th>Thing</th><th>Canonical rule</th></tr>
+            <tr><td>Order</td><td><code>Conv &#8594; BN &#8594; ReLU</code>. Conv <code>bias=False</code> under BN.</td></tr>
+            <tr><td>BatchNorm stats</td><td>Normalizes per-channel over <code>(B,H,W)</code> in train; uses <strong>running</strong> mean/var at eval &#8594; <code>model.eval()</code> is mandatory.</td></tr>
+            <tr><td>Conv output size</td><td><code>(W &#8722; K + 2P)/S + 1</code>; "same" when <code>S=1, P=(K&#8722;1)/2</code>.</td></tr>
+            <tr><td>Small batches</td><td>BN degrades &#8594; use GroupNorm/LayerNorm (why transformers avoid BN).</td></tr>
+            <tr><td>Dropout placement</td><td>In the classifier <strong>head</strong>. For conv maps use <code>nn.Dropout2d</code> (drops whole channels).</td></tr>
+        </table>
+        </div>
+        <div class="card">
+            <strong>Interview line that ties &sect;7 and &sect;11 together:</strong> "BatchNorm normalizes across the
+            batch per channel and keeps running stats for eval, so it's batch-size sensitive; transformers use
+            LayerNorm because it's batch-independent and works with variable-length sequences."
+        </div>
+
         <!-- ================= GRAB BAG ================= -->
-        <h2 id="grab">10. Grab-bag they might probe</h2>
+        <h2 id="grab">12. Grab-bag they might probe</h2>
         <details>
             <summary>Overfitting vs underfitting — diagnose &amp; fix</summary>
             <p><strong>Train ≫ val (overfit):</strong> more data / augmentation → dropout → weight decay → early stopping
@@ -631,8 +760,8 @@ tf = T.Compose([T.Resize((224,224)), T.ToTensor(),
         </details>
 
         <!-- ================= QUIZ ================= -->
-        <h2 id="quiz">11. Quiz — 10 questions</h2>
-        <p>Instant feedback, running score. Aim for 9+ before you sleep.</p>
+        <h2 id="quiz">13. Quiz — 12 questions</h2>
+        <p>Instant feedback, running score. Aim for 11+ before you sleep.</p>
         <div id="quiz"></div>
         <div class="ctrlrow">
             <span id="score">0 / 0</span>
@@ -831,7 +960,13 @@ tf = T.Compose([T.Resize((224,224)), T.ToTensor(),
                   a: 1, e: "Non-overlapping patch projection = Conv2d(3, d, kernel=P, stride=P). Then it's a standard transformer encoder." },
                 { q: "PyTorch image tensors are laid out as:",
                   opts: ["[B, H, W, C]", "[B, C, H, W]", "[C, B, H, W]", "[H, W, C, B]"],
-                  a: 1, e: "Channels-first: [B, C, H, W]. Confusing it with TF/NumPy's [B,H,W,C] is the #1 image bug." }
+                  a: 1, e: "Channels-first: [B, C, H, W]. Confusing it with TF/NumPy's [B,H,W,C] is the #1 image bug." },
+                { q: "A CNN is fine in training but garbage at inference with batch size 1. Most likely cause?",
+                  opts: ["Learning rate too high", "Forgot model.eval() — BatchNorm normalizes with the size-1 batch instead of running stats", "Dropout in the head", "Wrong conv padding"],
+                  a: 1, e: "In eval, BN must use its running mean/var. Without model.eval() it uses the current (size-1) batch stats → unstable outputs." },
+                { q: "What does a decoder layer have that an encoder layer does NOT?",
+                  opts: ["A larger FFN", "Causal-masked self-attention AND cross-attention over the encoder output", "BatchNorm", "A second embedding table"],
+                  a: 1, e: "Decoder = masked self-attn (no peeking ahead) + cross-attn (Q from decoder, K,V from encoder memory) + FFN. Encoder has neither." }
             ];
             var host = document.getElementById("quiz");
             var scoreEl = document.getElementById("score");
