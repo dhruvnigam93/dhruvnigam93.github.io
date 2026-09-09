@@ -552,7 +552,36 @@ if any(not t["text"] for t in result["transcript"]):
 # how it ran:
 #   uv run python scripts/run_top_picks_e2e.py --topic "GT vs KKR" --rounds 3
 #   uv run python scripts/batch_debate_test.py --count 5 --stagger 60</code></pre>
-            <p class="small">No simulated user — the show format is agents talking to each other (director + 2 personas via RPC stage directions), so the "environment" was the other agents. That's also something LiveKit's 1-agent-1-user sim framework doesn't cover.</p>
+            <p class="small">For the multi-agent debate show there was no simulated user — the agents were each other's environment (director + 2 personas via RPC stage directions), a shape LiveKit's 1-agent-1-user sim framework doesn't cover.</p>
+        </details>
+
+        <details>
+            <summary>Our simulated user: tests/simulation (on main — a first scan of the wrong branch missed it)</summary>
+            <p>The repo's <code>main</code> branch (the working tree was checked out on an older feature branch) carries a full <b>conversation simulation framework</b> with a simulated user in two modes — and the audio mode publishes <em>real synthesized speech frames</em> into the room, which even LiveKit's own CI examples mostly skip in favor of text:</p>
+<pre><code># ds-ai-companion-rtc @ main — tests/simulation/ (from its README)
+# Audio mode (default): Google Cloud TTS synthesizes each utterance,
+#   publishes audio frames to the LiveKit room in real time
+# Text mode: sends utterances as direct text messages
+uv run python -m tests.simulation \
+    --scenario tests/simulation/scenarios/multi_turn.json \
+    --agent &lt;agent-name&gt; --parallel 5
+
+# scenarios/multi_turn.json — a scripted user, not an LLM persona
+{
+  "name": "multi_turn",
+  "dispatch_metadata": {"characterName": "googly", ...},
+  "utterances": [
+    "Hey Googly! What's your favorite cricket memory?",
+    "That's cool! Tell me more about that match.",
+    "Who do you think is the best batsman of all time?", ...
+  ]
+}
+
+# flow: create room sim-{scenario}-{uuid} → dispatch the REAL deployed
+# agent → speak each utterance → fixed --turn-interval wait → results
+# JSON locally + agent_job_id linking to the S3 metrics corpus:
+#   s3://.../sessions/{date}/{job_id}/comprehensive_metrics.json</code></pre>
+            <p class="small">Honest deltas vs LiveKit's framework: our simulated user is <b>scripted</b> (fixed utterance list) where theirs is LLM-driven and adaptive; turn handling is a fixed wait, not response detection; and no verdict is attached at run time — grading happened downstream on the S3 exports. Bonus receipt from another branch (<code>experiment/livekit-turn-detection</code>): the companion agent was run with Gemini's native activity detection <em>disabled</em> and LiveKit's <code>MultilingualModel</code> turn detector + Deepgram Nova-3 STT in its place — a real A/B of Theo's turn-taking stack inside a production agent.</p>
         </details>
 
         <details>
@@ -591,7 +620,7 @@ def check_compliance(picks, lineup):
         <table>
             <tr><th>Layer</th><th>LiveKit frontdesk stack</th><th>Companion (Dream11)</th></tr>
             <tr><td>Episode</td><td>In-process sim, mocked tools, pinned clock — deterministic</td><td>Real room, real audio, live Gemini — high fidelity, not deterministic</td></tr>
-            <tr><td>User model</td><td>LLM-driven persona from scenarios.yaml</td><td>None — multi-agent show; agents are each other's environment</td></tr>
+            <tr><td>User model</td><td>LLM-driven persona from scenarios.yaml</td><td>Scripted sim user (<code>tests/simulation</code>): JSON utterances → Google TTS audio frames or text; <code>--parallel N</code></td></tr>
             <tr><td>Verifier</td><td><code>on_simulation_end</code> calendar-state check</td><td>Lineup grounding + structured-output compliance checks</td></tr>
             <tr><td>Judge</td><td>8 judges, pass/maybe/fail, forced tool call, temp 0</td><td>1 judge, four 1–10 dimensions, schema-forced JSON, temp 0.3</td></tr>
             <tr><td>Prod signal</td><td>Same judges on live calls + <code>tagger.success()/fail</code></td><td>S3 session export + retroactive judging + latency/cost metrics</td></tr>
@@ -601,8 +630,8 @@ def check_compliance(picks, lineup):
         </div>
 
         <div class="card">
-            <p style="margin-top:0;"><b>The line this earns you:</b> "I hand-rolled this exact stack on top of LiveKit before you productized it — spectator-run E2E episodes, an LLM judge with a schema-forced verdict, a programmatic grounding verifier, and prod sessions exported so the judge could score them retroactively. You've built the clean, deterministic version of what I built under fire. And neither of us has closed the RL loop on it — that's the role."</p>
-            <p>Honest gaps to own if pressed: our judge scored 1–10 (their pass/maybe/fail + forced tool call is better engineering), our runs weren't deterministic or in CI, and we had no simulated <em>user</em> — the debate format sidestepped it.</p>
+            <p style="margin-top:0;"><b>The line this earns you:</b> "I hand-rolled this exact stack on top of LiveKit before you productized it — a simulated user that publishes real TTS audio into the room, spectator-run E2E episodes, an LLM judge with a schema-forced verdict, a programmatic grounding verifier, and prod sessions exported so the judge could score them retroactively. I've even run your MultilingualModel turn detector head-to-head against Gemini's native activity detection inside the production agent. You've built the clean, deterministic version of what I built under fire. And neither of us has closed the RL loop on it — that's the role."</p>
+            <p>Honest gaps to own if pressed: our simulated user was scripted, not LLM-driven or adaptive; turn handling was a fixed wait, not response detection; our judge scored 1–10 (their pass/maybe/fail + forced tool call is better engineering); and our runs weren't deterministic or in CI.</p>
         </div>
 
         <h2 id="quiz">Quiz</h2>
