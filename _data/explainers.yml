@@ -146,3 +146,8 @@
   slug: livekit-evals-to-rl
   date: 2026-09-09
   description: "Real code from livekit/agents: scenarios.yaml as reward specs, stateful tool mocks, the on_simulation_end AND-gate, the 8-judge JudgeGroup that also runs in prod — with an animated sim-run stepper (Maya vs Victor-the-veto), a tap-to-cycle judge scoreboard, a GRPO reward-blend playground that shows reward hacking live, the eval→RL dictionary, four RL recipes, the Companion receipts, and an 8-question quiz."
+
+- title: "LiveKit HM Round — Intro Beat Sheet & Drop-ins"
+  slug: livekit-intro-beats
+  date: 2026-09-09
+  description: "The 75-second intro as 7 rehearsable beats (contributor hook, receipts-not-adjectives, the subagent/multi-agent pattern, audio-mode sandbox sims, prod flywheel, the peer-close turn) with a cue-mode stepper, exact-API drop-in tables from livekit/agents and ds-ai-companion-rtc, honest gaps, landmines, and a 7-question drill quiz."

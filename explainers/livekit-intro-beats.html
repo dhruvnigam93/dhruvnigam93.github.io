@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>LiveKit HM Round — Intro Beat Sheet &amp; Drop-ins</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --good: #16a34a;
+            --bad: #dc2626;
+            --warn: #d97706;
+            --radius: 14px;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                --good: #4ade80;
+                --bad: #f87171;
+                --warn: #fbbf24;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: max(20px, env(safe-area-inset-top)) 20px 80px;
+        }
+        .back {
+            display: inline-block;
+            margin: 8px 0 20px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.3rem; margin: 2em 0 0.5em; }
+        h3 { font-size: 1.05rem; margin: 1.4em 0 0.4em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        code {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.85em;
+            word-break: break-word;
+        }
+        pre {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            overflow-x: auto;
+            font-size: 0.85em;
+        }
+        pre code { background: none; border: none; padding: 0; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+        }
+        details {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 0 18px;
+            margin: 12px 0;
+            background: var(--card);
+        }
+        summary {
+            cursor: pointer;
+            padding: 16px 0;
+            font-weight: 600;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after {
+            content: "+";
+            color: var(--muted);
+            font-size: 1.4rem;
+            line-height: 1;
+        }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        button {
+            font: inherit;
+            font-weight: 600;
+            color: #fff;
+            background: var(--accent);
+            border: none;
+            border-radius: 999px;
+            padding: 12px 22px;
+            min-height: 48px;
+            min-width: 48px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        button:active { transform: scale(0.96); }
+        button:disabled { opacity: 0.4; cursor: default; }
+        .ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+        footer {
+            margin-top: 3em;
+            padding-top: 1.2em;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+        /* pills nav */
+        .pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 1em 0 1.6em; }
+        .pills a {
+            border: 1px solid var(--line);
+            background: var(--card);
+            color: var(--fg);
+            text-decoration: none;
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        /* beat stepper */
+        .stepper { margin: 1em 0 2em; }
+        .dots { display: flex; gap: 8px; justify-content: center; margin: 14px 0 4px; flex-wrap: wrap; }
+        .dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            background: var(--line); border: none; padding: 0; min-width: 12px; min-height: 12px;
+        }
+        .dot.on { background: var(--accent); transform: scale(1.25); }
+        .beatcard {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 18px;
+            min-height: 300px;
+            transition: opacity 0.18s ease;
+        }
+        .beatcard.fade { opacity: 0; }
+        .beathead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+        .beatname { font-weight: 700; font-size: 1.1rem; }
+        .beattime {
+            color: var(--accent); font-weight: 700; font-size: 0.85rem;
+            border: 1px solid var(--accent); border-radius: 999px; padding: 2px 10px; white-space: nowrap;
+        }
+        .beatmove { margin: 10px 0 6px; font-size: 0.97rem; }
+        .beatwhy { color: var(--muted); font-size: 0.88rem; margin: 8px 0 10px; }
+        .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+        .chip {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.76rem;
+            background: var(--bg);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            border-radius: 999px;
+            padding: 5px 11px;
+            word-break: break-all;
+        }
+        .navrow { display: flex; gap: 10px; justify-content: space-between; margin-top: 12px; }
+        .cue-toggle-row { display: flex; align-items: center; gap: 10px; margin: 4px 0 10px; flex-wrap: wrap; }
+        .cue-note { color: var(--muted); font-size: 0.82rem; }
+        .cue .beatmove, .cue .beatwhy { display: none; }
+        /* tables */
+        .tablewrap { overflow-x: auto; margin: 0.8em 0; -webkit-overflow-scrolling: touch; }
+        table { border-collapse: collapse; width: 100%; font-size: 0.86rem; }
+        th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+        th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+        td code { font-size: 0.92em; }
+        /* callout tones */
+        .tone-bad { border-left: 4px solid var(--bad); }
+        .tone-warn { border-left: 4px solid var(--warn); }
+        .tone-good { border-left: 4px solid var(--good); }
+        /* quiz */
+        .q { margin: 1.2em 0; }
+        .q .prompt { font-weight: 600; margin-bottom: 8px; }
+        .opts { display: flex; flex-direction: column; gap: 8px; }
+        .opt {
+            text-align: left;
+            background: var(--card);
+            color: var(--fg);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-weight: 500;
+            font-size: 0.92rem;
+        }
+        .opt.correct { border-color: var(--good); color: var(--good); font-weight: 700; }
+        .opt.wrong { border-color: var(--bad); color: var(--bad); }
+        .expl { font-size: 0.85rem; color: var(--muted); margin-top: 8px; display: none; }
+        .expl.show { display: block; }
+        .score { font-weight: 700; margin: 1em 0; }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>LiveKit HM Round — Intro Beat Sheet &amp; Drop-ins</h1>
+        <p class="meta">Added 2026-09-09 · call Sep 10, 22:00 IST · target: 75–90 seconds total</p>
+
+        <div class="pills">
+            <a href="#beats">Beats</a>
+            <a href="#theirs">Drop-ins: their repo</a>
+            <a href="#yours">Drop-ins: your repo</a>
+            <a href="#gaps">Gaps &amp; landmines</a>
+            <a href="#quiz">Drill quiz</a>
+        </div>
+
+        <div class="card tone-good">
+            <strong>The frame:</strong> peer, not fan. Every compliment is a design decision named
+            precisely, backed by a receipt from your own code. Open with the contributor fact, end on
+            the turn: <em>"you productized what I hand-rolled — neither of us has closed the RL loop on it."</em>
+        </div>
+
+        <h2 id="beats">The 7 beats</h2>
+        <p>Step through to rehearse. <strong>Cue mode</strong> hides the prose and leaves only the term
+        chips — rehearse until the chips alone are enough.</p>
+
+        <div class="stepper" id="stepper">
+            <div class="cue-toggle-row">
+                <button class="ghost" id="cueToggle" type="button">Cue mode: off</button>
+                <span class="cue-note">Beats 1–6 are the intro. Beat 7 only if invited to keep going.</span>
+            </div>
+            <div class="beatcard" id="beatcard"></div>
+            <div class="dots" id="dots"></div>
+            <div class="navrow">
+                <button class="ghost" id="prevBtn" type="button">&larr; Prev</button>
+                <button id="nextBtn" type="button">Next &rarr;</button>
+            </div>
+        </div>
+
+        <h2 id="theirs">Drop-ins — their repo (<code>livekit/agents</code>, read from source)</h2>
+        <p>Deploy these <em>during conversation</em>, not in the monologue. One exact name at the right
+        moment beats ten in a row.</p>
+
+        <details>
+            <summary>Core primitives &amp; lifecycle hooks</summary>
+            <div class="tablewrap"><table>
+                <tr><th>Term</th><th>What it is / the sentence</th></tr>
+                <tr><td><code>Agent</code></td><td>Config object, not a runtime — instructions + tools + model refs. "Agent is <em>what</em>, AgentSession is <em>how</em>, Worker is <em>where</em>."</td></tr>
+                <tr><td><code>AgentSession</code></td><td>The runtime container — I/O wiring, turn detection, interruption, tool exec, metrics/events.</td></tr>
+                <tr><td><code>session.update_agent()</code></td><td>The in-framework handoff: drains the old <code>AgentActivity</code>, builds a new one.</td></tr>
+                <tr><td><code>AgentTask</code></td><td>Agent subclass with a <code>complete()</code>/Future protocol — fire-and-forget sub-jobs (mid-call summarization) without disturbing the main loop.</td></tr>
+                <tr><td><code>on_enter</code> / <code>on_exit</code> / <code>on_user_turn_completed</code></td><td>Agent lifecycle hooks.</td></tr>
+                <tr><td><code>stt_node / llm_node / tts_node / transcription_node</code></td><td>Named override points — "override one node, call the default inside your wrapper. No middleware-ordering hell."</td></tr>
+                <tr><td><code>NOT_GIVEN</code> vs <code>None</code></td><td>Three-state config: omission = inherit (agent → session → auto), <code>None</code> = explicitly disable. A detail only real users notice.</td></tr>
+            </table></div>
+        </details>
+
+        <details>
+            <summary>The swap: cascaded ↔ speech-to-speech, avatars</summary>
+            <div class="tablewrap"><table>
+                <tr><th>Term</th><th>The sentence</th></tr>
+                <tr><td><code>Agent(llm=...)</code></td><td>Takes an <code>LLM</code> (cascaded STT→LLM→TTS) <em>or</em> a <code>RealtimeModel</code> — one param, two execution architectures; turn-taking, tools, events work in both.</td></tr>
+                <tr><td><code>RealtimeSession</code></td><td><code>push_audio()</code>, <code>generate_reply()</code>, <code>interrupt()</code>, <code>truncate()</code>; <code>RealtimeCapabilities</code> declares server-side turn detection etc.</td></tr>
+                <tr><td><code>FallbackAdapter</code></td><td>N providers behind one base-class interface with automatic failover — "the rest of the framework can't tell."</td></tr>
+            </table></div>
+        </details>
+
+        <details>
+            <summary>Turn-taking machinery</summary>
+            <div class="tablewrap"><table>
+                <tr><th>Term</th><th>The sentence</th></tr>
+                <tr><td><code>TurnHandlingOptions</code></td><td>Modes <code>"realtime_llm" / "vad" / "stt" / "manual"</code> or a turn-detector plugin.</td></tr>
+                <tr><td><code>DynamicEndpointing</code></td><td>EMA of the user's actual pause durations — learns each speaker's rhythm.</td></tr>
+                <tr><td>Preemptive generation</td><td>LLM starts speculatively on STT's <code>PREFLIGHT_TRANSCRIPT</code> during the endpointing delay; discarded if the user keeps talking.</td></tr>
+                <tr><td><code>livekit/turn-detector</code></td><td>Semantic EOT model; v1-mini int8 ONNX runs local on CPU via <code>InferenceExecutor</code> in a separate inference process.</td></tr>
+                <tr><td>eot-bench</td><td>v1: 9.9% false-cutoff at a 300ms budget vs Deepgram Flux 12.9%. Don't claim to know v1 training internals — <em>ask</em> instead.</td></tr>
+            </table></div>
+        </details>
+
+        <details>
+            <summary>Simulation &amp; evals (the module that matters for this role)</summary>
+            <div class="tablewrap"><table>
+                <tr><th>Term</th><th>The sentence</th></tr>
+                <tr><td><code>livekit.agents.simulation</code></td><td><code>Scenario</code>, <code>ScenarioGroup</code>, <code>SimulationRun</code>, <code>SimulationVerdict</code>.</td></tr>
+                <tr><td><code>livekit.agents.evals</code></td><td><code>Judge</code> + <code>Verdict</code>: pass=1, maybe=0.5, fail=0. Aggregators <code>all_passed / majority_passed / none_failed</code>.</td></tr>
+                <tr><td>The 8 judges</td><td>task_completion, tool_use, safety, relevancy, accuracy, coherence, conciseness, handoff.</td></tr>
+                <tr><td><code>submit_verdict</code></td><td>Verdict extracted via forced tool call, <code>tool_choice="required"</code>, temp 0 — better judge engineering than a 1–10 rubric (say so, it's true and generous).</td></tr>
+                <tr><td><code>mock_tools()</code> + FakeCalendar</td><td><code>examples/frontdesk/simulation.py</code> — stateful tool mocks; a booking changes the next availability listing. An execution sandbox.</td></tr>
+                <tr><td><code>scenarios.yaml</code></td><td>Reward specs: <code>agent_expectations</code> + <code>expected_booking</code> in 3 regimes (slot / null / omitted); pinned clock <code>SIMULATION_NOW</code> for determinism.</td></tr>
+                <tr><td><code>on_simulation_end</code></td><td>The AND-gate: <code>ctx.fail()</code> exists, <code>success()</code> deliberately doesn't — "your check can fail a run the simulator passed, never rescue one." Anti-reward-hacking before any RL.</td></tr>
+                <tr><td><code>on_session_end</code></td><td>The judges run <em>in production</em>, not just sims — plus <code>ctx.tagger.success()/fail()</code>. Reward telemetry already flows on prod traffic.</td></tr>
+                <tr><td><code>inference_class="low"</code></td><td>Sim + judge calls pinned so they never compete with live traffic — the exact pattern RL rollout generation needs.</td></tr>
+                <tr><td>CI</td><td><code>evals.yml</code> runs frontdesk + drive_thru sims on every push to main, <code>LIVEKIT_EVALS_VERBOSE=1</code>.</td></tr>
+            </table></div>
+        </details>
+
+        <h2 id="yours">Drop-ins — your repo (<code>ds-ai-companion-rtc</code>, verified from source)</h2>
+
+        <details>
+            <summary>Gemini Live + avatars (Beat 2 receipts)</summary>
+            <div class="tablewrap"><table>
+                <tr><th>Receipt</th><th>Exact form</th></tr>
+                <tr><td>Gemini Live S2S</td><td><code>google.realtime.RealtimeModel(**realtime_kwargs)</code> as the <code>llm=</code> of the persona agent.</td></tr>
+                <tr><td>Avatar plugin</td><td><code>from livekit.plugins.anam import AvatarSession, PersonaConfig</code></td></tr>
+                <tr><td>The ordering detail</td><td><code>avatar_session.start(agent_session=session, room=ctx.room)</code> <em>before</em> <code>session.start()</code>, with <code>audio_output=not enable_avatar</code> — avatar takes over the audio output path and the abstraction held.</td></tr>
+                <tr><td>Prod scar tissue</td><td>Second avatar's init staggered 5s to avoid a race — the kind of detail that proves you ran it, not demoed it.</td></tr>
+            </table></div>
+        </details>
+
+        <details>
+            <summary>Subagent / multi-agent pattern (Beat 3 receipts)</summary>
+            <div class="tablewrap"><table>
+                <tr><th>Receipt</th><th>Exact form</th></tr>
+                <tr><td>Named deployments</td><td><code>@server.rtc_session(agent_name="orch-debate-director")</code> — director + two personas as <em>separate</em> agent deployments (separate <code>livekit.*.toml</code> each).</td></tr>
+                <tr><td>Explicit dispatch</td><td><code>lkapi.agent_dispatch.create_dispatch(api.CreateAgentDispatchRequest(agent_name="orch-debate-persona", ...))</code> — three agents dispatched into one room.</td></tr>
+                <tr><td>RPC coordination</td><td>Director calls <code>perform_rpc</code>; personas expose <code>@ctx.room.local_participant.register_rpc_method("debate.speak")</code> + a <code>"debate.ready"</code> readiness handshake.</td></tr>
+                <tr><td>Text streams</td><td>Personas publish transcripts via <code>send_text(transcript, topic="debate.argument")</code>; the E2E harness joins as a <code>can_publish=False</code> spectator and captures them.</td></tr>
+                <tr><td>The contrast</td><td>Their multi-agent = handoff <em>within</em> one session (<code>session.update_agent()</code> / <code>AgentTask</code>). Yours = concurrent agent <em>participants</em> in one room. Genuine question: is multi-participant multi-agent coming into the framework?</td></tr>
+            </table></div>
+        </details>
+
+        <details>
+            <summary>Sandbox sims + prod flywheel (Beats 4–5 receipts)</summary>
+            <div class="tablewrap"><table>
+                <tr><th>Receipt</th><th>Exact form</th></tr>
+                <tr><td>Sandbox</td><td>A second LiveKit project as the sim environment; dispatched the <em>real deployed agent</em>, room-per-run <code>sim-{scenario}-{uuid}</code>, <code>--parallel N</code>.</td></tr>
+                <tr><td>Audio mode (the differentiator)</td><td>Each scripted user turn synthesized via Google Cloud TTS and published as real audio frames — because turn-taking accuracy and TTFB ground truth only exist in audio. Their CI sims are text.</td></tr>
+                <tr><td>Run command</td><td><code>uv run python -m tests.simulation --scenario tests/simulation/scenarios/multi_turn.json --agent &lt;name&gt; --parallel 5</code></td></tr>
+                <tr><td>Flywheel</td><td><code>S3SessionExporter</code> ships every prod session's transcript + event log to S3; <code>SessionMetricsCalculator</code>: TTFT, p50/p90/p95 latency, interruption counts.</td></tr>
+                <tr><td>Judges</td><td>Retroactive LLM judging with <code>response_schema</code>-forced JSON: repetition, instruction-following, memory invocation, prep quality. "Do not be generous" in the judge prompt.</td></tr>
+                <tr><td>Verifiers</td><td>Deterministic, in code: lineup grounding (every fantasy pick must exist in the actual lineup) + schema compliance (11 picks, ≤7 per team, valid C/VC). "Judges shape, verifiers gate."</td></tr>
+                <tr><td>Turn-detector A/B</td><td>Branch <code>experiment/livekit-turn-detection</code>: Gemini's automatic activity detection off, LiveKit <code>MultilingualModel</code> + Deepgram Nova-3 in its place. You A/B'd their turn stack in a production agent.</td></tr>
+                <tr><td>Contributor</td><td><code>livekit/agents#4513</code> — merged. Say it in Beat 1, once, without ceremony.</td></tr>
+            </table></div>
+        </details>
+
+        <h2 id="gaps">Honest gaps &amp; landmines</h2>
+
+        <div class="card tone-warn">
+            <strong>Own these if probed (never volunteer overclaims):</strong>
+            <ul>
+                <li>Sim user was <strong>scripted</strong>, not LLM-driven/adaptive.</li>
+                <li>Turn handling in sims = fixed <code>--turn-interval</code> wait, not response detection.</li>
+                <li>Judge scored 1–10; their pass/maybe/fail + forced tool call is <strong>better engineering</strong> — saying so is a credibility move.</li>
+                <li>Runs were manual, not CI-gated.</li>
+            </ul>
+        </div>
+
+        <div class="card tone-bad">
+            <strong>Do not say:</strong>
+            <ul>
+                <li>"CTO/co-founder" — he <strong>leads the Agents framework</strong>; founders are Russ d'Sa (CEO) and David Zhao (CTO).</li>
+                <li>Funding/valuation numbers — unverified.</li>
+                <li>Anything claiming to know Turn Detector v1 training internals. Instead ask: <em>"is the acoustic branch trained jointly with the semantic one, or staged?"</em></li>
+                <li>"Time to first <em>bite</em>" — it's <strong>TTFB</strong> / time-to-first-audio.</li>
+            </ul>
+        </div>
+
+        <h2 id="quiz">Drill quiz — exact names under pressure</h2>
+        <p>If you can't get 7/7 cold, run the stepper in cue mode again.</p>
+        <div id="quiz"></div>
+        <p class="score" id="score"></p>
+        <button class="ghost" id="resetQuiz" type="button">Reset quiz</button>
+
+        <footer>
+            Personal explainer · unlisted · <a href="/explainers/">back to index</a> ·
+            companion: <a href="/explainers/livekit-evals-to-rl.html">eval loop → RL</a> ·
+            <a href="/explainers/livekit-agents-architecture.html">agents architecture</a>
+        </footer>
+    </main>
+
+    <script>
+    (function () {
+        var BEATS = [
+            {
+                name: "1 · Hook — contributor, not fan",
+                time: "~10s",
+                move: "A year building on Agents in production, and a merged PR in the repo. State it once, no ceremony. This buys the right to every opinion that follows.",
+                why: "Sets the peer frame before any praise. A maintainer discounts flattery, not commits.",
+                chips: ["livekit/agents#4513", "a year in production"]
+            },
+            {
+                name: "2 · Abstractions — praise by receipts",
+                time: "~15s",
+                move: "The praise is a list of swaps that just worked: cascaded pipeline ↔ Gemini Live S2S is one parameter (llm= takes an LLM or a RealtimeModel); Anam avatar wired in by starting AvatarSession before session.start() and letting it take over audio output. Each swap held without touching the rest.",
+                why: "Naming the exact seam you swapped across proves you used it. Adjectives don't.",
+                chips: ["Agent(llm=LLM | RealtimeModel)", "google.realtime.RealtimeModel", "livekit.plugins.anam AvatarSession", "start before session.start()", "audio_output=False"]
+            },
+            {
+                name: "3 · Subagents — past 1-agent-1-user",
+                time: "~15s",
+                move: "Debate format: a director + two persona agents as separate deployments, explicitly dispatched into one room by agent_name, coordinated over RPC (debate.speak, debate.ready handshake), transcripts published as text streams on debate.argument. Multiple concurrent agent participants — a different shape than in-session handoff.",
+                why: "This is the beat you missed in the recording. It shows you pushed the framework somewhere its own examples don't go.",
+                chips: ["CreateAgentDispatchRequest(agent_name=…)", "perform_rpc", "register_rpc_method(\"debate.speak\")", "\"debate.ready\"", "send_text(topic=\"debate.argument\")", "vs session.update_agent()"]
+            },
+            {
+                name: "4 · The sandbox sims — centerpiece",
+                time: "~25s",
+                move: "Evals didn't exist yet, so: a second LiveKit project as a sandbox, sims dispatched against the REAL deployed agent, room per run (sim-{scenario}-{uuid}), parallel runs — and in AUDIO mode: every user turn synthesized via TTS and published as real frames, because turn-taking accuracy and TTFB ground truth only exist in audio.",
+                why: "Their own CI sims are text-mode. Audio-mode simulation is your single most differentiating claim — land it plainly.",
+                chips: ["second LiveKit project = sandbox", "real deployed agent", "sim-{scenario}-{uuid}", "--parallel 5", "TTS → real audio frames", "TTFB ground truth needs audio"]
+            },
+            {
+                name: "5 · Prod flywheel — judges + verifiers",
+                time: "~20s",
+                move: "Every prod session exported transcript + event log to S3, with TTFT and latency percentiles and interruption counts. Retroactive evals on that corpus: schema-forced LLM judges (repetition, instruction-following, memory invocation) PLUS deterministic verifiers in code — every fantasy pick checked against the actual lineup, roster schema validated. Judges shape, verifiers gate.",
+                why: "Mirrors their on_session_end judges running on live traffic. Name 2–3 concrete dimensions — 'conversation quality' is vague, 'grounding checked in code' is a verifier and he'll hear it as one.",
+                chips: ["S3 transcript + event dumps", "TTFT, p50/p95, interruptions", "schema-forced judge JSON", "repetition · instruction-following · memory", "lineup grounding in code", "judges shape, verifiers gate"]
+            },
+            {
+                name: "6 · The turn — peer close",
+                time: "~15s",
+                move: "Then 1.5→1.8 shipped the clean version: the simulation module, the 8 judges, the on_simulation_end AND-gate where ctx.fail() exists and success() deliberately doesn't. You productized what I hand-rolled under fire — and neither of us has closed the RL loop on top of it. That's why this role.",
+                why: "Ends on the thesis of the whole interview: environments + verifiers exist, the post-training loop doesn't, and you've run that loop end to end.",
+                chips: ["livekit.agents.simulation", "8 judges", "on_simulation_end AND-gate", "ctx.fail() only", "neither of us closed the RL loop"]
+            },
+            {
+                name: "7 · Bonus — only if invited",
+                time: "hold",
+                move: "The turn-detector A/B: a branch running the companion with Gemini's automatic activity detection disabled and LiveKit's MultilingualModel + Deepgram Nova-3 in its place. Bridge to the RL-for-turn-taking POV — and the ForeCal hook: a threshold policy over EOU probabilities is only principled if they're calibrated.",
+                why: "Don't force it into the intro. It's the natural opener when turn-taking or the RL POV comes up.",
+                chips: ["experiment/livekit-turn-detection", "MultilingualModel + Nova-3", "EOU threshold policy needs calibration", "ForeCal"]
+            }
+        ];
+
+        var idx = 0, cue = false;
+        var cardEl = document.getElementById('beatcard');
+        var dotsEl = document.getElementById('dots');
+        var prevBtn = document.getElementById('prevBtn');
+        var nextBtn = document.getElementById('nextBtn');
+        var cueBtn = document.getElementById('cueToggle');
+        if (cardEl && dotsEl && prevBtn && nextBtn && cueBtn) {
+            BEATS.forEach(function (_, i) {
+                var d = document.createElement('button');
+                d.className = 'dot';
+                d.setAttribute('aria-label', 'Beat ' + (i + 1));
+                d.addEventListener('click', function () { idx = i; render(); });
+                dotsEl.appendChild(d);
+            });
+            function esc(s) {
+                return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+            function render() {
+                var b = BEATS[idx];
+                cardEl.classList.add('fade');
+                setTimeout(function () {
+                    var html = '<div class="beathead"><span class="beatname">' + esc(b.name) +
+                        '</span><span class="beattime">' + esc(b.time) + '</span></div>' +
+                        '<p class="beatmove">' + esc(b.move) + '</p>' +
+                        '<p class="beatwhy">Why it lands: ' + esc(b.why) + '</p>' +
+                        '<div class="chips">' + b.chips.map(function (c) {
+                            return '<span class="chip">' + esc(c) + '</span>';
+                        }).join('') + '</div>';
+                    cardEl.innerHTML = html;
+                    cardEl.classList.remove('fade');
+                }, 120);
+                var dots = dotsEl.children;
+                for (var i = 0; i < dots.length; i++) {
+                    dots[i].className = 'dot' + (i === idx ? ' on' : '');
+                }
+                prevBtn.disabled = (idx === 0);
+                nextBtn.textContent = (idx === BEATS.length - 1) ? 'Back to 1' : 'Next →';
+            }
+            prevBtn.addEventListener('click', function () { if (idx > 0) { idx--; render(); } });
+            nextBtn.addEventListener('click', function () {
+                idx = (idx === BEATS.length - 1) ? 0 : idx + 1;
+                render();
+            });
+            cueBtn.addEventListener('click', function () {
+                cue = !cue;
+                cueBtn.textContent = 'Cue mode: ' + (cue ? 'on' : 'off');
+                var st = document.getElementById('stepper');
+                if (st) st.classList.toggle('cue', cue);
+            });
+            render();
+        }
+
+        /* ---- quiz ---- */
+        var QUIZ = [
+            {
+                q: "Which single parameter switches an agent between the cascaded pipeline and speech-to-speech?",
+                opts: ["Agent(llm=…) — it accepts an LLM or a RealtimeModel", "AgentSession(mode=…)", "TurnHandlingOptions(realtime=True)", "RoomIO(s2s=True)"],
+                a: 0,
+                expl: "One Agent class, two execution architectures — AgentActivity branches on isinstance(llm, RealtimeModel)."
+            },
+            {
+                q: "In on_simulation_end, why does ctx.fail() exist but success() deliberately not?",
+                opts: ["success() is implied by returning normally", "Your programmatic check can fail a run the simulator passed, but never rescue one — an anti-reward-hacking AND-gate", "It was deprecated in 1.8", "Judges own success verdicts exclusively"],
+                a: 1,
+                expl: "The AND-gate: LLM verdict ∧ programmatic state check. Shipped before any RL — that's the design insight to name."
+            },
+            {
+                q: "Verdict scoring in livekit.agents.evals?",
+                opts: ["1–10 scale per judge", "pass=1, maybe=0.5, fail=0", "binary pass/fail only", "z-scored across the ScenarioGroup"],
+                a: 1,
+                expl: "pass/maybe/fail with maybe=0.5, extracted via a forced submit_verdict tool call at temp 0."
+            },
+            {
+                q: "In your debate stack, persona transcripts reached the spectator harness via…",
+                opts: ["a Redis pubsub channel", "send_text(…, topic=\"debate.argument\") text streams", "the lk.transcription default topic", "S3 polling"],
+                a: 1,
+                expl: "Personas published on topic debate.argument; the E2E harness joined can_publish=False and captured them."
+            },
+            {
+                q: "What keeps sim and judge inference from competing with live traffic?",
+                opts: ["a separate LiveKit Cloud account", "nightly batch windows", "inference_class=\"low\" priority pinning", "rate limits per API key"],
+                a: 2,
+                expl: "Priority classes on their inference gateway — the exact pattern RL rollout generation would reuse."
+            },
+            {
+                q: "LiveKit's own in-framework multi-agent mechanism is…",
+                opts: ["multiple workers dispatched per room by default", "session.update_agent() handoff + AgentTask sub-jobs, within one session", "an AgentSwarm class", "RPC between AgentSessions"],
+                a: 1,
+                expl: "Handoff within one session. Your director + personas were concurrent agent participants in one room — the contrast IS the talking point."
+            },
+            {
+                q: "Your sim runs created rooms named…",
+                opts: ["debate-{n}", "sim-{scenario}-{uuid}", "sandbox-{date}", "eval-{agent_name}"],
+                a: 1,
+                expl: "Room per run for isolation, --parallel N, dispatching the real deployed agent."
+            }
+        ];
+        var quizEl = document.getElementById('quiz');
+        var scoreEl = document.getElementById('score');
+        var resetBtn = document.getElementById('resetQuiz');
+        var answered = 0, correct = 0;
+        function buildQuiz() {
+            if (!quizEl || !scoreEl) return;
+            answered = 0; correct = 0;
+            quizEl.innerHTML = '';
+            scoreEl.textContent = '';
+            QUIZ.forEach(function (item, qi) {
+                var qd = document.createElement('div');
+                qd.className = 'q';
+                var p = document.createElement('p');
+                p.className = 'prompt';
+                p.textContent = (qi + 1) + '. ' + item.q;
+                qd.appendChild(p);
+                var wrap = document.createElement('div');
+                wrap.className = 'opts';
+                var expl = document.createElement('p');
+                expl.className = 'expl';
+                expl.textContent = item.expl;
+                var done = false;
+                item.opts.forEach(function (opt, oi) {
+                    var b = document.createElement('button');
+                    b.className = 'opt';
+                    b.type = 'button';
+                    b.textContent = opt;
+                    b.addEventListener('click', function () {
+                        if (done) return;
+                        done = true;
+                        answered++;
+                        if (oi === item.a) {
+                            b.classList.add('correct');
+                            correct++;
+                        } else {
+                            b.classList.add('wrong');
+                            wrap.children[item.a].classList.add('correct');
+                        }
+                        expl.classList.add('show');
+                        scoreEl.textContent = 'Score: ' + correct + ' / ' + answered +
+                            (answered === QUIZ.length ? (correct === QUIZ.length ? ' — cold. You’re ready.' : ' — re-run cue mode on the ones you missed.') : '');
+                    });
+                    wrap.appendChild(b);
+                });
+                qd.appendChild(wrap);
+                qd.appendChild(expl);
+                quizEl.appendChild(qd);
+            });
+        }
+        if (resetBtn) resetBtn.addEventListener('click', buildQuiz);
+        buildQuiz();
+    })();
+    </script>
+</body>
+</html>
