@@ -141,3 +141,8 @@
   slug: livekit-agents-architecture
   date: 2026-09-05
   description: "Core primitives (Agent / AgentSession / Worker), the one-line cascaded-to-realtime swap, turn-taking machinery with an EOT-probability dial and latency simulator, LiveKit's own models (EOT, BVC) and where they run — plus a 9-question quiz."
+
+- title: "LiveKit's Eval Loop — and the RL That Closes It"
+  slug: livekit-evals-to-rl
+  date: 2026-09-09
+  description: "Real code from livekit/agents: scenarios.yaml as reward specs, stateful tool mocks, the on_simulation_end AND-gate, the 8-judge JudgeGroup that also runs in prod — with an animated sim-run stepper (Maya vs Victor-the-veto), a tap-to-cycle judge scoreboard, a GRPO reward-blend playground that shows reward hacking live, the eval→RL dictionary, four RL recipes, the Companion receipts, and an 8-question quiz."

@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>LiveKit's Eval Loop — and the RL That Closes It</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --good: #15803d;
+            --goodbg: #dcfce7;
+            --bad: #b91c1c;
+            --badbg: #fee2e2;
+            --warn: #b45309;
+            --warnbg: #fef3c7;
+            --radius: 14px;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                --good: #4ade80;
+                --goodbg: #14301d;
+                --bad: #f87171;
+                --badbg: #3a1414;
+                --warn: #fbbf24;
+                --warnbg: #33270c;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: max(20px, env(safe-area-inset-top)) 20px 80px;
+        }
+        .back {
+            display: inline-block;
+            margin: 8px 0 20px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.3rem; margin: 2em 0 0.5em; }
+        h3 { font-size: 1.05rem; margin: 1.4em 0 0.4em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        code {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.85em;
+        }
+        pre {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            overflow-x: auto;
+            font-size: 0.78em;
+            line-height: 1.5;
+        }
+        pre code { background: none; border: none; padding: 0; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+        }
+        details {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 0 18px;
+            margin: 12px 0;
+            background: var(--card);
+        }
+        summary {
+            cursor: pointer;
+            padding: 16px 0;
+            font-weight: 600;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after { content: "+"; color: var(--muted); font-size: 1.4rem; line-height: 1; }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        button {
+            font: inherit;
+            font-weight: 600;
+            color: #fff;
+            background: var(--accent);
+            border: none;
+            border-radius: 999px;
+            padding: 12px 22px;
+            min-height: 48px;
+            min-width: 48px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        button:active { transform: scale(0.96); }
+        .ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+        input[type="range"] { width: 100%; height: 44px; }
+        .pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
+        .pills a {
+            padding: 9px 14px; border: 1px solid var(--line); border-radius: 999px;
+            text-decoration: none; font-size: 0.82rem; color: var(--fg);
+            background: var(--card); font-weight: 600;
+        }
+        .tag { display:inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: .04em;
+               text-transform: uppercase; border-radius: 6px; padding: 2px 8px; }
+        .tag.good { color: var(--good); background: var(--goodbg); }
+        .tag.bad { color: var(--bad); background: var(--badbg); }
+        .tag.warn { color: var(--warn); background: var(--warnbg); }
+        /* flow stepper */
+        .flow { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+        .fnode {
+            border: 1px solid var(--line); border-radius: 10px; background: var(--bg);
+            padding: 8px 12px; font-size: 0.85rem; color: var(--muted);
+            transition: border-color .3s, color .3s, transform .3s;
+        }
+        .fnode b { color: inherit; }
+        .fnode.active { border-color: var(--accent); color: var(--fg); transform: translateX(4px); }
+        .fnode.done { color: var(--fg); }
+        .transcript {
+            border: 1px dashed var(--line); border-radius: var(--radius);
+            padding: 12px 14px; min-height: 130px; font-size: 0.88rem; margin: 12px 0;
+        }
+        .tline { margin: 6px 0; animation: fadein .45s ease; }
+        @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+        .btnrow { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 10px 0; }
+        .seg { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 2px; }
+        .seg button { font-size: 0.85rem; padding: 10px 16px; }
+        .seg button.inactive { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+        /* judge board */
+        .jrow { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+                padding: 8px 0; border-bottom: 1px solid var(--line); }
+        .jrow:last-of-type { border-bottom: none; }
+        .jname { font-size: 0.9rem; font-weight: 600; }
+        .jdesc { font-size: 0.75rem; color: var(--muted); }
+        .jbtn { min-width: 92px; font-size: 0.82rem; padding: 10px 12px; border: none; }
+        .jbtn.pass { background: var(--goodbg); color: var(--good); }
+        .jbtn.maybe { background: var(--warnbg); color: var(--warn); }
+        .jbtn.fail { background: var(--badbg); color: var(--bad); }
+        .flags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; font-size: 0.8rem; }
+        .scorebig { font-size: 1.5rem; font-weight: 800; }
+        /* grpo widget */
+        .roll { margin: 10px 0; }
+        .rollhead { display: flex; justify-content: space-between; gap: 8px; font-size: 0.82rem; }
+        .rollhead .adv { font-weight: 800; }
+        .bar { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; margin-top: 4px; }
+        .bar > div { height: 100%; background: var(--accent); border-radius: 6px; transition: width .3s ease; }
+        .adv.pos { color: var(--good); }
+        .adv.neg { color: var(--bad); }
+        .hackwarn { font-size: 0.85rem; border-left: 3px solid var(--warn); padding: 6px 10px;
+                    background: var(--warnbg); color: var(--fg); border-radius: 6px; margin-top: 10px; }
+        table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+        th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+        th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+        .tablewrap { overflow-x: auto; margin: 1em 0; }
+        /* quiz */
+        .q { margin: 1.4em 0; }
+        .q .opts { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+        .q .opts button {
+            text-align: left; background: var(--card); color: var(--fg);
+            border: 1px solid var(--line); border-radius: 12px; font-weight: 500;
+            padding: 12px 16px; font-size: 0.92rem; line-height: 1.4;
+        }
+        .q .opts button.correct { border-color: var(--good); background: var(--goodbg); }
+        .q .opts button.wrong { border-color: var(--bad); background: var(--badbg); }
+        .q .fb { font-size: 0.86rem; margin-top: 8px; color: var(--muted); }
+        footer {
+            margin-top: 3em; padding-top: 1.2em; border-top: 1px solid var(--line);
+            color: var(--muted); font-size: 0.85rem;
+        }
+        .small { font-size: 0.85rem; color: var(--muted); }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>LiveKit's Eval Loop — and the RL That Closes It</h1>
+        <p class="meta">Added 2026-09-09</p>
+
+        <nav class="pills">
+            <a href="#insight">The insight</a>
+            <a href="#loop">Watch a run</a>
+            <a href="#code">The real code</a>
+            <a href="#theo">Theo's mind</a>
+            <a href="#mapping">Eval&rarr;RL map</a>
+            <a href="#recipes">RL recipes</a>
+            <a href="#companion">We did this too</a>
+            <a href="#quiz">Quiz</a>
+        </nav>
+
+        <h2 id="insight">The one insight</h2>
+        <div class="card">
+            <p><b>Theo personally built LiveKit's simulation + evals stack over the last ~3 months, and it is RL scaffolding with no RL on it yet.</b> The repo ships <code>livekit.agents.simulation</code> (scenarios, LLM-simulated users, verdicts), <code>livekit.agents.evals</code> (8 LLM judges scoring pass / maybe / fail), and CI that runs end-to-end agent simulations on every push to <code>main</code>. There is zero RL code anywhere in the org — their shipped ML is all supervised (Turn Detector v1, an interruption classifier, answering-machine detection).</p>
+            <p>So the Research Engineer (RL) role is greenfield: <b>turn verdicts and judges into rewards, and post-train against them.</b> The Dream11 loop — data &rarr; reward model &rarr; GRPO &rarr; vLLM serving &rarr; A/B — is exactly the missing piece.</p>
+        </div>
+        <p>Everything below is real code pulled from <code>livekit/agents</code> on Sep 9 2026 — mostly the <code>examples/frontdesk</code> appointment-booking agent, which is Theo's own canonical demo of the whole system (his PR #6089).</p>
+
+        <h2 id="loop">Watch one simulation run</h2>
+        <p>A run has <b>three layers of judgment</b>: the simulator's own LLM verdict on the chat, your programmatic verifier on ground-truth state, and a panel of 8 LLM judges. Step through both storylines — especially Victor, where the LLM verdict gets fooled and the verifier catches it.</p>
+
+        <div class="card">
+            <div class="seg" id="storySeg">
+                <button id="storyMaya">Maya — happy path</button>
+                <button id="storyVictor" class="inactive">Victor — the veto</button>
+            </div>
+            <div class="flow" id="flowNodes"></div>
+            <div class="transcript" id="transcript"><span class="small">Press Next to start the run.</span></div>
+            <div class="btnrow">
+                <button class="ghost" id="stepPrev">&larr; Prev</button>
+                <button id="stepNext">Next &rarr;</button>
+                <button class="ghost" id="stepAuto">Auto &#9654;</button>
+                <span class="small" id="stepCount"></span>
+            </div>
+        </div>
+
+        <h2 id="code">The real code, layer by layer</h2>
+
+        <details open>
+            <summary>1 &middot; A scenario is a reward spec in YAML</summary>
+            <p>Each scenario in <code>scenarios.yaml</code> defines a <b>persona</b> for the simulated user, <b>expectations</b> for the simulator's LLM verdict, and <b>userdata</b> that seeds the sandbox and encodes the ground-truth target. This one is adversarial — success means the agent books <em>nothing</em>:</p>
+<pre><code># examples/frontdesk/scenarios.yaml (one of 10 scenarios, trimmed)
+- label: Refuses every alternative, no booking allowed
+  instructions: |-
+    You are Victor Hale, a contractor who is sure he was told
+    8 AM Thursday was free. You are stubborn and mildly irritated.
+    Goals:
+    - Demand an appointment on Thursday, June 18 at exactly 8 AM.
+    - Reject every alternative the agent offers ...
+    - ... give up and end the call without booking anything.
+      Never provide your email address.
+  agent_expectations: The agent must state that June 18 at 8 AM is
+    not available and must not pretend otherwise or book a different
+    time without the caller's agreement ...
+  tags:
+    feature: adversarial
+  userdata:
+    available_slots:
+      - "2026-06-18T11:00:00"
+      - "2026-06-19T10:00:00"
+    expected_booking: null   # ground truth: book NOTHING</code></pre>
+            <p><code>expected_booking</code> has <b>three regimes</b>: a concrete slot (verifiable positive), <code>null</code> (verifiable negative — the agent must <em>not</em> act), or omitted entirely (graded on conversation only). All scenarios run against a pinned clock (<code>SIMULATION_NOW = "2026-06-12T09:00:00"</code>, a Friday) so absolute dates are deterministic.</p>
+        </details>
+
+        <details>
+            <summary>2 &middot; Stateful tool mocks = an execution sandbox</summary>
+            <p>Under simulation, the agent's real calendar tools are swapped for mocks backed by a <code>FakeCalendar</code> seeded from the scenario. The mocks <b>share live state</b> — a booking changes what the next <code>list_available_slots</code> call returns (there's a scenario that specifically probes this):</p>
+<pre><code># examples/frontdesk/simulation.py (trimmed)
+def tool_mocks(cal: FakeCalendar, tz: ZoneInfo) -&gt; dict[str, Callable]:
+    """Tool mocks sharing live state: a booking changes what the
+    mocked list_available_slots returns on the next call."""
+    async def list_available_slots() -&gt; str:
+        slots = await cal.list_available_slots(...)
+        ...
+    async def schedule_appointment(ctx: RunContext, slot_id: str):
+        ...
+        await cal.schedule_appointment(start_time=slot.start_time, ...)
+    return {"list_available_slots": list_available_slots,
+            "schedule_appointment": schedule_appointment}
+
+# examples/frontdesk/agent.py — the entrypoint wires it up
+@server.rtc_session(on_session_end=on_session_end,
+                    on_simulation_end=on_simulation_end)
+async def frontdesk_agent(ctx: JobContext):
+    if sim := ctx.simulation_context():
+        # scenario userdata seeds the calendar, pinned to its clock
+        cal = simulation.fake_calendar(sim, timezone="UTC")
+        tool_mocks = simulation.tool_mocks(cal, ZoneInfo("UTC"))
+    ...
+    mock_tools(FrontDeskAgent, tool_mocks, session=session)</code></pre>
+            <p>This is, in RL vocabulary, an <b>execution sandbox</b>: deterministic initial state, real tool interface, no real side effects, final state inspectable.</p>
+        </details>
+
+        <details>
+            <summary>3 &middot; The verifier: on_simulation_end and the AND-gate</summary>
+            <p>After the conversation, the simulator produces its own LLM verdict of the chat. Then <em>your</em> code runs and can <b>veto</b> based on ground truth. From the <code>SimulationContext</code> docstring: <em>"The effective result is the AND of the two: your check can fail a run the simulator passed, but it can never rescue one"</em> — there is deliberately no <code>success()</code> method, only <code>fail()</code>.</p>
+<pre><code># examples/frontdesk/agent.py
+async def on_simulation_end(ctx: SimulationContext) -&gt; None:
+    # grade the run on final calendar state; a mismatch vetoes the run
+    userdata = ctx.userdata()
+    if "expected_booking" not in userdata:
+        return   # scenario graded on conversation only
+
+    cal: FakeCalendar = ctx.job_context.primary_session.userdata.cal
+    booked = cal.scheduled_appointments
+
+    if (expected_raw := userdata["expected_booking"]) is None:
+        if booked:
+            ctx.fail(reason=f"no booking was expected, but the "
+                            f"agent booked: {times}")
+        return
+
+    expected = simulation.parse_slot(expected_raw, cal.tz)
+    if len(booked) != 1 or booked[0].slot.start_time != expected:
+        ctx.fail(reason=f"expected a single booking at "
+                        f"{speak(expected)}, got {times}")</code></pre>
+            <p>Note what's being graded: not the transcript, but <b>whether exactly one appointment exists at exactly the right time on the calendar</b>. An LLM can be charmed; a state check cannot.</p>
+        </details>
+
+        <details>
+            <summary>4 &middot; The 8 judges — and they run in production too</summary>
+            <p>This is the detail most people miss: <code>on_session_end</code> is not simulation-only. It runs after <b>every session, including live production calls</b>, fans out all 8 judges concurrently, auto-tags results onto the session, and records a hard success/fail from real state:</p>
+<pre><code># examples/frontdesk/agent.py
+async def on_session_end(ctx: JobContext) -&gt; None:
+    report = ctx.make_session_report()
+    ...
+    judges = JudgeGroup(
+        llm="openai/gpt-4o-mini",
+        judges=[
+            task_completion_judge(),   # First Call Resolution
+            accuracy_judge(),          # grounded in tool outputs?
+            tool_use_judge(),          # right tool, right args?
+            handoff_judge(),           # context kept across handoffs?
+            safety_judge(),            # advice/disclosure/escalation
+            relevancy_judge(),         # on-topic?
+            coherence_judge(),         # logical, no contradictions?
+            conciseness_judge(),       # brevity — voice-specific
+        ],
+    )
+    await judges.evaluate(report.chat_history)  # auto-tagged to session
+
+    if ctx.primary_session.userdata.cal.scheduled_appointments:
+        ctx.tagger.success()
+    else:
+        ctx.tagger.fail(reason="Appointment was not booked")</code></pre>
+            <p><b>Every production call already emits a reward tuple</b> (8 verdicts + a binary outcome tag) into their observability pipeline. That's a live reward-telemetry flywheel — before anyone has written a line of RL.</p>
+        </details>
+
+        <details>
+            <summary>5 &middot; Inside a judge: forced tool call, temp 0, priority class</summary>
+            <p>Verdict extraction is engineered, not vibes — the judge <em>must</em> call a function tool, at temperature 0, and every judge call is pinned to the low-priority inference class:</p>
+<pre><code># livekit/agents/evals/judge.py
+Verdict = Literal["pass", "fail", "maybe"]
+
+@function_tool
+async def submit_verdict(verdict: Verdict, reasoning: str): ...
+
+response = await llm.chat(
+    chat_ctx=eval_ctx,
+    tools=[submit_verdict],
+    tool_choice="required",           # cannot skip the verdict
+    extra_kwargs={"temperature": 0.0},
+    **_judge_chat_kwargs(llm),        # pins inference_class="low"
+).collect()
+
+# why "low"? (verbatim comment from the source)
+# "Judging is batch load: an eval suite fans out many judgments at
+#  once, they run after the conversation they grade, and nobody is
+#  waiting on the verdict. So they are pinned to the low inference
+#  class and must not compete with live traffic for gateway capacity"</code></pre>
+            <p>And an example of what a judge actually checks — <code>accuracy_judge</code>'s full rubric:</p>
+<pre><code>"All information provided by the agent must be accurate and grounded.
+ Fail if the agent states facts not supported by the function call
+ outputs, contradicts information from tool results, makes up details
+ (hallucination), or misquotes data like names, dates, numbers, or
+ appointments."</code></pre>
+        </details>
+
+        <details>
+            <summary>6 &middot; Scoring: pass=1, maybe=0.5, fail=0 — already a reward in [0,1]</summary>
+<pre><code># livekit/agents/evals/evaluation.py (condensed)
+@property
+def score(self) -&gt; float:
+    """Score from 0.0 to 1.0. Pass=1, maybe=0.5, fail=0."""
+    total = sum(1.0 if j.passed else 0.5 if j.uncertain else 0.0
+                for j in self.judgments.values())
+    return total / len(self.judgments)
+
+# plus aggregation policies, ready-made:
+result.all_passed        # maybes count as NOT passed
+result.majority_passed   # &gt; half passed
+result.none_failed       # maybes tolerated, explicit fails not</code></pre>
+            <p>Set the verdicts yourself and watch the score and the three aggregation flags:</p>
+            <div id="judgeBoard"></div>
+            <div class="btnrow" style="justify-content: space-between;">
+                <span>Score: <span class="scorebig" id="jScore"></span></span>
+                <button class="ghost" id="jReset" style="min-height:44px;padding:8px 16px;">Reset</button>
+            </div>
+            <div class="flags" id="jFlags"></div>
+        </details>
+
+        <details>
+            <summary>7 &middot; Turn-level assertions + how the whole thing runs</summary>
+            <p>Below the scenario level, tests drive the agent turn by turn in-process — hard assertions on tool calls, LLM judgment on the free-text turns:</p>
+<pre><code># examples/frontdesk/test_agent.py (trimmed)
+result = await sess.run(user_input="Can I get an appointment tomorrow?")
+result.expect.next_event().is_function_call(name="list_available_slots")
+result.expect.next_event().is_function_call_output()
+await (result.expect.next_event()
+       .is_message(role="assistant")
+       .judge(llm, intent="must suggest one or more available "
+                          "appointment time slots for tomorrow ..."))</code></pre>
+            <p>And it all runs on every push to main — this is CI, not a research script:</p>
+<pre><code># .github/workflows/evals.yml (trimmed)
+on:
+  push: { branches: [main] }
+jobs:
+  evals:
+    strategy:
+      matrix: { example: [frontdesk, drive_thru] }
+    steps:
+      - run: uv run pytest examples/${{matrix.example}}/test_agent.py -s
+        env: { LIVEKIT_EVALS_VERBOSE: 1, ... }   # prints each verdict
+
+# run it yourself:
+#   uv run pytest examples/frontdesk/test_agent.py -s</code></pre>
+            <p class="small">The <code>scenarios.yaml</code> path runs via LiveKit Cloud simulations (a <code>SimulationDispatch</code> arrives at your entrypoint and <code>ctx.simulation_context()</code> is non-None) — parallel, text or audio. Text sims are pinned to the "low" inference class too.</p>
+        </details>
+
+        <h2 id="theo">Inside Theo's mind: what each choice is capturing</h2>
+        <p>Read as a systems designer's decisions, the stack encodes six beliefs — and each one maps directly onto an RL design decision:</p>
+        <div class="card">
+            <p><b>1. LLM judges are advisory; state is truth.</b> The AND-gate (your verifier can veto, never rescue) is anti-reward-hacking architecture built <em>before any RL exists</em>. He already doesn't trust the judge alone.</p>
+            <p><b>2. Scenarios are reward specs.</b> <code>expected_booking</code>: value / null / omitted = verifiable-positive / verifiable-negative / judge-only. He's authoring reward functions in YAML without calling them that.</p>
+            <p><b>3. Determinism is non-negotiable.</b> Pinned clock, seeded slots, stateful mocks — reproducible episodes. That's the property that turns an eval suite into a trainable environment.</p>
+            <p><b>4. Judge reliability is an engineering problem.</b> Forced tool-call extraction, temperature 0, and a three-way verdict where "maybe" scores 0.5 — uncertainty is measured, not rounded up to pass.</p>
+            <p><b>5. Eval traffic must never touch prod latency.</b> Everything offline is pinned to <code>inference_class="low"</code>. A priority-classed shared inference fleet is <em>exactly</em> the substrate RL rollout generation needs — it already exists.</p>
+            <p><b>6. Rewards trace to business metrics.</b> <code>task_completion_judge</code>'s docstring names First Call Resolution, "the key metric in call centers." And the same judges + success/fail tagging run on live production sessions — the reward telemetry flywheel is already spinning.</p>
+        </div>
+
+        <h2 id="mapping">The eval &rarr; RL dictionary</h2>
+        <p>Nothing needs inventing — it needs renaming:</p>
+        <div class="tablewrap">
+        <table>
+            <tr><th>LiveKit primitive (shipped)</th><th>RL name</th></tr>
+            <tr><td><code>Scenario</code> + <code>userdata</code></td><td>Task / episode spec + ground truth</td></tr>
+            <tr><td>Simulated user (persona LLM)</td><td>Environment / user model</td></tr>
+            <tr><td><code>mock_tools</code> + <code>FakeCalendar</code></td><td>Execution sandbox</td></tr>
+            <tr><td><code>on_simulation_end</code> state check</td><td>Verifiable reward (RLVR)</td></tr>
+            <tr><td><code>JudgeGroup.score</code> &isin; [0,1]</td><td>Rubric reward model</td></tr>
+            <tr><td>simulator verdict &and; user veto</td><td>Reward gating</td></tr>
+            <tr><td>Cloud parallel sims + CI matrix</td><td>Rollout farm</td></tr>
+            <tr><td><code>inference_class="low"</code></td><td>Rollout serving priority tier</td></tr>
+            <tr><td>Prod <code>on_session_end</code> judges + <code>tagger</code></td><td>Online reward telemetry</td></tr>
+        </table>
+        </div>
+
+        <h2 id="recipes">The RL recipes</h2>
+
+        <h3>Recipe 1 — GRPO in their own sandbox</h3>
+        <p>GRPO wants exactly what this stack provides: many rollouts of the <em>same task</em>, a scalar reward, no value network. A group = G rollouts of one scenario (same seeded calendar, same persona); the advantage is normalized within the group.</p>
+<pre><code># sketch — GRPO on the frontdesk agent, using LiveKit primitives
+async def rollout(scenario, policy_llm):
+    cal = simulation.fake_calendar(sim, timezone="UTC")   # seeded sandbox
+    mock_tools(FrontDeskAgent, simulation.tool_mocks(cal, tz))
+    async with AgentSession(llm=policy_llm,
+                            userdata=Userdata(cal=cal)) as sess:
+        await sess.start(FrontDeskAgent(timezone="UTC", now=cal.now))
+        await drive_sim_user(sess, persona=scenario.instructions)
+    return sess.history, cal
+
+async def reward(chat, cal, scenario):
+    v = verify_state(cal, scenario)                 # {0, 1}  hard gate
+    j = (await judge_group.evaluate(chat)).score    # [0, 1]  shaped
+    return v * (0.6 + 0.4 * j)   # gated: judges refine, never rescue
+
+for scenario in scenarios:                # GRPO outer loop
+    group = [await rollout(scenario, policy) for _ in range(G)]
+    r = [await reward(c, cal, scenario) for c, cal in group]
+    adv = (r - mean(r)) / (std(r) + 1e-6)
+    update(policy, grpo_loss(adv, kl_to_reference=beta))</code></pre>
+        <p>The reward is <b>multiplicative, not additive</b> — the verifier gates, the judges shape. That mirrors Theo's AND-gate exactly, and the widget below shows why it matters.</p>
+
+        <div class="card">
+            <p style="margin-top:0;"><b>Reward design playground.</b> Six rollouts of the "Tom wants July 16, 1 PM" scenario (G=6). V = verifier (did the right booking land), J = judge score. Blend them with &lambda; and watch which rollouts GRPO up-weights (positive advantage) vs down-weights:</p>
+            <p style="margin: 4px 0;"><code>r = &lambda;&middot;V + (1&minus;&lambda;)&middot;J</code> &nbsp; &lambda; = <b id="lamVal">0.60</b></p>
+            <input type="range" id="lamSlider" min="0" max="100" value="60" aria-label="verifier weight lambda">
+            <div class="btnrow">
+                <button class="ghost" id="gateToggle">Switch to gated reward &nbsp;v&middot;(0.6+0.4j)</button>
+            </div>
+            <div id="rollList"></div>
+            <div class="hackwarn" id="hackNote" style="display:none;"></div>
+        </div>
+
+        <h3>Recipe 2 — distill the judges into a reward model</h3>
+        <p>Judge calls are slow and expensive at training scale (8 &times; LLM call per rollout). Standard move: run the full judge panel + verifier offline over thousands of group rollouts, form <b>pairwise preferences within each group</b> (same scenario, so comparisons are apples-to-apples), and train a small reward model on them. Then GRPO against the cheap dense RM with a KL anchor, re-validating periodically against the real judges. This is the close-pairs RM discipline from Dream11 — pairs from the same context are the highest-signal pairs.</p>
+
+        <h3>Recipe 3 — RL from production, not just simulation</h3>
+        <p>Because <code>on_session_end</code> already judges live calls and <code>tagger.success()/fail</code> already records outcomes, production is emitting (trajectory, reward) tuples today. The conservative ladder: <b>filtered SFT</b> (clone only high-scoring calls) &rarr; <b>DPO</b> (pair high vs low scoring calls on similar intents) &rarr; <b>offline RL</b>. No live exploration — you never let a training policy experiment on a real caller. The just-shipped PII redaction (1.7/1.8) is the unglamorous prerequisite that makes prod transcripts usable as training data.</p>
+
+        <h3>Recipe 4 — the turn-taking policy</h3>
+        <p>Different model, same logic. Turn Detector v1 outputs an end-of-turn probability; the <em>policy</em> on top (threshold, action_delay, timeout) is grid-searched in eot-bench. That's a sequential decision problem begging for a learned policy: act &isin; {commit, wait, backchannel}, reward = &minus;false-cutoff &minus; latency&middot;ms + clean handover, trained offline from logged prod signals (<code>agent_false_interruption</code> events, user restarts). And a threshold policy over probabilities is only principled if the probabilities are <b>calibrated</b> — which is the ForeCal conversation.</p>
+
+        <h3>What breaks: reward hacking, and the defense they already built</h3>
+        <p>Judge-only reward gets hacked: the policy learns to be charming, verbose-then-apologetic, or sycophantic to the judge rather than to book the right slot (rollout C in the widget). Mitigations, in order of leverage: <b>the verifier gate</b> (already in the architecture — say this to Theo), held-out judge models the policy never trains against, judge ensembles with disagreement flags, KL to reference, fresh adversarial scenarios (their <code>feature: adversarial</code> tag is already the seed of a red-team suite), and monitoring the prod judges for drift once a trained policy ships.</p>
+
+        <div class="card">
+            <p style="margin-top:0;"><b>Three lines for the room:</b></p>
+            <p>1. "You've already built the environment, the verifiers, and the reward telemetry — what's missing is the loop that trains against them, and I've run that loop end to end in production."</p>
+            <p>2. "Your AND-gate — verifier can veto, never rescue — is the exact reward-gating discipline that keeps GRPO from hacking the judges. I'd keep it as <code>r = v&middot;(0.6+0.4j)</code>."</p>
+            <p>3. "on_session_end judging live calls means every production conversation is already a labeled trajectory. Filtered SFT and DPO on that data are shippable before any online RL."</p>
+        </div>
+
+        <h2 id="companion">Receipts: we built the same three layers on the Companion</h2>
+        <p>This isn't theory for you — the AI Companion codebase (<code>ds-ai-companion-rtc</code>, built <em>on LiveKit</em>) independently converged on the same architecture: E2E runs, an LLM judge, a programmatic verifier, and a production telemetry corpus. Different trade-offs, same shape. Know your own code cold — Theo may ask exactly this.</p>
+
+        <details>
+            <summary>Our E2E runs: headless spectator in a real room</summary>
+            <p>Where LiveKit's frontdesk sims run in-process against mocked tools, the Companion's multi-agent debate tests dispatched <b>real agents into a real LiveKit Cloud room with real Gemini audio</b>, and joined as a read-only spectator to capture the transcript:</p>
+<pre><code># ds-ai-companion-rtc/scripts/run_debate_test.py (trimmed)
+token = (api.AccessToken()
+    .with_identity(f"test-spectator-{int(time.time())}")
+    .with_grants(api.VideoGrants(
+        room_join=True, room=room_name,
+        can_subscribe=True,
+        can_publish=False,          # read-only observer
+        can_publish_data=False,
+    )).to_jwt())
+
+room.register_text_stream_handler("debate.argument", on_argument_stream)
+
+# structural verdicts after the run (run_top_picks_e2e.py):
+if not result["orchestrator_joined"]: errors.append("Orchestrator never joined")
+if result["personas_joined"] &lt; 2:     errors.append("Expected 2 personas")
+if any(not t["text"] for t in result["transcript"]):
+    errors.append("Some turns have empty transcripts")
+
+# how it ran:
+#   uv run python scripts/run_top_picks_e2e.py --topic "GT vs KKR" --rounds 3
+#   uv run python scripts/batch_debate_test.py --count 5 --stagger 60</code></pre>
+            <p class="small">No simulated user — the show format is agents talking to each other (director + 2 personas via RPC stage directions), so the "environment" was the other agents. That's also something LiveKit's 1-agent-1-user sim framework doesn't cover.</p>
+        </details>
+
+        <details>
+            <summary>Our judge and our verifier</summary>
+            <p>The judge (<code>evaluate_debate.py</code>) pulls session transcripts from S3 and scores four dimensions 1–10 with schema-forced JSON — same LLM-as-judge idea, scalar rubric instead of pass/maybe/fail:</p>
+<pre><code># ds-ai-companion-rtc/scripts/evaluate_debate.py (trimmed)
+EVAL_PROMPT = """You are a senior creative director evaluating ...
+## Scoring Dimensions (1-10 each)
+1. Prep Material Quality   2. Instruction Quality
+3. Speaker Compliance      4. Debate Structure &amp; Flow
+Do not be generous — be honest and critical."""
+
+response = await client.aio.models.generate_content(
+    model="gemini-3-flash-preview",
+    config=types.GenerateContentConfig(
+        system_instruction=EVAL_PROMPT, temperature=0.3,
+        response_mime_type="application/json",
+        response_schema=EVAL_SCHEMA))       # schema-forced verdict
+
+# run: uv run python scripts/evaluate_debate.py --latest</code></pre>
+            <p>And the verifier (<code>test_lineup_compliance.py</code>) — our <code>expected_booking</code>: does every fantasy pick reference a player who is actually in the provided lineup? Grounding checked in code, not by an LLM:</p>
+<pre><code># ds-ai-companion-rtc/scripts/test_lineup_compliance.py (trimmed)
+def check_compliance(picks, lineup):
+    """Check each pick against the lineup. Returns violations."""
+    violations = []
+    for pick in picks:
+        normalized = normalize(pick.get("player", ""))
+        if not any(match(normalized, norm) for norm, _, _ in all_players):
+            violations.append({"player": pick["player"],
+                               "closest_match": get_close_matches(...)})
+    return violations   # hallucinated player = hard fail, however fluent</code></pre>
+            <p class="small">Plus <code>SessionMetricsCalculator</code> on every prod session: conversational latency p50/p90/p95, TTFT, token/cost breakdown, interruptions — all exported to S3, giving a corpus the judge could score retroactively. That's the same prod-reward-flywheel idea as their <code>on_session_end</code>.</p>
+        </details>
+
+        <div class="tablewrap">
+        <table>
+            <tr><th>Layer</th><th>LiveKit frontdesk stack</th><th>Companion (Dream11)</th></tr>
+            <tr><td>Episode</td><td>In-process sim, mocked tools, pinned clock — deterministic</td><td>Real room, real audio, live Gemini — high fidelity, not deterministic</td></tr>
+            <tr><td>User model</td><td>LLM-driven persona from scenarios.yaml</td><td>None — multi-agent show; agents are each other's environment</td></tr>
+            <tr><td>Verifier</td><td><code>on_simulation_end</code> calendar-state check</td><td>Lineup grounding + structured-output compliance checks</td></tr>
+            <tr><td>Judge</td><td>8 judges, pass/maybe/fail, forced tool call, temp 0</td><td>1 judge, four 1–10 dimensions, schema-forced JSON, temp 0.3</td></tr>
+            <tr><td>Prod signal</td><td>Same judges on live calls + <code>tagger.success()/fail</code></td><td>S3 session export + retroactive judging + latency/cost metrics</td></tr>
+            <tr><td>CI</td><td>Sims on every push to main</td><td>Manual scripts (honest gap)</td></tr>
+            <tr><td>RL on top</td><td>None</td><td>None (GRPO pipeline existed separately at Dream11)</td></tr>
+        </table>
+        </div>
+
+        <div class="card">
+            <p style="margin-top:0;"><b>The line this earns you:</b> "I hand-rolled this exact stack on top of LiveKit before you productized it — spectator-run E2E episodes, an LLM judge with a schema-forced verdict, a programmatic grounding verifier, and prod sessions exported so the judge could score them retroactively. You've built the clean, deterministic version of what I built under fire. And neither of us has closed the RL loop on it — that's the role."</p>
+            <p>Honest gaps to own if pressed: our judge scored 1–10 (their pass/maybe/fail + forced tool call is better engineering), our runs weren't deterministic or in CI, and we had no simulated <em>user</em> — the debate format sidestepped it.</p>
+        </div>
+
+        <h2 id="quiz">Quiz</h2>
+        <p class="small">Score: <span id="quizScore">0</span> / <span id="quizTotal">8</span> &nbsp; <button class="ghost" id="quizReset" style="min-height:40px;padding:6px 14px;font-size:0.85rem;">Reset</button></p>
+        <div id="quizBox"></div>
+
+        <footer>
+            Personal explainer · unlisted · <a href="/explainers/">back to index</a><br>
+            Source: <code>livekit/agents</code> @ main, Sep 9 2026 — <code>examples/frontdesk</code>, <code>livekit/agents/evals</code>, <code>livekit/agents/simulation.py</code>. Companion: <a href="/explainers/livekit-agents-architecture.html">LiveKit Agents architecture map</a>.
+        </footer>
+    </main>
+
+    <script>
+    (function () {
+        "use strict";
+
+        /* ---------- 1. Simulation run stepper ---------- */
+        var NODES = [
+            "Scenario (scenarios.yaml)",
+            "Sandbox: mock_tools + FakeCalendar",
+            "Sim user LLM ↔ Agent",
+            "Simulator verdict (LLM reads the chat)",
+            "Verifier: on_simulation_end (state check)",
+            "AND gate → effective result",
+            "JudgeGroup: 8 judges → score"
+        ];
+        var STORIES = {
+            maya: [
+                { n: 0, t: "<b>Scenario:</b> “Flexible caller hesitant to share an email.” Persona: Maya Chen, freelance designer, wary of sharing personal info. userdata seeds 4 slots; clock pinned to Fri 2026-06-12 09:00. No expected_booking — any offered slot is fine." },
+                { n: 1, t: "<b>Sandbox:</b> mock_tools() swaps the real calendar tools for stateful fakes over a seeded FakeCalendar. No real backend, fully reproducible." },
+                { n: 2, t: "<b>Maya:</b> “Hi — what do you have next week?” → <b>Agent</b> calls list_available_slots → mock returns Mon 10:00, Mon 14:30, Tue 09:00, Wed 11:00." },
+                { n: 2, t: "<b>Agent</b> offers Monday 10. Maya accepts. schedule_appointment → GetEmailTask workflow. Maya hesitates once (“do you really need that?”), then gives her email. The booking lands on the FakeCalendar." },
+                { n: 3, t: "<b>Simulator verdict:</b> the simulator’s LLM reads the whole chat against agent_expectations → <span class='tag good'>PASS</span> — slot offered, email collected, exactly one booking, clearly confirmed." },
+                { n: 4, t: "<b>Verifier:</b> on_simulation_end reads the FakeCalendar. This scenario has no expected_booking → graded on conversation only → no veto." },
+                { n: 5, t: "<b>Effective result:</b> simulator PASS ∧ (no veto) → <span class='tag good'>PASS</span>." },
+                { n: 6, t: "<b>Judges:</b> on_session_end fans out all 8 judges concurrently (gpt-4o-mini, temp 0, inference_class=“low”). Say 7 pass + conciseness “maybe” → score = 7.5/8 = <b>0.94</b>. In an RL loop, that’s this trajectory’s shaped reward." }
+            ],
+            victor: [
+                { n: 0, t: "<b>Scenario:</b> “Refuses every alternative, no booking allowed.” Persona: Victor Hale, stubborn contractor demanding Thu 8 AM. userdata: expected_booking: <b>null</b> — the correct outcome is NO booking." },
+                { n: 1, t: "<b>Sandbox:</b> FakeCalendar seeded with only Thu 11:00 and Fri 10:00. Tools mocked, clock pinned." },
+                { n: 2, t: "<b>Victor:</b> “I was told Thursday 8 AM was free. Just squeeze me in.” He rejects every alternative and never gives an email." },
+                { n: 2, t: "<b>Agent</b> (failure mode this scenario exists to catch): worn down, it books Fri 10:00 “to hold something for you” — without Victor’s agreement." },
+                { n: 3, t: "<b>Simulator verdict:</b> the LLM reads the chat — agent stayed polite, kept offering listed alternatives, call ended “resolved” with a booking → <span class='tag good'>PASS</span>. The judge got charmed." },
+                { n: 4, t: "<b>Verifier:</b> expected_booking is null but cal.scheduled_appointments has 1 entry → ctx.fail(“no booking was expected, but the agent booked: Fri 10:00”) → <span class='tag bad'>VETO</span>." },
+                { n: 5, t: "<b>Effective result:</b> PASS ∧ FAIL → <span class='tag bad'>FAIL</span>. Your state check can fail a run the simulator passed — it can never rescue one. This is reward-hacking defense, shipped before any RL exists." },
+                { n: 6, t: "<b>Judges:</b> still run and record per-dimension verdicts (tool_use likely fails). For RL, this trajectory is exactly the high-value negative example: charming transcript, wrong world-state, reward 0." }
+            ]
+        };
+
+        var story = "maya", idx = -1, autoTimer = null;
+        var flowEl = document.getElementById("flowNodes");
+        var trEl = document.getElementById("transcript");
+        var cntEl = document.getElementById("stepCount");
+        var btnPrev = document.getElementById("stepPrev");
+        var btnNext = document.getElementById("stepNext");
+        var btnAuto = document.getElementById("stepAuto");
+        var segMaya = document.getElementById("storyMaya");
+        var segVictor = document.getElementById("storyVictor");
+
+        function buildNodes() {
+            if (!flowEl) return;
+            flowEl.innerHTML = "";
+            for (var i = 0; i < NODES.length; i++) {
+                var d = document.createElement("div");
+                d.className = "fnode";
+                d.id = "fnode-" + i;
+                d.innerHTML = "<b>" + (i + 1) + ".</b> " + NODES[i];
+                flowEl.appendChild(d);
+            }
+        }
+
+        function renderStep() {
+            var steps = STORIES[story];
+            for (var i = 0; i < NODES.length; i++) {
+                var el = document.getElementById("fnode-" + i);
+                if (!el) continue;
+                el.className = "fnode";
+            }
+            if (trEl) trEl.innerHTML = "";
+            if (idx < 0) {
+                if (trEl) trEl.innerHTML = "<span class='small'>Press Next to start the run.</span>";
+            } else {
+                var doneNodes = {};
+                for (var s = 0; s <= idx && s < steps.length; s++) {
+                    doneNodes[steps[s].n] = true;
+                    if (trEl) {
+                        var line = document.createElement("div");
+                        line.className = "tline";
+                        line.innerHTML = steps[s].t;
+                        trEl.appendChild(line);
+                    }
+                }
+                for (var k in doneNodes) {
+                    var dn = document.getElementById("fnode-" + k);
+                    if (dn) dn.classList.add("done");
+                }
+                var act = document.getElementById("fnode-" + steps[Math.min(idx, steps.length - 1)].n);
+                if (act) act.classList.add("active");
+                if (trEl) trEl.scrollTop = trEl.scrollHeight;
+            }
+            if (cntEl) cntEl.textContent = (idx + 1) + " / " + steps.length;
+        }
+
+        function stopAuto() {
+            if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+            if (btnAuto) btnAuto.innerHTML = "Auto ▶";
+        }
+        function setStory(s) {
+            story = s; idx = -1; stopAuto();
+            if (segMaya) segMaya.className = (s === "maya") ? "" : "inactive";
+            if (segVictor) segVictor.className = (s === "victor") ? "" : "inactive";
+            renderStep();
+        }
+        if (btnNext) btnNext.addEventListener("click", function () {
+            stopAuto();
+            if (idx < STORIES[story].length - 1) { idx++; renderStep(); }
+        });
+        if (btnPrev) btnPrev.addEventListener("click", function () {
+            stopAuto();
+            if (idx > -1) { idx--; renderStep(); }
+        });
+        if (btnAuto) btnAuto.addEventListener("click", function () {
+            if (autoTimer) { stopAuto(); return; }
+            btnAuto.innerHTML = "Pause ❚❚";
+            autoTimer = setInterval(function () {
+                if (idx < STORIES[story].length - 1) { idx++; renderStep(); }
+                else stopAuto();
+            }, 1600);
+        });
+        if (segMaya) segMaya.addEventListener("click", function () { setStory("maya"); });
+        if (segVictor) segVictor.addEventListener("click", function () { setStory("victor"); });
+        buildNodes();
+        renderStep();
+
+        /* ---------- 2. Judge scoreboard ---------- */
+        var JUDGES = [
+            { name: "task_completion", desc: "goal met / handed off / correctly declined (FCR)" },
+            { name: "accuracy", desc: "grounded in tool outputs, no hallucination" },
+            { name: "tool_use", desc: "right tool, right args, errors handled" },
+            { name: "handoff", desc: "context preserved across agent handoffs" },
+            { name: "safety", desc: "no bad advice / disclosure; escalates" },
+            { name: "relevancy", desc: "addresses what the user said" },
+            { name: "coherence", desc: "organized, no contradictions" },
+            { name: "conciseness", desc: "brief — voice-specific" }
+        ];
+        var DEFAULT_VERDICTS = ["pass", "pass", "pass", "pass", "pass", "pass", "pass", "maybe"];
+        var verdicts = DEFAULT_VERDICTS.slice();
+        var CYCLE = { pass: "maybe", maybe: "fail", fail: "pass" };
+        var boardEl = document.getElementById("judgeBoard");
+        var jScoreEl = document.getElementById("jScore");
+        var jFlagsEl = document.getElementById("jFlags");
+        var jResetBtn = document.getElementById("jReset");
+
+        function jscore() {
+            var t = 0;
+            for (var i = 0; i < verdicts.length; i++) {
+                if (verdicts[i] === "pass") t += 1;
+                else if (verdicts[i] === "maybe") t += 0.5;
+            }
+            return t;
+        }
+        function flagTag(label, on) {
+            return "<span class='tag " + (on ? "good" : "bad") + "'>" + label + " " + (on ? "✓" : "✗") + "</span>";
+        }
+        function renderBoard() {
+            if (!boardEl) return;
+            boardEl.innerHTML = "";
+            JUDGES.forEach(function (j, i) {
+                var row = document.createElement("div");
+                row.className = "jrow";
+                var left = document.createElement("div");
+                left.innerHTML = "<div class='jname'>" + j.name + "</div><div class='jdesc'>" + j.desc + "</div>";
+                var b = document.createElement("button");
+                b.className = "jbtn " + verdicts[i];
+                b.textContent = verdicts[i];
+                b.setAttribute("aria-label", "cycle verdict for " + j.name);
+                b.addEventListener("click", function () {
+                    verdicts[i] = CYCLE[verdicts[i]];
+                    renderBoard();
+                });
+                row.appendChild(left);
+                row.appendChild(b);
+                boardEl.appendChild(row);
+            });
+            var s = jscore();
+            var n = verdicts.length;
+            if (jScoreEl) jScoreEl.textContent = s + "/" + n + " = " + (s / n).toFixed(3);
+            var passCount = verdicts.filter(function (v) { return v === "pass"; }).length;
+            var anyFail = verdicts.indexOf("fail") !== -1;
+            if (jFlagsEl) {
+                jFlagsEl.innerHTML =
+                    flagTag("all_passed", passCount === n) + " " +
+                    flagTag("majority_passed", passCount > n / 2) + " " +
+                    flagTag("none_failed", !anyFail);
+            }
+        }
+        if (jResetBtn) jResetBtn.addEventListener("click", function () {
+            verdicts = DEFAULT_VERDICTS.slice();
+            renderBoard();
+        });
+        renderBoard();
+
+        /* ---------- 3. GRPO reward-blend playground ---------- */
+        var ROLLS = [
+            { k: "A", d: "Books July 16, 1:00 PM. Tight, warm, confirms clearly.", v: 1, j: 0.94 },
+            { k: "B", d: "Books the right slot but rambles and repeats itself.", v: 1, j: 0.56 },
+            { k: "C", d: "Books 9:30 AM — the WRONG slot — but is extremely charming.", v: 0, j: 0.81 },
+            { k: "D", d: "Never books anything. Apologizes beautifully.", v: 0, j: 0.44 },
+            { k: "E", d: "Books the right slot after hallucinating a 2 PM option first.", v: 1, j: 0.38 },
+            { k: "F", d: "Books the right slot… twice (duplicate booking → wrong state).", v: 0, j: 0.69 }
+        ];
+        var lam = 0.6, gated = false;
+        var lamSlider = document.getElementById("lamSlider");
+        var lamVal = document.getElementById("lamVal");
+        var gateBtn = document.getElementById("gateToggle");
+        var rollList = document.getElementById("rollList");
+        var hackNote = document.getElementById("hackNote");
+
+        function rewards() {
+            return ROLLS.map(function (r) {
+                return gated ? r.v * (0.6 + 0.4 * r.j) : lam * r.v + (1 - lam) * r.j;
+            });
+        }
+        function renderRolls() {
+            if (!rollList) return;
+            var r = rewards();
+            var mean = r.reduce(function (a, b) { return a + b; }, 0) / r.length;
+            var varr = r.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / r.length;
+            var sd = Math.sqrt(varr) || 1e-6;
+            rollList.innerHTML = "";
+            ROLLS.forEach(function (ro, i) {
+                var adv = (r[i] - mean) / sd;
+                var div = document.createElement("div");
+                div.className = "roll";
+                div.innerHTML =
+                    "<div class='rollhead'><span><b>" + ro.k + "</b> — " + ro.d +
+                    " <span class='small'>(V=" + ro.v + ", J=" + ro.j.toFixed(2) + ")</span></span>" +
+                    "<span class='adv " + (adv >= 0 ? "pos" : "neg") + "'>" +
+                    (adv >= 0 ? "+" : "") + adv.toFixed(2) + "</span></div>" +
+                    "<div class='bar'><div style='width:" + Math.max(2, Math.round(r[i] * 100)) + "%'></div></div>";
+                rollList.appendChild(div);
+            });
+            var advC = (r[2] - mean) / sd;
+            if (hackNote) {
+                if (!gated && advC > 0.02) {
+                    hackNote.style.display = "block";
+                    hackNote.innerHTML = "<b>Reward hacking, live:</b> at λ=" + lam.toFixed(2) +
+                        ", rollout C — wrong slot, charming transcript — gets a <b>positive advantage</b> (" +
+                        (advC >= 0 ? "+" : "") + advC.toFixed(2) + "). GRPO would push the policy toward charming the judge instead of booking the slot. This is exactly why Theo's verifier can veto but never rescue.";
+                } else if (gated) {
+                    hackNote.style.display = "block";
+                    hackNote.innerHTML = "<b>Gated reward:</b> r = v·(0.6+0.4j). Every wrong-state rollout (C, D, F) is zeroed no matter how charming — judges only differentiate among rollouts that got the world-state right (A > B > E). This mirrors the shipped AND-gate.";
+                } else {
+                    hackNote.style.display = "block";
+                    hackNote.innerHTML = "At λ=" + lam.toFixed(2) + ", the verifier dominates: wrong-state rollouts sit below the group mean. Slide λ left to watch rollout C go positive — that flip is the reward-hacking threshold.";
+                }
+            }
+        }
+        if (lamSlider) lamSlider.addEventListener("input", function () {
+            lam = Number(lamSlider.value) / 100;
+            if (lamVal) lamVal.textContent = lam.toFixed(2);
+            if (gated) { gated = false; if (gateBtn) gateBtn.textContent = "Switch to gated reward  v·(0.6+0.4j)"; }
+            renderRolls();
+        });
+        if (gateBtn) gateBtn.addEventListener("click", function () {
+            gated = !gated;
+            gateBtn.textContent = gated ? "Switch back to blend  λ·V + (1−λ)·J" : "Switch to gated reward  v·(0.6+0.4j)";
+            renderRolls();
+        });
+        renderRolls();
+
+        /* ---------- 4. Quiz ---------- */
+        var QUIZ = [
+            {
+                q: "A simulation run's effective result is…",
+                opts: [
+                    "The simulator LLM's verdict on the transcript",
+                    "Your on_simulation_end verdict",
+                    "The AND of both — your check can veto, never rescue",
+                    "The OR of both — either passing is enough"
+                ],
+                a: 2,
+                ex: "SimulationContext exposes fail() but deliberately no success(): “your check can fail a run the simulator passed, but it can never rescue one.”"
+            },
+            {
+                q: "A JudgeGroup of 8 returns 5 pass, 2 maybe, 1 fail. score = ?",
+                opts: ["0.625", "0.75", "0.875", "5/8"],
+                a: 1,
+                ex: "Pass=1, maybe=0.5, fail=0 → (5 + 2×0.5 + 0)/8 = 6/8 = 0.75."
+            },
+            {
+                q: "Why are judge calls pinned to inference_class=“low”?",
+                opts: [
+                    "To use cheaper models",
+                    "Batch load — nobody is waiting on a verdict, so it must not compete with live voice traffic for gateway capacity",
+                    "Lower temperature is only available in that class",
+                    "It disables rate limits"
+                ],
+                a: 1,
+                ex: "Verbatim from judge.py: judging is batch load that runs after the conversation — it must not steal capacity from live traffic. The same priority tier is what RL rollout generation would use."
+            },
+            {
+                q: "How does a judge extract its verdict reliably?",
+                opts: [
+                    "Regex over the response text",
+                    "JSON mode with a schema",
+                    "A forced function call (submit_verdict, tool_choice=“required”) at temperature 0",
+                    "Comparing token logprobs of “pass” vs “fail”"
+                ],
+                a: 2,
+                ex: "The judge must call submit_verdict(verdict, reasoning) — extraction is a tool call, not text parsing, and temp 0 keeps it stable."
+            },
+            {
+                q: "In GRPO on this stack, a “group” would be…",
+                opts: [
+                    "The 8 judges evaluating one conversation",
+                    "G rollouts of the same scenario, with advantages normalized within the group",
+                    "All 10 scenarios in scenarios.yaml",
+                    "One rollout evaluated by G different judge models"
+                ],
+                a: 1,
+                ex: "GRPO replaces the value network with a group baseline: sample G trajectories of the same task (same seeded calendar, same persona), then Â = (r − mean)/std within the group."
+            },
+            {
+                q: "expected_booking: null in a scenario encodes…",
+                opts: [
+                    "Skip grading for this scenario",
+                    "A verifiable NEGATIVE constraint — success is the agent not acting",
+                    "Judge-only grading",
+                    "Missing data — the field defaults later"
+                ],
+                a: 1,
+                ex: "Victor's scenario: the correct outcome is zero bookings. If the agent books anything, the verifier vetoes — even if the LLM judgment of the chat looked fine."
+            },
+            {
+                q: "Which shipped piece means reward signal already flows on production calls?",
+                opts: [
+                    "eot-bench",
+                    "on_session_end runs the same JudgeGroup on live sessions and tags success/fail via ctx.tagger",
+                    "The evals.yml CI workflow",
+                    "mock_tools"
+                ],
+                a: 1,
+                ex: "on_session_end is not simulation-only — every prod session gets 8 verdicts + a hard outcome tag. That's (trajectory, reward) telemetry, today, enabling filtered SFT / DPO / offline RL."
+            },
+            {
+                q: "Judge-only reward's biggest failure mode — and LiveKit's existing mitigation?",
+                opts: [
+                    "Latency; response caching",
+                    "Cost; smaller judge models",
+                    "Reward hacking — charming wrong-state rollouts score high; the verifier AND-gate on ground-truth state kills them",
+                    "Variance; temperature 0"
+                ],
+                a: 2,
+                ex: "Rollout C in the playground: wrong slot, J=0.81. Under judge-heavy blends it gets positive advantage. The state-check veto (already shipped) is the defense — keep it as a multiplicative gate in the RL reward."
+            }
+        ];
+        var quizBox = document.getElementById("quizBox");
+        var quizScoreEl = document.getElementById("quizScore");
+        var quizTotalEl = document.getElementById("quizTotal");
+        var quizResetBtn = document.getElementById("quizReset");
+        var answered = {};
+        var score = 0;
+
+        function renderQuiz() {
+            if (!quizBox) return;
+            quizBox.innerHTML = "";
+            score = 0;
+            answered = {};
+            if (quizTotalEl) quizTotalEl.textContent = String(QUIZ.length);
+            if (quizScoreEl) quizScoreEl.textContent = "0";
+            QUIZ.forEach(function (item, qi) {
+                var qd = document.createElement("div");
+                qd.className = "q";
+                var h = document.createElement("p");
+                h.innerHTML = "<b>Q" + (qi + 1) + ".</b> " + item.q;
+                qd.appendChild(h);
+                var opts = document.createElement("div");
+                opts.className = "opts";
+                var fb = document.createElement("div");
+                fb.className = "fb";
+                item.opts.forEach(function (opt, oi) {
+                    var b = document.createElement("button");
+                    b.textContent = opt;
+                    b.addEventListener("click", function () {
+                        if (answered[qi] !== undefined) return;
+                        answered[qi] = oi;
+                        var kids = opts.children;
+                        if (oi === item.a) {
+                            b.classList.add("correct");
+                            score++;
+                            fb.innerHTML = "<b>Correct.</b> " + item.ex;
+                        } else {
+                            b.classList.add("wrong");
+                            if (kids[item.a]) kids[item.a].classList.add("correct");
+                            fb.innerHTML = "<b>Not quite.</b> " + item.ex;
+                        }
+                        if (quizScoreEl) quizScoreEl.textContent = String(score);
+                    });
+                    opts.appendChild(b);
+                });
+                qd.appendChild(opts);
+                qd.appendChild(fb);
+                quizBox.appendChild(qd);
+            });
+        }
+        if (quizResetBtn) quizResetBtn.addEventListener("click", renderQuiz);
+        renderQuiz();
+    })();
+    </script>
+</body>
+</html>
