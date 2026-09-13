@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>RL Derivations Drill: Policy Gradients, GAE, DPO &amp; Agentic RL</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --radius: 14px;
+            --green: #16a34a;
+            --red: #dc2626;
+            --orange: #ea580c;
+            --purple: #7c3aed;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                --green: #4ade80;
+                --red: #f87171;
+                --orange: #fb923c;
+                --purple: #a78bfa;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: max(20px, env(safe-area-inset-top)) 20px 80px;
+        }
+        .back {
+            display: inline-block;
+            margin: 8px 0 20px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.3rem; margin: 2em 0 0.5em; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
+        h3 { font-size: 1.1rem; margin: 1.2em 0 0.4em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        code {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.85em;
+        }
+        pre {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            overflow-x: auto;
+            font-size: 0.85em;
+        }
+        pre code { background: none; border: none; padding: 0; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+        }
+        .card.warn {
+            border-left: 4px solid var(--orange);
+        }
+        .card.key {
+            border-left: 4px solid var(--accent);
+        }
+        .card.green {
+            border-left: 4px solid var(--green);
+        }
+        details {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 0 18px;
+            margin: 12px 0;
+            background: var(--card);
+        }
+        summary {
+            cursor: pointer;
+            padding: 16px 0;
+            font-weight: 600;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after {
+            content: "+";
+            color: var(--muted);
+            font-size: 1.4rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        button {
+            font: inherit;
+            font-weight: 600;
+            color: #fff;
+            background: var(--accent);
+            border: none;
+            border-radius: 999px;
+            padding: 12px 22px;
+            min-height: 48px;
+            min-width: 48px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        button:active { transform: scale(0.96); }
+        .ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+        input[type="range"] { width: 100%; height: 44px; }
+        footer {
+            margin-top: 3em;
+            padding-top: 1.2em;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+
+        /* === Nav pills === */
+        .nav-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 0 0 2em;
+            padding: 0;
+            list-style: none;
+        }
+        .nav-pills a {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            color: var(--fg);
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 500;
+            white-space: nowrap;
+            min-height: 36px;
+            line-height: 1.6;
+        }
+        .nav-pills a:active { background: var(--accent); color: #fff; }
+
+        /* === Math display === */
+        .math {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.92em;
+            line-height: 1.7;
+            overflow-x: auto;
+            padding: 4px 0;
+        }
+        .math-block {
+            display: block;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            margin: 0.8em 0;
+            overflow-x: auto;
+            white-space: nowrap;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.88em;
+            line-height: 1.8;
+        }
+        .math-block .line { display: block; white-space: nowrap; }
+        .hl { color: var(--accent); font-weight: 700; }
+        .fade { opacity: 0.35; text-decoration: line-through; }
+        .strike-anim {
+            transition: opacity 0.6s, text-decoration-color 0.6s;
+        }
+
+        /* === Stepper === */
+        .stepper {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin: 1em 0;
+        }
+        .stepper-display {
+            min-height: 120px;
+            margin-bottom: 14px;
+        }
+        .stepper-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .stepper-counter {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-left: auto;
+        }
+        .step-line {
+            margin: 4px 0;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: background 0.3s, opacity 0.3s;
+        }
+        .step-line.active {
+            background: color-mix(in srgb, var(--accent) 15%, transparent);
+            font-weight: 600;
+        }
+        .step-line.inactive {
+            opacity: 0.45;
+        }
+
+        /* === Two-card comparison === */
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 1em 0;
+        }
+        @media (max-width: 520px) {
+            .compare-grid { grid-template-columns: 1fr; }
+        }
+        .compare-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+        }
+        .compare-card h4 {
+            margin: 0 0 8px;
+            font-size: 1rem;
+        }
+        .compare-card .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .badge-blue { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
+        .badge-purple { background: color-mix(in srgb, var(--purple) 20%, transparent); color: var(--purple); }
+
+        /* === Slider widget === */
+        .slider-widget {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin: 1em 0;
+        }
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .slider-row label {
+            font-weight: 600;
+            white-space: nowrap;
+            min-width: 40px;
+        }
+        .slider-readout {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-weight: 700;
+            font-size: 1.1em;
+            min-width: 50px;
+            text-align: right;
+        }
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 80px;
+            margin: 12px 0;
+        }
+        .bar-chart .bar {
+            flex: 1;
+            background: var(--accent);
+            border-radius: 4px 4px 0 0;
+            transition: height 0.3s;
+            min-width: 0;
+            position: relative;
+        }
+        .bar-chart .bar-label {
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.65rem;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .result-cell {
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 8px 10px;
+            text-align: center;
+        }
+        .result-cell .label {
+            font-size: 0.72rem;
+            color: var(--muted);
+            display: block;
+        }
+        .result-cell .value {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+        .bias-var-meter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 10px 0;
+            font-size: 0.85rem;
+        }
+        .bv-track {
+            flex: 1;
+            height: 8px;
+            background: linear-gradient(to right, var(--accent), var(--orange));
+            border-radius: 4px;
+            position: relative;
+        }
+        .bv-thumb {
+            position: absolute;
+            top: -6px;
+            width: 20px;
+            height: 20px;
+            background: var(--fg);
+            border-radius: 50%;
+            transition: left 0.3s;
+        }
+
+        /* === PPO plot === */
+        .ppo-plot {
+            position: relative;
+            width: 100%;
+            height: 220px;
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            margin: 1em 0;
+            overflow: hidden;
+        }
+        .ppo-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* === Four-card grid === */
+        .four-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 1em 0;
+        }
+        @media (max-width: 520px) {
+            .four-grid { grid-template-columns: 1fr; }
+        }
+        .four-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+        }
+        .four-card .num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+        .four-card h4 { margin: 4px 0 6px; font-size: 0.95rem; }
+        .four-card p { font-size: 0.88rem; margin: 0; }
+
+        /* === Comparison table === */
+        .tablewrap {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 1em 0;
+        }
+        .tablewrap table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            min-width: 500px;
+        }
+        .tablewrap th, .tablewrap td {
+            border: 1px solid var(--line);
+            padding: 8px 10px;
+            text-align: left;
+        }
+        .tablewrap th {
+            background: var(--card);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        /* === Quiz === */
+        .quiz-container { margin: 1em 0; }
+        .quiz-q {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 12px 0;
+        }
+        .quiz-q p { margin: 0 0 10px; font-weight: 600; }
+        .quiz-option {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: var(--bg);
+            color: var(--fg);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin: 6px 0;
+            min-height: 48px;
+            font-weight: 400;
+            font-size: 0.92rem;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .quiz-option:hover { border-color: var(--accent); }
+        .quiz-option.correct {
+            border-color: var(--green);
+            background: color-mix(in srgb, var(--green) 12%, var(--bg));
+        }
+        .quiz-option.wrong {
+            border-color: var(--red);
+            background: color-mix(in srgb, var(--red) 12%, var(--bg));
+        }
+        .quiz-option:disabled { cursor: default; opacity: 0.85; }
+        .quiz-explain {
+            margin-top: 8px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            display: none;
+        }
+        .quiz-explain.show { display: block; }
+        .quiz-explain.right { background: color-mix(in srgb, var(--green) 10%, var(--card)); color: var(--green); }
+        .quiz-explain.incorrect { background: color-mix(in srgb, var(--red) 10%, var(--card)); color: var(--red); }
+        .quiz-score {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin: 12px 0;
+        }
+
+        /* === Timeline widget === */
+        .timeline-widget {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin: 1em 0;
+        }
+        .timeline-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 8px 0;
+            font-size: 0.85rem;
+        }
+        .timeline-row .tl-label {
+            min-width: 50px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .timeline-track {
+            flex: 1;
+            height: 28px;
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+        .timeline-marker {
+            position: absolute;
+            top: 2px;
+            bottom: 2px;
+            border-radius: 4px;
+            transition: left 0.4s, width 0.4s, background 0.4s;
+        }
+        .timeline-step-label {
+            text-align: center;
+            font-size: 0.78rem;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        /* === Variance demo === */
+        .variance-demo {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin: 1em 0;
+        }
+        .variance-canvas {
+            width: 100%;
+            height: 160px;
+            border-radius: 8px;
+        }
+
+        /* === Checklist === */
+        .checklist {
+            list-style: none;
+            padding: 0;
+            margin: 0.5em 0;
+        }
+        .checklist li {
+            padding: 6px 0 6px 28px;
+            position: relative;
+            font-size: 0.92rem;
+        }
+        .checklist li::before {
+            content: "\2713";
+            position: absolute;
+            left: 0;
+            color: var(--green);
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>RL Derivations Drill: Policy Gradients, GAE, DPO &amp; Agentic RL</h1>
+        <p class="meta">Added 2026-09-13</p>
+
+        <nav>
+            <ul class="nav-pills">
+                <li><a href="#s1">1. On/Off-Policy</a></li>
+                <li><a href="#s2">2. Policy Gradient</a></li>
+                <li><a href="#s3">3. Baselines</a></li>
+                <li><a href="#s4">4. GAE</a></li>
+                <li><a href="#s5">5. PPO Clip</a></li>
+                <li><a href="#s6">6. DPO</a></li>
+                <li><a href="#s7">7. Agentic RL</a></li>
+                <li><a href="#s8">8. Env &amp; Reward</a></li>
+                <li><a href="#quiz">Quiz</a></li>
+            </ul>
+        </nav>
+
+        <!-- ============================== SECTION 1 ============================== -->
+        <h2 id="s1">1. On-Policy vs Off-Policy, and &pi;<sub>old</sub> vs &pi;<sub>ref</sub></h2>
+
+        <p><strong>On-policy:</strong> the gradient is estimated from data sampled by the <em>current</em> policy. <strong>Off-policy:</strong> data comes from a different (older or other) policy.</p>
+
+        <p><strong>PPO is "approximately on-policy."</strong> It takes multiple gradient epochs over a batch sampled from &pi;<sub>old</sub>, correcting for drift with the importance-sampling ratio:</p>
+
+        <div class="math-block">
+            r<sub>t</sub>(&theta;) = &pi;<sub>&theta;</sub>(a<sub>t</sub>|s<sub>t</sub>) / &pi;<sub>old</sub>(a<sub>t</sub>|s<sub>t</sub>)
+        </div>
+
+        <p>This ratio is clipped to [1&minus;&epsilon;, 1+&epsilon;]. &pi;<sub>old</sub> is refreshed every rollout iteration.</p>
+
+        <div class="card warn">
+            <strong>The distinction people fumble:</strong> &pi;<sub>old</sub> and &pi;<sub>ref</sub> are <em>different objects</em> with different roles and different update cadences. Toggle the cards below to compare them side by side.
+        </div>
+
+        <div class="compare-grid">
+            <div class="compare-card">
+                <span class="badge badge-blue">&pi;<sub>old</sub></span>
+                <h4>Importance-Sampling Anchor</h4>
+                <p style="font-size:0.88rem"><strong>Role:</strong> The policy that generated the current batch of data. Used to compute the probability ratio r<sub>t</sub>(&theta;) for the clipped surrogate objective.</p>
+                <p style="font-size:0.88rem"><strong>Updated:</strong> Every rollout boundary &mdash; snaps to &pi;<sub>&theta;</sub> at the start of each new data-collection phase.</p>
+                <p style="font-size:0.88rem"><strong>Lives in:</strong> PPO, GRPO, any algorithm using IS correction.</p>
+            </div>
+            <div class="compare-card">
+                <span class="badge badge-purple">&pi;<sub>ref</sub></span>
+                <h4>KL-Penalty Anchor</h4>
+                <p style="font-size:0.88rem"><strong>Role:</strong> The frozen SFT checkpoint. Used as the reference distribution in the KL-divergence penalty D<sub>KL</sub>(&pi;<sub>&theta;</sub> &Vert; &pi;<sub>ref</sub>) that prevents the policy from drifting too far from the initial well-behaved model.</p>
+                <p style="font-size:0.88rem"><strong>Updated:</strong> <em>Never</em> &mdash; frozen for the entire training run.</p>
+                <p style="font-size:0.88rem"><strong>Lives in:</strong> RLHF / DPO &mdash; anywhere KL regularisation is used.</p>
+            </div>
+        </div>
+
+        <h3>Timeline: who moves when?</h3>
+        <p style="font-size:0.9rem">Press <strong>Step</strong> to advance training. Watch &pi;<sub>&theta;</sub> update each step, &pi;<sub>old</sub> snap to &pi;<sub>&theta;</sub> at rollout boundaries (every 4 steps), and &pi;<sub>ref</sub> never move.</p>
+
+        <div class="timeline-widget" id="timeline-widget">
+            <div class="timeline-row">
+                <span class="tl-label" style="color:var(--accent)">&pi;<sub>&theta;</sub></span>
+                <div class="timeline-track">
+                    <div class="timeline-marker" id="tl-theta" style="background:var(--accent); width:16px; left:0; border-radius:50%;"></div>
+                </div>
+            </div>
+            <div class="timeline-row">
+                <span class="tl-label" style="color:var(--orange)">&pi;<sub>old</sub></span>
+                <div class="timeline-track">
+                    <div class="timeline-marker" id="tl-old" style="background:var(--orange); width:16px; left:0; border-radius:50%;"></div>
+                </div>
+            </div>
+            <div class="timeline-row">
+                <span class="tl-label" style="color:var(--purple)">&pi;<sub>ref</sub></span>
+                <div class="timeline-track">
+                    <div class="timeline-marker" id="tl-ref" style="background:var(--purple); width:16px; left:0; border-radius:50%;"></div>
+                </div>
+            </div>
+            <div class="timeline-step-label" id="tl-step-label">Step 0 &mdash; press Step to begin</div>
+            <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+                <button id="tl-step-btn" style="font-size:0.9rem; padding:10px 20px;">Step</button>
+                <button id="tl-reset-btn" class="ghost" style="font-size:0.9rem; padding:10px 20px;">Reset</button>
+            </div>
+        </div>
+
+
+        <!-- ============================== SECTION 2 ============================== -->
+        <h2 id="s2">2. The Policy Gradient Theorem (Full Derivation)</h2>
+
+        <p>Step through one algebraic move at a time. The <span class="hl">highlighted</span> line is the current move.</p>
+
+        <div class="stepper" id="pg-stepper">
+            <div class="stepper-display" id="pg-display"></div>
+            <div class="stepper-controls">
+                <button id="pg-prev" class="ghost" style="font-size:0.85rem; padding:8px 18px;">Prev</button>
+                <button id="pg-next" style="font-size:0.85rem; padding:8px 18px;">Next</button>
+                <span class="stepper-counter" id="pg-counter"></span>
+            </div>
+        </div>
+
+        <details>
+            <summary>Worked example: 2-armed bandit</summary>
+            <p>Policy: &pi;(a<sub>1</sub>) = 0.7, &pi;(a<sub>2</sub>) = 0.3. Rewards: r(a<sub>1</sub>) = 1, r(a<sub>2</sub>) = 5.</p>
+            <p><strong>Expected return:</strong> J = 0.7 &times; 1 + 0.3 &times; 5 = <strong>2.2</strong></p>
+            <p>The policy gradient for each arm (using softmax parameterisation so &nabla; log &pi;(a<sub>i</sub>) = 1 &minus; &pi;(a<sub>i</sub>) for the chosen arm):</p>
+            <div class="math-block">
+                <span class="line">Arm 1: &pi;(a<sub>1</sub>) &times; &nabla; log &pi;(a<sub>1</sub>) &times; r(a<sub>1</sub>)</span>
+                <span class="line">&nbsp;&nbsp;= 0.7 &times; (1 &minus; 0.7) &times; 1 = 0.7 &times; 0.3 &times; 1 = <strong>+0.21</strong></span>
+                <span class="line">Arm 2: &pi;(a<sub>2</sub>) &times; &nabla; log &pi;(a<sub>2</sub>) &times; r(a<sub>2</sub>)</span>
+                <span class="line">&nbsp;&nbsp;= 0.3 &times; (1 &minus; 0.3) &times; 5 = 0.3 &times; 0.7 &times; 5 = <strong>+1.05</strong></span>
+            </div>
+            <p>The gradient signal for arm 2 is <strong>5&times; larger</strong> despite being chosen less often. The high-reward, low-probability arm gets pushed up &mdash; exactly what we want. The gradient naturally amplifies underexplored, high-reward actions.</p>
+        </details>
+
+
+        <!-- ============================== SECTION 3 ============================== -->
+        <h2 id="s3">3. Baselines and the 3-Line Unbiasedness Proof</h2>
+
+        <p>A baseline b(s) is any function of <strong>state only</strong> subtracted from the return:</p>
+        <div class="math-block">
+            &nabla;J = E[&Sigma;<sub>t</sub> &nabla; log &pi;(a<sub>t</sub>|s<sub>t</sub>) (R &minus; b(s<sub>t</sub>))]
+        </div>
+        <p>Purpose: variance reduction. Hard requirement: <strong>b must not depend on the action.</strong></p>
+
+        <h3>The proof (3 lines, each expandable)</h3>
+
+        <div class="card key">
+            <p style="margin:0 0 8px;font-weight:600;">We want to show: E<sub>a~&pi;</sub>[&nabla;<sub>&theta;</sub> log &pi;<sub>&theta;</sub>(a|s) &middot; b(s)] = 0</p>
+
+            <details style="background:var(--bg); border-color:var(--line); margin:6px 0;">
+                <summary style="font-size:0.92rem;">Line 1: b(s) &Sigma;<sub>a</sub> &pi;<sub>&theta;</sub>(a|s) &nabla;<sub>&theta;</sub> log &pi;<sub>&theta;</sub>(a|s)</summary>
+                <p style="font-size:0.88rem;">b(s) doesn't depend on a, so it pulls out of the expectation / weighted sum over actions.</p>
+            </details>
+
+            <details style="background:var(--bg); border-color:var(--line); margin:6px 0;">
+                <summary style="font-size:0.92rem;">Line 2: = b(s) &Sigma;<sub>a</sub> &nabla;<sub>&theta;</sub> &pi;<sub>&theta;</sub>(a|s)</summary>
+                <p style="font-size:0.88rem;">Log-derivative trick <em>in reverse</em>: &pi; &nabla; log &pi; = &pi; &middot; (&nabla;&pi;/&pi;) = &nabla;&pi;.</p>
+            </details>
+
+            <details style="background:var(--bg); border-color:var(--line); margin:6px 0;">
+                <summary style="font-size:0.92rem;">Line 3: = b(s) &nabla;<sub>&theta;</sub> &Sigma;<sub>a</sub> &pi;<sub>&theta;</sub>(a|s) = b(s) &nabla;<sub>&theta;</sub> 1 = <strong>0</strong></summary>
+                <p style="font-size:0.88rem;">Probabilities sum to 1. The gradient of a constant is 0. QED.</p>
+            </details>
+        </div>
+
+        <div class="card green">
+            <strong>GRPO connection:</strong> GRPO&rsquo;s group-mean reward baseline is valid because it&rsquo;s computed from <em>other rollouts for the same prompt</em>, not from the current action&rsquo;s identity. An action-dependent "baseline" would corrupt the gradient.
+        </div>
+
+        <h3>Variance demo: baseline effect</h3>
+        <p style="font-size:0.9rem;">Each dot is a sampled gradient estimate. <strong>b = 0</strong> gives a wide spread; <strong>b = V(s)</strong> keeps the same mean but tighter spread. Press Sample to draw 40 new estimates.</p>
+
+        <div class="variance-demo">
+            <canvas class="variance-canvas" id="variance-canvas"></canvas>
+            <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+                <button id="var-sample-btn" style="font-size:0.85rem; padding:8px 18px;">Sample</button>
+                <span style="font-size:0.82rem; color:var(--muted); align-self:center;">Left = no baseline &nbsp;|&nbsp; Right = V(s) baseline</span>
+            </div>
+        </div>
+
+
+        <!-- ============================== SECTION 4 ============================== -->
+        <h2 id="s4">4. TD Residual and GAE (&lambda; Slider)</h2>
+
+        <h3>TD Residual</h3>
+        <div class="math-block">
+            &delta;<sub>t</sub> = r<sub>t</sub> + <span class="hl">&gamma;</span> V(s<sub>t+1</sub>) &minus; V(s<sub>t</sub>)
+        </div>
+
+        <div class="card warn">
+            <strong>Common error:</strong> dropping the &gamma; from &delta;<sub>t</sub>. The discount factor multiplies V(s<sub>t+1</sub>), not just the return. Without it the residual overweights future value.
+        </div>
+
+        <h3>Generalised Advantage Estimation</h3>
+        <div class="math-block">
+            <span class="line">&Acirc;<sub>t</sub><sup>GAE(&gamma;,&lambda;)</sup> = &Sigma;<sub>l=0</sub><sup>&infin;</sup> (&gamma;&lambda;)<sup>l</sup> &middot; &delta;<sub>t+l</sub></span>
+        </div>
+
+        <p>This is a <strong>discounted sum over future residuals</strong> &mdash; not a moving average of past ones (common misconception).</p>
+
+        <ul>
+            <li><strong>&lambda; = 0</strong> &rarr; &Acirc;<sub>t</sub> = &delta;<sub>t</sub> (single one-step TD residual). Trusts the critic: <em>low variance, high bias</em>.</li>
+            <li><strong>&lambda; = 1</strong> &rarr; &Acirc;<sub>t</sub> = &Sigma;<sub>l</sub> &gamma;<sup>l</sup> &delta;<sub>t+l</sub>, which telescopes to (&Sigma;<sub>l</sub> &gamma;<sup>l</sup> r<sub>t+l</sub>) &minus; V(s<sub>t</sub>) &mdash; the Monte-Carlo return minus baseline. <em>Unbiased, high variance</em>.</li>
+        </ul>
+
+        <details>
+            <summary>Telescoping proof (&lambda; = 1 reduces to MC)</summary>
+            <div class="math-block">
+                <span class="line">&Acirc;<sub>t</sub> = &Sigma;<sub>l=0</sub><sup>T&minus;t</sup> &gamma;<sup>l</sup> &delta;<sub>t+l</sub></span>
+                <span class="line">= &Sigma;<sub>l=0</sub><sup>T&minus;t</sup> &gamma;<sup>l</sup> [r<sub>t+l</sub> + &gamma;V(s<sub>t+l+1</sub>) &minus; V(s<sub>t+l</sub>)]</span>
+                <span class="line">= &Sigma;<sub>l</sub> &gamma;<sup>l</sup> r<sub>t+l</sub> + &Sigma;<sub>l</sub> &gamma;<sup>l+1</sup>V(s<sub>t+l+1</sub>) &minus; &Sigma;<sub>l</sub> &gamma;<sup>l</sup>V(s<sub>t+l</sub>)</span>
+                <span class="line">The two V sums telescope: most terms cancel pairwise.</span>
+                <span class="line">= &Sigma;<sub>l</sub> &gamma;<sup>l</sup> r<sub>t+l</sub> + &gamma;<sup>T&minus;t+1</sup>V(s<sub>T+1</sub>) &minus; V(s<sub>t</sub>)</span>
+                <span class="line">With V(s<sub>terminal</sub>) = 0: = (&Sigma;<sub>l</sub> &gamma;<sup>l</sup> r<sub>t+l</sub>) &minus; V(s<sub>t</sub>) = G<sub>t</sub> &minus; V(s<sub>t</sub>)</span>
+            </div>
+        </details>
+
+        <h3>&lambda; slider &mdash; live computation</h3>
+        <p style="font-size:0.9rem;">Toy trajectory: 5 steps, rewards [1, 0, 0, 2, 10], V(s) = [5, 4, 3, 6, 8], V(terminal) = 0, &gamma; = 0.9. Drag &lambda; and watch the weights, &delta; values, and resulting &Acirc;<sub>0</sub> update live.</p>
+
+        <div class="slider-widget" id="gae-widget">
+            <div class="slider-row">
+                <label>&lambda;</label>
+                <input type="range" id="lambda-slider" min="0" max="100" value="95" step="1" style="flex:1;">
+                <span class="slider-readout" id="lambda-readout">0.95</span>
+            </div>
+
+            <div style="margin:12px 0;">
+                <div style="font-size:0.82rem; color:var(--muted); margin-bottom:4px;">Weights (&gamma;&lambda;)<sup>l</sup> for l = 0..4</div>
+                <div class="bar-chart" id="gae-bars" style="height:60px;"></div>
+            </div>
+
+            <div style="font-size:0.82rem; color:var(--muted); margin:24px 0 4px;">&delta; values (r<sub>t</sub> + &gamma;V(s<sub>t+1</sub>) &minus; V(s<sub>t</sub>))</div>
+            <div class="result-grid" id="gae-deltas"></div>
+
+            <div style="margin-top:12px;">
+                <div class="result-grid">
+                    <div class="result-cell">
+                        <span class="label">&Acirc;<sub>0</sub><sup>GAE</sup></span>
+                        <span class="value" id="gae-result"></span>
+                    </div>
+                    <div class="result-cell">
+                        <span class="label">Interpretation</span>
+                        <span class="value" id="gae-interp" style="font-size:0.78rem; font-weight:500;"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bias-var-meter">
+                <span style="font-size:0.78rem;">TD(0): biased, quiet</span>
+                <div class="bv-track">
+                    <div class="bv-thumb" id="bv-thumb"></div>
+                </div>
+                <span style="font-size:0.78rem;">MC: unbiased, noisy</span>
+            </div>
+        </div>
+
+
+        <!-- ============================== SECTION 5 ============================== -->
+        <h2 id="s5">5. PPO&rsquo;s Clipped Objective</h2>
+
+        <div class="math-block">
+            L<sup>CLIP</sup>(&theta;) = E<sub>t</sub>[ min( r<sub>t</sub>(&theta;) &Acirc;<sub>t</sub>, clip(r<sub>t</sub>(&theta;), 1&minus;&epsilon;, 1+&epsilon;) &Acirc;<sub>t</sub> ) ]
+        </div>
+
+        <p>Toggle between &Acirc; &gt; 0 and &Acirc; &lt; 0 to see how the objective shapes the gradient.</p>
+
+        <div style="margin: 10px 0; display:flex; gap:10px;">
+            <button id="ppo-pos-btn" style="font-size:0.85rem; padding:8px 18px;">Show &Acirc; &gt; 0</button>
+            <button id="ppo-neg-btn" class="ghost" style="font-size:0.85rem; padding:8px 18px;">Show &Acirc; &lt; 0</button>
+        </div>
+
+        <div class="ppo-plot">
+            <canvas class="ppo-canvas" id="ppo-canvas"></canvas>
+        </div>
+
+        <div class="card key" id="ppo-insight">
+            <strong>&Acirc; &gt; 0 (good action):</strong> The objective increases linearly in r until r = 1 + &epsilon;, then flattens. No incentive to push r above the clip &mdash; the policy has moved far enough from &pi;<sub>old</sub>.
+        </div>
+
+
+        <!-- ============================== SECTION 6 ============================== -->
+        <h2 id="s6">6. DPO&rsquo;s Closed-Form Trick (Stepper)</h2>
+
+        <p>Step through the derivation that eliminates the reward model entirely.</p>
+
+        <div class="stepper" id="dpo-stepper">
+            <div class="stepper-display" id="dpo-display"></div>
+            <div class="stepper-controls">
+                <button id="dpo-prev" class="ghost" style="font-size:0.85rem; padding:8px 18px;">Prev</button>
+                <button id="dpo-next" style="font-size:0.85rem; padding:8px 18px;">Next</button>
+                <span class="stepper-counter" id="dpo-counter"></span>
+            </div>
+        </div>
+
+        <details>
+            <summary>Why offline DPO underperforms online RL on reasoning / agentic tasks</summary>
+            <div class="four-grid" style="grid-template-columns:1fr;">
+                <div class="four-card">
+                    <div class="num">1</div>
+                    <h4>Stale, off-distribution data</h4>
+                    <p>The preference pairs were generated by a <em>different</em> policy. As the current policy improves, those pairs become increasingly irrelevant &mdash; distributional mismatch grows with every gradient step.</p>
+                </div>
+                <div class="four-card">
+                    <div class="num">2</div>
+                    <h4>No exploration</h4>
+                    <p>DPO can only reweight existing completions. It cannot discover new reasoning chains, new tool-use patterns, or novel solutions. Online RL generates fresh data from the current policy each iteration.</p>
+                </div>
+                <div class="four-card">
+                    <div class="num">3</div>
+                    <h4>Verifiable rewards remove offline&rsquo;s cost advantage</h4>
+                    <p>Where rewards are verifiable (math, code, task completion), online RL gets cheap, unhackable signal. The main reason to go offline &mdash; avoiding expensive human preference collection &mdash; disappears.</p>
+                </div>
+            </div>
+        </details>
+
+
+        <!-- ============================== SECTION 7 ============================== -->
+        <h2 id="s7">7. What Changes in Multi-Turn Agentic RL</h2>
+
+        <p>Four reasons multi-turn is fundamentally harder. Non-deterministic transitions come first because they break the simplifying assumption that makes single-turn RL tractable.</p>
+
+        <div class="four-grid">
+            <div class="four-card">
+                <div class="num">1</div>
+                <h4>Non-deterministic transitions</h4>
+                <p>The environment responds, and the policy doesn&rsquo;t control what comes back. In single-turn, the "transition" is just your own token appended &mdash; deterministic.</p>
+            </div>
+            <div class="four-card">
+                <div class="num">2</div>
+                <h4>Variable / unbounded episodes</h4>
+                <p>Termination must be designed: final-answer flag OR turn/token cap. Heterogeneous episode lengths create batching pain.</p>
+            </div>
+            <div class="four-card">
+                <div class="num">3</div>
+                <h4>Sparse terminal reward</h4>
+                <p>One scalar reward explains 15 decisions. In GRPO, every token inherits the same sequence-level advantage &mdash; credit assignment is extremely coarse.</p>
+            </div>
+            <div class="four-card">
+                <div class="num">4</div>
+                <h4>Per-rollout isolation</h4>
+                <p>One sandbox/browser per rollout. With G=16, that&rsquo;s 16 environments per prompt. GRPO-specific: group advantage compares G rollouts of the same prompt &mdash; only fair if all G start from an identical environment state. Leakage corrupts the baseline itself.</p>
+            </div>
+        </div>
+
+        <h3>Single-turn vs multi-turn comparison</h3>
+        <div class="tablewrap">
+            <table>
+                <thead>
+                    <tr><th>Dimension</th><th>Single-turn (RLHF/RLVR)</th><th>Multi-turn (Agentic RL)</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>State</strong></td><td>Token context (growing sequence)</td><td>LLM context + external env state</td></tr>
+                    <tr><td><strong>Action</strong></td><td>Next token</td><td>Text output OR tool call</td></tr>
+                    <tr><td><strong>Transition</strong></td><td>Deterministic (append token)</td><td>Non-deterministic (env responds)</td></tr>
+                    <tr><td><strong>Reward</strong></td><td>Terminal (end of completion)</td><td>Terminal and/or intermediate</td></tr>
+                    <tr><td><strong>Episode length</strong></td><td>Hundreds of tokens</td><td>Potentially unbounded</td></tr>
+                    <tr><td><strong>Isolation</strong></td><td>Not needed</td><td>Critical (containerised per rollout)</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>Token masking</h3>
+        <div class="card key">
+            <p><strong>Mask from the loss:</strong> system prompt, user messages, tool outputs. They stay in context but contribute zero gradient.</p>
+            <p><strong>Why:</strong> per-token loss = log &pi;(token) &times; advantage. Tool-output tokens weren&rsquo;t chosen by the policy. Gradients on them assign credit for <em>non-actions</em> and destabilise training. (Search-R1&rsquo;s retrieved-token masking ablation confirmed this.)</p>
+            <p style="font-weight:600;">"Masked from loss &ne; removed from context."</p>
+        </div>
+
+
+        <!-- ============================== SECTION 8 ============================== -->
+        <h2 id="s8">8. Environment &amp; Reward Design Reflexes</h2>
+
+        <div class="card">
+            <h3 style="margin-top:0;">Quick checklist</h3>
+            <ul class="checklist">
+                <li><strong>Termination:</strong> final-answer flag OR max-turns/token cap &mdash; never flag-only (the agent can loop forever).</li>
+                <li><strong>Verifiable reward first:</strong> exact match, test suite, environment-state check. LLM-judge is a last resort and every judge is a hacking surface.</li>
+                <li><strong>Never train against a live/mutable environment.</strong> Non-deterministic + non-resettable = unreproducible. Use a snapshot corpus or staging copy with reset (the Search-R1 pattern).</li>
+                <li><strong>Resettability to identical start state</strong> is what makes GRPO group advantages comparable. Without it, variance in initial conditions corrupts the baseline.</li>
+                <li><strong>Isolation:</strong> one sandbox per rollout. No shared state across rollouts within a group.</li>
+                <li><strong>Reward shaping bias:</strong> intermediate bonuses are a hacking surface. Prefer outcome-only; add shape only when the outcome signal is too sparse to learn from.</li>
+            </ul>
+        </div>
+
+
+        <!-- ============================== QUIZ ============================== -->
+        <h2 id="quiz">Quiz</h2>
+
+        <div class="quiz-score">Score: <span id="quiz-score-val">0</span> / <span id="quiz-total">10</span> &nbsp; <button id="quiz-reset-btn" class="ghost" style="font-size:0.8rem; padding:6px 16px; min-height:36px;">Reset</button></div>
+
+        <div class="quiz-container" id="quiz-container"></div>
+
+
+        <footer>
+            Personal explainer &middot; unlisted &middot; <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+
+    <script>
+    /* ============================== ALL JS IN ONE IIFE ============================== */
+    (function () {
+        "use strict";
+
+        /* ---------- helpers ---------- */
+        function $(id) { return document.getElementById(id); }
+        function qs(sel, ctx) { return (ctx || document).querySelector(sel); }
+        function qsa(sel, ctx) { return (ctx || document).querySelectorAll(sel); }
+
+        /* ============================== SECTION 1: TIMELINE ============================== */
+        (function timelineWidget() {
+            var theta = $("tl-theta"), old = $("tl-old"), ref = $("tl-ref"), label = $("tl-step-label");
+            var stepBtn = $("tl-step-btn"), resetBtn = $("tl-reset-btn");
+            if (!theta || !stepBtn) return;
+            var step = 0, maxSteps = 16, rolloutSize = 4;
+            function pct(s) { return (s / maxSteps * 100) + "%"; }
+            function render() {
+                var thetaPos = pct(step);
+                theta.style.left = thetaPos;
+                var rolloutBoundary = Math.floor(step / rolloutSize) * rolloutSize;
+                old.style.left = pct(rolloutBoundary);
+                ref.style.left = "0%";
+                var isRB = (step > 0 && step % rolloutSize === 0);
+                label.textContent = "Step " + step + (isRB ? " — rollout boundary! π_old snaps to π_θ" : step === 0 ? " — press Step to begin" : "");
+            }
+            stepBtn.addEventListener("click", function () {
+                if (step < maxSteps) { step++; render(); }
+            });
+            resetBtn.addEventListener("click", function () {
+                step = 0; render();
+            });
+            render();
+        })();
+
+        /* ============================== SECTION 2: PG STEPPER ============================== */
+        (function pgStepper() {
+            var display = $("pg-display"), counter = $("pg-counter");
+            var prevBtn = $("pg-prev"), nextBtn = $("pg-next");
+            if (!display || !prevBtn) return;
+
+            var steps = [
+                {
+                    lines: [
+                        { text: "J(θ) = E_{τ~π_θ}[R(τ)] = Σ_τ p_θ(τ) R(τ)", active: true },
+                    ],
+                    note: "Start: the objective is the expected return over trajectories sampled from π_θ."
+                },
+                {
+                    lines: [
+                        { text: "J(θ) = Σ_τ p_θ(τ) R(τ)", active: false },
+                        { text: "∇_θ J = Σ_τ ∇_θ p_θ(τ) · R(τ)", active: true },
+                    ],
+                    note: "Differentiate w.r.t. θ. The gradient passes through p_θ(τ); R(τ) is a scalar."
+                },
+                {
+                    lines: [
+                        { text: "∇_θ J = Σ_τ ∇_θ p_θ(τ) · R(τ)", active: false },
+                        { text: "Log-derivative trick: ∇p = p ∇ log p", active: true },
+                        { text: "∇_θ J = Σ_τ p_θ(τ) ∇_θ log p_θ(τ) · R(τ)", active: true },
+                        { text: "       = E_τ[∇_θ log p_θ(τ) · R(τ)]", active: true },
+                    ],
+                    note: "The log-derivative trick converts ∇p into p · ∇ log p, giving us an expectation we can sample."
+                },
+                {
+                    lines: [
+                        { text: "Trajectory factorisation:", active: true },
+                        { text: "p_θ(τ) = p(s₀) ∏_t π_θ(a_t|s_t) · p(s_{t+1}|s_t,a_t)", active: true },
+                    ],
+                    note: "Factor the trajectory probability into initial state × policy actions × dynamics."
+                },
+                {
+                    lines: [
+                        { text: "log p_θ(τ) = log p(s₀)", active: false },
+                        { text: "            + Σ_t log π_θ(a_t|s_t)", active: true },
+                        { text: "            + Σ_t log p(s_{t+1}|s_t,a_t)", active: false },
+                    ],
+                    note: "Take the log. Three additive terms."
+                },
+                {
+                    lines: [
+                        { text: "∇_θ log p_θ(τ) = ∇_θ log p(s₀)", cls: "fade" },
+                        { text: "                  + Σ_t ∇_θ log π_θ(a_t|s_t)", active: true },
+                        { text: "                  + Σ_t ∇_θ log p(s_{t+1}|s_t,a_t)", cls: "fade" },
+                    ],
+                    note: "Differentiate. The initial-state and dynamics terms DO NOT depend on θ — their gradients are ZERO. This is why the method is model-free: the environment model drops out."
+                },
+                {
+                    lines: [
+                        { text: "∇_θ J = E_τ[ (Σ_t ∇_θ log π_θ(a_t|s_t)) · R(τ) ]", active: true },
+                    ],
+                    note: "Result: the policy gradient. Only the policy log-probabilities appear — no environment model needed."
+                }
+            ];
+
+            var idx = 0;
+            function render() {
+                var s = steps[idx];
+                var html = "";
+                for (var i = 0; i < s.lines.length; i++) {
+                    var l = s.lines[i];
+                    var cls = "step-line";
+                    if (l.active) cls += " active";
+                    else if (l.cls === "fade") cls += " inactive fade";
+                    else cls += " inactive";
+                    html += '<div class="' + cls + '">' + l.text + '</div>';
+                }
+                html += '<p style="font-size:0.85rem; color:var(--muted); margin-top:12px;">' + s.note + '</p>';
+                display.innerHTML = html;
+                counter.textContent = (idx + 1) + " / " + steps.length;
+                prevBtn.disabled = (idx === 0);
+                nextBtn.disabled = (idx === steps.length - 1);
+            }
+            prevBtn.addEventListener("click", function () { if (idx > 0) { idx--; render(); } });
+            nextBtn.addEventListener("click", function () { if (idx < steps.length - 1) { idx++; render(); } });
+            render();
+        })();
+
+        /* ============================== SECTION 3: VARIANCE DEMO ============================== */
+        (function varianceDemo() {
+            var canvas = $("variance-canvas"), btn = $("var-sample-btn");
+            if (!canvas || !btn) return;
+            var ctx = canvas.getContext("2d");
+
+            function getColors() {
+                var s = getComputedStyle(document.documentElement);
+                return {
+                    bg: s.getPropertyValue("--bg").trim() || "#ffffff",
+                    fg: s.getPropertyValue("--fg").trim() || "#1a1a1a",
+                    accent: s.getPropertyValue("--accent").trim() || "#2563eb",
+                    muted: s.getPropertyValue("--muted").trim() || "#6b7280",
+                    green: s.getPropertyValue("--green").trim() || "#16a34a",
+                    line: s.getPropertyValue("--line").trim() || "#e5e7eb"
+                };
+            }
+
+            function draw() {
+                var dpr = window.devicePixelRatio || 1;
+                var rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+                var w = rect.width, h = rect.height;
+                var c = getColors();
+
+                ctx.fillStyle = c.bg;
+                ctx.fillRect(0, 0, w, h);
+
+                // Axis
+                var midY = h / 2;
+                ctx.strokeStyle = c.line;
+                ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(w, midY); ctx.stroke();
+
+                // Draw separator
+                ctx.strokeStyle = c.muted;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath(); ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h); ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Labels
+                ctx.fillStyle = c.muted;
+                ctx.font = "12px -apple-system, sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText("b = 0", w * 0.25, 16);
+                ctx.fillText("b = V(s)", w * 0.75, 16);
+
+                // True mean
+                var trueMean = 2.5; // arbitrary
+                var scale = (h - 40) / 10; // map gradient values
+                var meanY = midY - trueMean * scale / 2;
+
+                ctx.strokeStyle = c.green;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 3]);
+                ctx.beginPath(); ctx.moveTo(0, meanY); ctx.lineTo(w / 2, meanY); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(w / 2, meanY); ctx.lineTo(w, meanY); ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Sample dots
+                var n = 40;
+                // No baseline: mean=trueMean, high variance
+                ctx.fillStyle = c.accent;
+                for (var i = 0; i < n; i++) {
+                    var val = trueMean + (Math.random() - 0.5) * 8; // wide
+                    var x = 20 + Math.random() * (w / 2 - 40);
+                    var y = midY - val * scale / 2;
+                    y = Math.max(4, Math.min(h - 4, y));
+                    ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2); ctx.fill();
+                }
+                // With baseline: same mean, low variance
+                ctx.fillStyle = c.green;
+                for (var j = 0; j < n; j++) {
+                    var val2 = trueMean + (Math.random() - 0.5) * 2; // tight
+                    var x2 = w / 2 + 20 + Math.random() * (w / 2 - 40);
+                    var y2 = midY - val2 * scale / 2;
+                    y2 = Math.max(4, Math.min(h - 4, y2));
+                    ctx.beginPath(); ctx.arc(x2, y2, 3.5, 0, Math.PI * 2); ctx.fill();
+                }
+            }
+
+            btn.addEventListener("click", draw);
+            draw();
+            try {
+                window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+            } catch (e) { /* old browsers */ }
+            window.addEventListener("resize", draw);
+        })();
+
+        /* ============================== SECTION 4: GAE SLIDER ============================== */
+        (function gaeWidget() {
+            var slider = $("lambda-slider"), readout = $("lambda-readout");
+            var barsDiv = $("gae-bars"), deltasDiv = $("gae-deltas");
+            var resultEl = $("gae-result"), interpEl = $("gae-interp"), bvThumb = $("bv-thumb");
+            if (!slider || !readout) return;
+
+            var rewards = [1, 0, 0, 2, 10];
+            var V = [5, 4, 3, 6, 8, 0]; // V[5] = terminal
+            var gamma = 0.9;
+
+            // Precompute deltas: delta_t = r_t + gamma * V[t+1] - V[t]
+            var deltas = [];
+            for (var t = 0; t < 5; t++) {
+                deltas.push(rewards[t] + gamma * V[t + 1] - V[t]);
+            }
+            // deltas: [1+0.9*4-5, 0+0.9*3-4, 0+0.9*6-3, 2+0.9*8-6, 10+0.9*0-8]
+            // = [1+3.6-5, 0+2.7-4, 0+5.4-3, 2+7.2-6, 10+0-8]
+            // = [-0.4, -1.3, 2.4, 3.2, 2.0]
+
+            function update() {
+                var lam = slider.value / 100;
+                readout.textContent = lam.toFixed(2);
+
+                // Weights
+                var weights = [];
+                for (var l = 0; l < 5; l++) {
+                    weights.push(Math.pow(gamma * lam, l));
+                }
+
+                // Bars
+                var maxW = weights[0]; // always 1
+                var barsHtml = "";
+                for (var i = 0; i < 5; i++) {
+                    var hPct = (weights[i] / maxW * 100);
+                    barsHtml += '<div class="bar" style="height:' + hPct + '%;"><span class="bar-label">l=' + i + '</span></div>';
+                }
+                barsDiv.innerHTML = barsHtml;
+
+                // Deltas display
+                var dHtml = "";
+                for (var j = 0; j < 5; j++) {
+                    dHtml += '<div class="result-cell"><span class="label">&delta;<sub>' + j + '</sub></span><span class="value">' + deltas[j].toFixed(2) + '</span></div>';
+                }
+                deltasDiv.innerHTML = dHtml;
+
+                // GAE_0
+                var gae0 = 0;
+                for (var k = 0; k < 5; k++) {
+                    gae0 += weights[k] * deltas[k];
+                }
+                resultEl.textContent = gae0.toFixed(3);
+
+                // Interpretation
+                if (lam < 0.01) {
+                    interpEl.textContent = "TD(0): just δ₀";
+                } else if (lam > 0.99) {
+                    interpEl.textContent = "MC return − V(s₀)";
+                } else {
+                    interpEl.textContent = "λ=" + lam.toFixed(2) + " blend";
+                }
+
+                // Bias-variance thumb
+                if (bvThumb) {
+                    bvThumb.style.left = "calc(" + (lam * 100) + "% - " + (lam * 20).toFixed(1) + "px)";
+                }
+            }
+
+            slider.addEventListener("input", update);
+            update();
+        })();
+
+        /* ============================== SECTION 5: PPO PLOT ============================== */
+        (function ppoPlot() {
+            var canvas = $("ppo-canvas"), posBtn = $("ppo-pos-btn"), negBtn = $("ppo-neg-btn");
+            var insightEl = $("ppo-insight");
+            if (!canvas || !posBtn) return;
+            var ctx = canvas.getContext("2d");
+            var showPositive = true;
+            var eps = 0.2;
+
+            function getColors() {
+                var s = getComputedStyle(document.documentElement);
+                return {
+                    bg: s.getPropertyValue("--bg").trim() || "#ffffff",
+                    fg: s.getPropertyValue("--fg").trim() || "#1a1a1a",
+                    accent: s.getPropertyValue("--accent").trim() || "#2563eb",
+                    muted: s.getPropertyValue("--muted").trim() || "#6b7280",
+                    green: s.getPropertyValue("--green").trim() || "#16a34a",
+                    red: s.getPropertyValue("--red").trim() || "#dc2626",
+                    line: s.getPropertyValue("--line").trim() || "#e5e7eb",
+                    orange: s.getPropertyValue("--orange").trim() || "#ea580c"
+                };
+            }
+
+            function draw() {
+                var dpr = window.devicePixelRatio || 1;
+                var rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+                var w = rect.width, h = rect.height;
+                var c = getColors();
+
+                ctx.fillStyle = c.bg;
+                ctx.fillRect(0, 0, w, h);
+
+                var padL = 50, padR = 20, padT = 20, padB = 40;
+                var plotW = w - padL - padR, plotH = h - padT - padB;
+
+                // r axis: 0 to 2
+                var rMin = 0, rMax = 2;
+                function toX(r) { return padL + (r - rMin) / (rMax - rMin) * plotW; }
+                // L axis: depends on A sign
+                var lMin = showPositive ? -0.3 : -1.5;
+                var lMax = showPositive ? 1.5 : 0.3;
+                function toY(l) { return padT + (lMax - l) / (lMax - lMin) * plotH; }
+
+                // Grid
+                ctx.strokeStyle = c.line;
+                ctx.lineWidth = 1;
+                // Horizontal zero
+                ctx.beginPath(); ctx.moveTo(padL, toY(0)); ctx.lineTo(w - padR, toY(0)); ctx.stroke();
+                // Vertical r=1
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath(); ctx.moveTo(toX(1), padT); ctx.lineTo(toX(1), h - padB); ctx.stroke();
+                // Clip boundaries
+                ctx.strokeStyle = c.orange;
+                ctx.beginPath(); ctx.moveTo(toX(1 - eps), padT); ctx.lineTo(toX(1 - eps), h - padB); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(toX(1 + eps), padT); ctx.lineTo(toX(1 + eps), h - padB); ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Labels
+                ctx.fillStyle = c.muted;
+                ctx.font = "12px -apple-system, sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText("r(0)", toX(0), h - padB + 16);
+                ctx.fillText("r(1)", toX(1), h - padB + 16);
+                ctx.fillText("r(2)", toX(2), h - padB + 16);
+                ctx.fillText("1−ε", toX(1 - eps), h - padB + 28);
+                ctx.fillText("1+ε", toX(1 + eps), h - padB + 28);
+                ctx.textAlign = "right";
+                ctx.fillText("L", padL - 8, padT + 6);
+                ctx.fillText("r", w - padR + 4, h - padB + 16);
+
+                // Compute L^CLIP for a range of r values, A=+1 or A=-1
+                var A = showPositive ? 1 : -1;
+
+                // unclipped: r*A
+                // clipped: clip(r, 1-eps, 1+eps)*A
+                // L = min(unclipped, clipped)
+
+                ctx.lineWidth = 2.5;
+                ctx.strokeStyle = c.accent;
+                ctx.beginPath();
+                var nPts = 200;
+                for (var i = 0; i <= nPts; i++) {
+                    var r = rMin + (rMax - rMin) * i / nPts;
+                    var uncl = r * A;
+                    var cl = Math.max(1 - eps, Math.min(1 + eps, r)) * A;
+                    var L = Math.min(uncl, cl);
+                    var px = toX(r), py = toY(L);
+                    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+
+                // Mark flat regions
+                ctx.fillStyle = c.red;
+                ctx.font = "bold 11px -apple-system, sans-serif";
+                ctx.textAlign = "center";
+                if (showPositive) {
+                    // flat for r > 1+eps
+                    ctx.fillText("∇ = 0 (clipped)", toX(1.6), toY((1 + eps) * A) - 8);
+                } else {
+                    // flat for r < 1-eps
+                    ctx.fillText("∇ = 0 (clipped)", toX(0.4), toY((1 - eps) * A) - 8);
+                }
+            }
+
+            posBtn.addEventListener("click", function () {
+                showPositive = true;
+                posBtn.classList.remove("ghost");
+                negBtn.classList.add("ghost");
+                insightEl.innerHTML = '<strong>Â > 0 (good action):</strong> The objective increases linearly in r until r = 1 + ε, then flattens. No incentive to push r above the clip — the policy has moved far enough from π<sub>old</sub>.';
+                draw();
+            });
+            negBtn.addEventListener("click", function () {
+                showPositive = false;
+                negBtn.classList.remove("ghost");
+                posBtn.classList.add("ghost");
+                insightEl.innerHTML = '<strong>Â < 0 (bad action):</strong> The objective increases linearly as r drops (the policy suppresses the bad action), until r = 1 − ε, then flattens. No incentive to suppress the action further once the ratio is below the clip.';
+                draw();
+            });
+
+            draw();
+            try {
+                window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+            } catch (e) {}
+            window.addEventListener("resize", draw);
+        })();
+
+        /* ============================== SECTION 6: DPO STEPPER ============================== */
+        (function dpoStepper() {
+            var display = $("dpo-display"), counter = $("dpo-counter");
+            var prevBtn = $("dpo-prev"), nextBtn = $("dpo-next");
+            if (!display || !prevBtn) return;
+
+            var steps = [
+                {
+                    lines: [
+                        { text: "KL-regularised RLHF objective:", active: false },
+                        { text: "max_π E[r(x,y)] − β · KL(π ∥ π_ref)", active: true },
+                    ],
+                    note: "Start: maximise expected reward while staying close to the reference policy."
+                },
+                {
+                    lines: [
+                        { text: "This has a closed-form optimum:", active: false },
+                        { text: "π*(y|x) = (1/Z(x)) · π_ref(y|x) · exp(r(x,y)/β)", active: true },
+                        { text: "where Z(x) = Σ_y π_ref(y|x) exp(r(x,y)/β)", active: false },
+                    ],
+                    note: "The optimal policy is the reference policy reweighted by exponentiated reward, normalised by the intractable partition function Z(x)."
+                },
+                {
+                    lines: [
+                        { text: "Invert for r:", active: false },
+                        { text: "r(x,y) = β · log(π*(y|x) / π_ref(y|x)) + β · log Z(x)", active: true },
+                    ],
+                    note: "Rearrange: the reward is recoverable from the log-ratio of optimal and reference policies, plus a prompt-dependent constant."
+                },
+                {
+                    lines: [
+                        { text: "Plug into Bradley–Terry:", active: false },
+                        { text: "p(y_w ≻ y_l) = σ(r(x,y_w) − r(x,y_l))", active: true },
+                        { text: "= σ( β log(π*/π_ref)(y_w) + β log Z(x)", cls: "fade" },
+                        { text: "     − β log(π*/π_ref)(y_l) − β log Z(x) )", cls: "fade" },
+                    ],
+                    note: "The β log Z(x) term appears for BOTH completions (same prompt x) and CANCELS in the difference. This cancellation is the key insight."
+                },
+                {
+                    lines: [
+                        { text: "After Z(x) cancellation:", active: false },
+                        { text: "L_DPO = −E log σ(", active: true },
+                        { text: "  β log(π_θ(y_w|x)/π_ref(y_w|x))", active: true },
+                        { text: "  − β log(π_θ(y_l|x)/π_ref(y_l|x))", active: true },
+                        { text: ")", active: true },
+                    ],
+                    note: "The final DPO loss. No reward model, no partition function. The policy IS the implicit reward model. Just log-probs under π_θ and π_ref on the chosen and rejected completions."
+                }
+            ];
+
+            var idx = 0;
+            function render() {
+                var s = steps[idx];
+                var html = "";
+                for (var i = 0; i < s.lines.length; i++) {
+                    var l = s.lines[i];
+                    var cls = "step-line";
+                    if (l.active) cls += " active";
+                    else if (l.cls === "fade") cls += " inactive fade";
+                    else cls += " inactive";
+                    html += '<div class="' + cls + '">' + l.text + '</div>';
+                }
+                html += '<p style="font-size:0.85rem; color:var(--muted); margin-top:12px;">' + s.note + '</p>';
+                display.innerHTML = html;
+                counter.textContent = (idx + 1) + " / " + steps.length;
+                prevBtn.disabled = (idx === 0);
+                nextBtn.disabled = (idx === steps.length - 1);
+            }
+            prevBtn.addEventListener("click", function () { if (idx > 0) { idx--; render(); } });
+            nextBtn.addEventListener("click", function () { if (idx < steps.length - 1) { idx++; render(); } });
+            render();
+        })();
+
+        /* ============================== QUIZ ============================== */
+        (function quiz() {
+            var container = $("quiz-container"), scoreEl = $("quiz-score-val"), resetBtn = $("quiz-reset-btn");
+            if (!container || !scoreEl) return;
+
+            var questions = [
+                {
+                    q: "In the TD residual δ_t = r_t + γV(s_{t+1}) − V(s_t), what multiplies V(s_{t+1})?",
+                    opts: ["λ", "γ (the discount factor)", "1 (no multiplier)", "γλ"],
+                    correct: 1,
+                    explain: "The discount factor γ multiplies V(s_{t+1}). Dropping it is a common error that overweights future value."
+                },
+                {
+                    q: "When λ = 0, GAE reduces to:",
+                    opts: ["The full Monte-Carlo return minus V(s_t)", "A single one-step TD residual δ_t", "Zero (no advantage)", "The average of all δ values"],
+                    correct: 1,
+                    explain: "At λ=0, all weights (γλ)^l for l>0 are zero. Only δ_t survives — the one-step TD residual. Low variance, high bias."
+                },
+                {
+                    q: "When λ = 1, GAE reduces to:",
+                    opts: ["A single TD residual", "The full Monte-Carlo return minus V(s_t)", "The mean TD residual", "Zero"],
+                    correct: 1,
+                    explain: "At λ=1, the sum telescopes to (Σ γ^l r_{t+l}) − V(s_t), the MC return minus baseline. Unbiased but high variance."
+                },
+                {
+                    q: "Why must a baseline b(s) NOT depend on the action?",
+                    opts: [
+                        "It would make the gradient zero everywhere",
+                        "It would introduce bias into the gradient estimate",
+                        "It would increase variance instead of reducing it",
+                        "It would make the algorithm off-policy"
+                    ],
+                    correct: 1,
+                    explain: "The unbiasedness proof relies on b(s) pulling out of the sum over actions. If b depends on a, the Σ_a ∇π term no longer equals ∇(1) = 0, and the baseline adds bias."
+                },
+                {
+                    q: "π_old is refreshed ___; π_ref is refreshed ___.",
+                    opts: [
+                        "Every rollout boundary; never",
+                        "Never; every rollout boundary",
+                        "Every gradient step; every epoch",
+                        "Every epoch; every rollout boundary"
+                    ],
+                    correct: 0,
+                    explain: "π_old is the IS/clipping anchor, snapped to π_θ at each new data-collection phase. π_ref is the frozen SFT model, never updated."
+                },
+                {
+                    q: "In the DPO derivation, why does the partition function Z(x) cancel?",
+                    opts: [
+                        "Z(x) equals 1 by construction",
+                        "Both y_w and y_l share the same prompt x, so β log Z(x) appears in both terms and cancels in the difference",
+                        "The reference policy normalises Z(x) away",
+                        "Z(x) is approximated as constant during training"
+                    ],
+                    correct: 1,
+                    explain: "Bradley–Terry uses the DIFFERENCE r(x,y_w) − r(x,y_l). Since both completions share prompt x, the prompt-dependent β log Z(x) appears in both and subtracts out."
+                },
+                {
+                    q: "In multi-turn agentic RL, which tokens should be MASKED from the loss?",
+                    opts: [
+                        "Only the initial system prompt",
+                        "All tokens — use reward signal only",
+                        "All non-agent-generated tokens: system prompt, user messages, tool outputs",
+                        "Only tool outputs (user messages should be kept)"
+                    ],
+                    correct: 2,
+                    explain: "Tool outputs and user messages were not chosen by the policy. Gradients on them assign credit for non-actions and destabilise training. They remain in context for conditioning but contribute zero gradient."
+                },
+                {
+                    q: "What makes multi-turn transitions fundamentally different from single-turn?",
+                    opts: [
+                        "Multi-turn transitions are faster",
+                        "Single-turn transitions are non-deterministic",
+                        "Multi-turn transitions are non-deterministic — the environment’s response is outside the policy’s control",
+                        "There is no fundamental difference"
+                    ],
+                    correct: 2,
+                    explain: "In single-turn, the 'transition' is deterministic (your own token appended). In multi-turn, the environment responds unpredictably. This breaks the simplifying assumption that makes single-turn RL tractable."
+                },
+                {
+                    q: "In PPO’s clipped objective with Â > 0 and r > 1 + ε, the gradient is:",
+                    opts: [
+                        "Positive and large",
+                        "Negative (pushes ratio back down)",
+                        "Zero (the min selects the flat clipped branch)",
+                        "Undefined"
+                    ],
+                    correct: 2,
+                    explain: "When Â > 0 and r > 1+ε, the clipped term is (1+ε)Â (a constant), which the min selects because rÂ > (1+ε)Â. The gradient of a constant w.r.t. θ is zero."
+                },
+                {
+                    q: "Why should you never train against a live, mutable environment in agentic RL?",
+                    opts: [
+                        "It is too expensive",
+                        "Live environments are too slow",
+                        "Non-deterministic + non-resettable means results are unreproducible and GRPO group advantages become incomparable",
+                        "Live environments always have bugs"
+                    ],
+                    correct: 2,
+                    explain: "Resettability to an identical start state is what makes GRPO group advantages comparable. A live, mutable environment cannot guarantee identical starts across the G rollouts in a group, corrupting the baseline."
+                }
+            ];
+
+            var score = 0, answered = [];
+            var totalEl = $("quiz-total");
+            if (totalEl) totalEl.textContent = questions.length;
+
+            function renderQuiz() {
+                var html = "";
+                for (var i = 0; i < questions.length; i++) {
+                    var q = questions[i];
+                    html += '<div class="quiz-q" id="qq-' + i + '">';
+                    html += '<p>' + (i + 1) + '. ' + q.q + '</p>';
+                    for (var j = 0; j < q.opts.length; j++) {
+                        html += '<button class="quiz-option" data-q="' + i + '" data-opt="' + j + '">' + q.opts[j] + '</button>';
+                    }
+                    html += '<div class="quiz-explain" id="qe-' + i + '"></div>';
+                    html += '</div>';
+                }
+                container.innerHTML = html;
+
+                // Attach listeners
+                var btns = qsa(".quiz-option", container);
+                for (var k = 0; k < btns.length; k++) {
+                    btns[k].addEventListener("click", handleAnswer);
+                }
+            }
+
+            function handleAnswer(e) {
+                var btn = e.currentTarget;
+                var qi = parseInt(btn.getAttribute("data-q"), 10);
+                var oi = parseInt(btn.getAttribute("data-opt"), 10);
+                if (answered.indexOf(qi) !== -1) return;
+                answered.push(qi);
+
+                var q = questions[qi];
+                var isCorrect = (oi === q.correct);
+                if (isCorrect) score++;
+                scoreEl.textContent = score;
+
+                // Disable all options in this question
+                var allBtns = qsa('[data-q="' + qi + '"]', container);
+                for (var i = 0; i < allBtns.length; i++) {
+                    allBtns[i].disabled = true;
+                    var idx = parseInt(allBtns[i].getAttribute("data-opt"), 10);
+                    if (idx === q.correct) allBtns[i].classList.add("correct");
+                    else if (idx === oi && !isCorrect) allBtns[i].classList.add("wrong");
+                }
+
+                // Show explanation
+                var explainEl = $("qe-" + qi);
+                if (explainEl) {
+                    explainEl.textContent = (isCorrect ? "✓ Correct. " : "✗ Wrong. ") + q.explain;
+                    explainEl.className = "quiz-explain show " + (isCorrect ? "right" : "incorrect");
+                }
+            }
+
+            resetBtn.addEventListener("click", function () {
+                score = 0;
+                answered = [];
+                scoreEl.textContent = "0";
+                renderQuiz();
+            });
+
+            renderQuiz();
+        })();
+
+    })();
+    </script>
+</body>
+</html>
