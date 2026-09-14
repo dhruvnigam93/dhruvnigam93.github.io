@@ -1,0 +1,1880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>RL Environment &amp; Reward Design for Agentic LLM Training</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --radius: 14px;
+            --green: #16a34a;
+            --red: #dc2626;
+            --orange: #ea580c;
+            --purple: #7c3aed;
+            --teal: #0d9488;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                --green: #4ade80;
+                --red: #f87171;
+                --orange: #fb923c;
+                --purple: #a78bfa;
+                --teal: #2dd4bf;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: max(20px, env(safe-area-inset-top)) 20px 80px;
+        }
+        .back {
+            display: inline-block;
+            margin: 8px 0 20px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.3rem; margin: 2em 0 0.5em; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
+        h3 { font-size: 1.1rem; margin: 1.2em 0 0.4em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        code {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.85em;
+        }
+        pre {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            overflow-x: auto;
+            font-size: 0.85em;
+        }
+        pre code { background: none; border: none; padding: 0; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+        }
+        .card.warn { border-left: 4px solid var(--orange); }
+        .card.key { border-left: 4px solid var(--accent); }
+        .card.green { border-left: 4px solid var(--green); }
+        .card.red { border-left: 4px solid var(--red); }
+        details {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 0 18px;
+            margin: 12px 0;
+            background: var(--card);
+        }
+        summary {
+            cursor: pointer;
+            padding: 16px 0;
+            font-weight: 600;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after {
+            content: "+";
+            color: var(--muted);
+            font-size: 1.4rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        button {
+            font: inherit;
+            font-weight: 600;
+            color: #fff;
+            background: var(--accent);
+            border: none;
+            border-radius: 999px;
+            padding: 12px 22px;
+            min-height: 48px;
+            min-width: 48px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        button:active { transform: scale(0.96); }
+        .ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+        input[type="range"] { width: 100%; height: 44px; }
+        footer {
+            margin-top: 3em;
+            padding-top: 1.2em;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+
+        /* Nav pills */
+        .nav-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 0 0 2em;
+            padding: 0;
+            list-style: none;
+        }
+        .nav-pills a {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            color: var(--fg);
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 500;
+            white-space: nowrap;
+            min-height: 36px;
+            line-height: 1.6;
+        }
+        .nav-pills a:active { background: var(--accent); color: #fff; }
+
+        /* Tables */
+        .tablewrap {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 1em 0;
+        }
+        .tablewrap table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            min-width: 500px;
+        }
+        .tablewrap th, .tablewrap td {
+            border: 1px solid var(--line);
+            padding: 8px 10px;
+            text-align: left;
+        }
+        .tablewrap th {
+            background: var(--card);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        /* Principle cards */
+        .principle-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 1em 0;
+        }
+        @media (max-width: 520px) {
+            .principle-grid { grid-template-columns: 1fr; }
+        }
+        .principle-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+        }
+        .principle-card .num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+        .principle-card h4 { margin: 4px 0 6px; font-size: 0.95rem; }
+        .principle-card p { font-size: 0.88rem; margin: 0; }
+        .principle-card .failure { color: var(--red); font-size: 0.82rem; margin-top: 6px; }
+
+        /* Decision ladder */
+        .ladder-widget {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin: 1em 0;
+        }
+        .ladder-question {
+            font-weight: 600;
+            margin-bottom: 12px;
+            font-size: 1rem;
+        }
+        .ladder-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .ladder-btn {
+            text-align: left;
+            background: var(--bg);
+            color: var(--fg);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-weight: 400;
+            font-size: 0.92rem;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .ladder-btn:hover { border-color: var(--accent); }
+        .ladder-btn:active { background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
+        .ladder-result {
+            display: none;
+            margin-top: 16px;
+            padding: 14px 16px;
+            background: color-mix(in srgb, var(--green) 10%, var(--card));
+            border: 1px solid var(--green);
+            border-radius: 10px;
+        }
+        .ladder-result.show { display: block; }
+        .ladder-result h4 { margin: 0 0 6px; color: var(--green); }
+        .ladder-trail {
+            font-size: 0.82rem;
+            color: var(--muted);
+            margin-top: 10px;
+        }
+        .ladder-trail span {
+            display: inline-block;
+            padding: 2px 8px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            margin: 2px 4px 2px 0;
+        }
+
+        /* Toggle widget */
+        .toggle-widget {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin: 1em 0;
+        }
+        .toggle-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 14px;
+        }
+        .toggle-tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px 14px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: 1px solid var(--line);
+            background: var(--bg);
+            color: var(--fg);
+            cursor: pointer;
+            min-height: 44px;
+        }
+        .toggle-tab:first-child { border-radius: 10px 0 0 10px; }
+        .toggle-tab:last-child { border-radius: 0 10px 10px 0; }
+        .toggle-tab.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+        .toggle-content { min-height: 120px; }
+
+        /* Score bars for the blending demo */
+        .score-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 6px 0;
+            font-size: 0.88rem;
+        }
+        .score-label {
+            min-width: 110px;
+            font-weight: 500;
+        }
+        .score-bar-track {
+            flex: 1;
+            height: 24px;
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+        .score-bar-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.5s, background 0.3s;
+        }
+        .score-value {
+            min-width: 50px;
+            text-align: right;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        /* Quiz */
+        .quiz-container { margin: 1em 0; }
+        .quiz-q {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 12px 0;
+        }
+        .quiz-q p { margin: 0 0 10px; font-weight: 600; }
+        .quiz-option {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: var(--bg);
+            color: var(--fg);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin: 6px 0;
+            min-height: 48px;
+            font-weight: 400;
+            font-size: 0.92rem;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .quiz-option:hover { border-color: var(--accent); }
+        .quiz-option.correct {
+            border-color: var(--green);
+            background: color-mix(in srgb, var(--green) 12%, var(--bg));
+        }
+        .quiz-option.wrong {
+            border-color: var(--red);
+            background: color-mix(in srgb, var(--red) 12%, var(--bg));
+        }
+        .quiz-option:disabled { cursor: default; opacity: 0.85; }
+        .quiz-explain {
+            margin-top: 8px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            display: none;
+        }
+        .quiz-explain.show { display: block; }
+        .quiz-explain.right { background: color-mix(in srgb, var(--green) 10%, var(--card)); color: var(--green); }
+        .quiz-explain.incorrect { background: color-mix(in srgb, var(--red) 10%, var(--card)); color: var(--red); }
+        .quiz-score {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin: 12px 0;
+        }
+
+        /* Self-check reveal */
+        .self-check {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+        }
+        .self-check .sc-question {
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .self-check .sc-answer {
+            display: none;
+            margin-top: 10px;
+            padding: 12px 14px;
+            background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+            border-radius: 8px;
+            font-size: 0.92rem;
+        }
+        .self-check .sc-answer.show { display: block; }
+        .reveal-btn {
+            font-size: 0.88rem;
+            padding: 8px 18px;
+            min-height: 40px;
+        }
+
+        /* Matching quiz */
+        .match-widget {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin: 1em 0;
+        }
+        .match-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+            flex-wrap: wrap;
+        }
+        .match-label {
+            font-weight: 600;
+            font-size: 0.88rem;
+            min-width: 140px;
+        }
+        .match-select {
+            font: inherit;
+            font-size: 0.85rem;
+            padding: 8px 12px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--bg);
+            color: var(--fg);
+            min-height: 40px;
+            flex: 1;
+            min-width: 160px;
+        }
+        .match-feedback {
+            font-size: 0.82rem;
+            font-weight: 600;
+            min-width: 20px;
+        }
+
+        /* Advantage normalization demo */
+        .norm-demo {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin: 1em 0;
+        }
+        .norm-canvas {
+            width: 100%;
+            height: 200px;
+            border-radius: 8px;
+        }
+        .norm-readouts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .norm-cell {
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 8px 10px;
+            text-align: center;
+        }
+        .norm-cell .label {
+            font-size: 0.72rem;
+            color: var(--muted);
+            display: block;
+        }
+        .norm-cell .value {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        /* Env spec cards */
+        .env-spec {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+        }
+        .env-spec h4 {
+            margin: 0 0 8px;
+            color: var(--accent);
+        }
+        .env-field {
+            margin: 6px 0;
+            font-size: 0.88rem;
+        }
+        .env-field strong {
+            display: inline-block;
+            min-width: 100px;
+        }
+
+        /* Chain stepper */
+        .chain-stepper {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin: 1em 0;
+        }
+        .chain-step {
+            padding: 10px 14px;
+            margin: 4px 0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: background 0.3s, opacity 0.3s;
+            opacity: 0.4;
+            border-left: 3px solid transparent;
+        }
+        .chain-step.active {
+            opacity: 1;
+            background: color-mix(in srgb, var(--accent) 12%, transparent);
+            border-left-color: var(--accent);
+            font-weight: 600;
+        }
+        .chain-step.done {
+            opacity: 0.7;
+        }
+        .chain-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+        .chain-counter {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-left: auto;
+        }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+            padding: 0;
+            margin: 0.5em 0;
+        }
+        .checklist li {
+            padding: 6px 0 6px 28px;
+            position: relative;
+            font-size: 0.92rem;
+        }
+        .checklist li::before {
+            content: "\2713";
+            position: absolute;
+            left: 0;
+            color: var(--green);
+            font-weight: 700;
+        }
+
+        /* Math block */
+        .math-block {
+            display: block;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            margin: 0.8em 0;
+            overflow-x: auto;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.88em;
+            line-height: 1.8;
+        }
+        .hl { color: var(--accent); font-weight: 700; }
+
+        /* Design drill cards */
+        .drill-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+            border-left: 4px solid var(--purple);
+        }
+        .drill-card .drill-label {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            background: color-mix(in srgb, var(--purple) 20%, transparent);
+            color: var(--purple);
+        }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>RL Environment &amp; Reward Design for Agentic LLM Training</h1>
+        <p class="meta">Added 2026-09-14</p>
+
+        <div class="card key" style="border-left: 4px solid var(--teal);">
+            <strong>How to use this page (30 seconds)</strong><br>
+            This is your pre-interview refresher for the "Environment &amp; Reward Design" round. Skim the <strong>blue key-concept boxes</strong> first -- they carry the claims you must defend cold. The <strong>orange warning box</strong> in Section 2 corrects a specific wrong instinct from Sep 13 drilling. Interactive widgets (decision ladder, mult/add toggle, normalization slider) are for building intuition, not memorization. The <strong>six drill cards</strong> are interview-format design questions -- try answering before revealing. The <strong>10-question quiz</strong> at the end is your final self-test. Nav pills below jump to any section.
+        </div>
+
+        <nav>
+            <ul class="nav-pills">
+                <li><a href="#s1">1. Sandbox</a></li>
+                <li><a href="#s2">2. Reward Ladder</a></li>
+                <li><a href="#s3">3. Why Errors Kill</a></li>
+                <li><a href="#s4">4. Observability</a></li>
+                <li><a href="#s5">5. Hybrid Gating</a></li>
+                <li><a href="#s6">6. Judge Biases</a></li>
+                <li><a href="#s7">7. Adv. Norm.</a></li>
+                <li><a href="#s8">8. Worked Examples</a></li>
+                <li><a href="#s9">9. Hacking Table</a></li>
+                <li><a href="#drills">Drills</a></li>
+                <li><a href="#quiz">Quiz</a></li>
+            </ul>
+        </nav>
+
+        <!-- ============================== SECTION 1 ============================== -->
+        <h2 id="s1">1. Six Sandbox Principles</h2>
+
+        <p>Every agentic RL environment must satisfy these six properties. Violating any one can silently corrupt your entire training run.</p>
+
+        <div class="principle-grid">
+            <div class="principle-card">
+                <div class="num">1</div>
+                <h4>Isolation</h4>
+                <p>Each rollout gets its own container (Docker/gVisor/K8s pod). No shared state between rollouts.</p>
+                <p class="failure">Violation: Rollout A writes a file that rollout B reads. Now B's reward depends on A's actions. Advantages become meaningless -- they credit the wrong policy.</p>
+            </div>
+            <div class="principle-card">
+                <div class="num">2</div>
+                <h4>Determinism</h4>
+                <p>Same initial state + same actions = same trajectory. Cache web pages, fix random seeds, snapshot corpora.</p>
+                <p class="failure">Violation: Training against the live web. Same query, different results across rollouts in the same group. GRPO sees reward differences that reflect environment luck, not policy quality -- pure noise in the advantage.</p>
+            </div>
+            <div class="principle-card">
+                <div class="num">3</div>
+                <h4>Observability</h4>
+                <p>Observations must be informative enough to learn from. Truncate long outputs, provide structured error messages.</p>
+                <p class="failure">Violation: A 50KB stack trace fills the context window. The agent's reasoning tokens get pushed out. It can't reason about the error, so it can't learn from it.</p>
+            </div>
+            <div class="principle-card">
+                <div class="num">4</div>
+                <h4>Resetability</h4>
+                <p><code>reset()</code> returns a clean initial state + prompt. Reset cost must be seconds, not minutes.</p>
+                <p class="failure">Violation: Environment reset takes 3 minutes (booting a VM). With G=16 rollouts x 1000 questions per step, you spend 800 GPU-hours waiting for resets instead of training.</p>
+            </div>
+            <div class="principle-card">
+                <div class="num">5</div>
+                <h4>Verifiability</h4>
+                <p>The ideal environment has a verifiable goal state. "Did the answer match?" > "Is it helpful?" The former is a reward function; the latter requires a reward model.</p>
+                <p class="failure">Violation: Using only LLM-judge for tasks that have ground truth answers. The policy learns to charm the judge instead of being correct. After 500 steps, judge-score=0.95, human-eval quality plummets.</p>
+            </div>
+            <div class="principle-card">
+                <div class="num">6</div>
+                <h4>Scalability</h4>
+                <p>You need thousands of rollouts per training step. Environments must be parallelizable -- containerization + orchestrators (K8s, Ray) are non-negotiable.</p>
+                <p class="failure">Violation: A single-threaded environment server. Training step needs 16K rollouts. Serial execution takes 4 hours per step. Training diverges because the policy drifts too far between updates.</p>
+            </div>
+        </div>
+
+        <div class="self-check" id="sc1">
+            <div class="sc-question">Self-check: Search-R1 trains a retrieval agent against a fixed corpus instead of live web search. Which TWO sandbox principles does this decision serve?</div>
+            <button class="reveal-btn" onclick="toggleReveal('sc1')">Reveal Answer</button>
+            <div class="sc-answer"><strong>Determinism</strong> (same query returns same documents across rollouts, so reward differences reflect policy quality, not web randomness) and <strong>Scalability</strong> (cached corpus avoids rate limits and latency of live API calls). Bonus: it also helps <strong>Isolation</strong> since rollouts can't affect each other through a shared web state.</div>
+        </div>
+
+        <!-- ============================== SECTION 2 ============================== -->
+        <h2 id="s2">2. The Reward Taxonomy: A Decision Ladder</h2>
+
+        <div class="card key">
+            <strong>Critical ordering:</strong> Binary/verifiable-exact-match is the SAFEST reward -- it is ungameable. You only move down the ladder when you cannot verify. Continuous metrics buy reward density by opening a gaming surface. GRPO's group sampling (G rollouts per prompt) is the densifier for sparse binary rewards -- not reward softening.
+        </div>
+
+        <div class="card warn">
+            <strong>Your wrong instinct (Sep 13):</strong> You said "continuous is always good because denser signal." Wrong. Continuous = denser BUT gameable. F1 can be padded (include everything to inflate recall). Distance metrics invite hedging. Binary = sparse but honest. GRPO was designed to make sparse binary rewards work by creating G=16 rollouts per prompt and comparing them to each other.
+        </div>
+
+        <h3>Interactive Decision Ladder</h3>
+        <p>Answer the questions below. The ladder walks you to the right reward type for your task.</p>
+
+        <div class="ladder-widget" id="ladder">
+            <div id="ladder-body">
+                <!-- Filled by JS -->
+            </div>
+            <div id="ladder-result" class="ladder-result">
+                <!-- Filled by JS -->
+            </div>
+            <div id="ladder-trail" class="ladder-trail"></div>
+            <div style="margin-top:14px">
+                <button class="ghost" onclick="resetLadder()" style="font-size:0.85rem; padding:8px 16px; min-height:40px;">Reset Ladder</button>
+            </div>
+        </div>
+
+        <h3>The 7 Rungs (Reference)</h3>
+        <div class="tablewrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rung</th>
+                        <th>Reward Type</th>
+                        <th>Safety</th>
+                        <th>Density</th>
+                        <th>When to Use</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><strong>Binary outcome</strong></td>
+                        <td style="color:var(--green)">Ungameable</td>
+                        <td>Sparse</td>
+                        <td>Math, code (test pass), factual QA, exact match</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><strong>Verifiable state</strong></td>
+                        <td style="color:var(--green)">Ungameable</td>
+                        <td>Sparse</td>
+                        <td>Tool-use (env reaches goal), games, robotics</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td><strong>Continuous outcome</strong></td>
+                        <td style="color:var(--orange)">Gameable</td>
+                        <td>Dense</td>
+                        <td>Retrieval (F1), summarization (ROUGE) -- only if binary not possible</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td><strong>Process reward (PRM)</strong></td>
+                        <td style="color:var(--orange)">Depends on labels</td>
+                        <td>Dense</td>
+                        <td>Long chains where terminal-only credit is impossible (15+ steps to fail)</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td><strong>LLM-as-judge</strong></td>
+                        <td style="color:var(--red)">Judge-gameable</td>
+                        <td>Dense</td>
+                        <td>Open-ended generation, dialogue, creative tasks -- last resort</td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td><strong>Hybrid verifier-gated</strong></td>
+                        <td style="color:var(--green)">Gate protects</td>
+                        <td>Dense</td>
+                        <td>Production agents with both hard and soft constraints</td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td><strong>Reward shaping</strong></td>
+                        <td style="color:var(--red)">High risk</td>
+                        <td>Dense</td>
+                        <td>Bootstrapping ONLY. Remove after early training. Watch for tool-avoidance and call-farming.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="self-check" id="sc2">
+            <div class="sc-question">Self-check: You're training a code agent with test-case pass/fail rewards. Reward is very sparse (most rollouts fail all tests). A teammate suggests switching to a continuous "partial test pass" metric. What do you say?</div>
+            <button class="reveal-btn" onclick="toggleReveal('sc2')">Reveal Answer</button>
+            <div class="sc-answer">Don't soften the reward -- densify the sampling. Increase GRPO's group size G (e.g., 16 or 32 rollouts per prompt) so you get variance within each group. Binary test-pass is ungameable; partial-test-pass can be gamed (model passes easy tests, ignores hard ones). If G is large enough, some rollouts will pass and some will fail, creating natural contrast for the advantage. Also consider curriculum: start with easier problems where pass rate is higher, then scale difficulty.</div>
+        </div>
+
+        <!-- ============================== SECTION 3 ============================== -->
+        <h2 id="s3">3. Why Reward Error Is Catastrophic in RL (But Tolerable in Eval)</h2>
+
+        <div class="card key">
+            <strong>The one-sentence version:</strong> Eval samples the reward surface. RL does gradient ascent on it. The policy migrates probability mass into the error regions.
+        </div>
+
+        <p><strong>In evaluation,</strong> a noisy reward metric (say, an imperfect LLM judge) adds noise to your ranking of models. Some good outputs score low, some bad ones score high. On average, your eval still works because the errors cancel out over many samples.</p>
+
+        <p><strong>In RL training,</strong> the same noisy reward becomes the optimization target. The policy doesn't just <em>sample</em> the reward surface -- it <em>climbs</em> it. Gradient ascent systematically moves probability mass toward high-reward regions. If there are error regions (where bad outputs score high), the policy finds them and exploits them.</p>
+
+        <p>This is <strong>Goodhart's Law in action</strong> (Gao et al., arXiv:2210.10760): as you optimize against a proxy reward model, true quality initially improves, then <em>degrades</em>. The proxy and the truth diverge, and the policy follows the proxy into the ditch.</p>
+
+        <div class="chain-stepper" id="goodhart-stepper">
+            <h4>Goodhart's Law: Step by Step</h4>
+            <div id="goodhart-steps">
+                <div class="chain-step" data-step="0">Step 1: You train a reward model (RM) on human preferences. The RM is a noisy proxy of true quality.</div>
+                <div class="chain-step" data-step="1">Step 2: Early in RL training, policy improves on both RM score AND true quality. The proxy is locally accurate.</div>
+                <div class="chain-step" data-step="2">Step 3: The policy finds a region where RM score is high but true quality is low -- a "crack" in the proxy.</div>
+                <div class="chain-step" data-step="3">Step 4: Gradient ascent drives probability mass into the crack. RM score keeps rising. True quality drops.</div>
+                <div class="chain-step" data-step="4">Step 5: At deployment, the model produces high-RM-score outputs that are verbose, sycophantic, or factually wrong.</div>
+                <div class="chain-step" data-step="5">Step 6: Defense: KL penalty (stay near reference), RM ensembles, verifiable rewards where possible, overoptimization monitoring.</div>
+            </div>
+            <div class="chain-controls">
+                <button class="ghost" onclick="stepGoodhart(-1)" style="font-size:0.85rem; padding:8px 16px; min-height:40px;">Prev</button>
+                <button onclick="stepGoodhart(1)" style="font-size:0.85rem; padding:8px 16px; min-height:40px;">Next</button>
+                <span class="chain-counter" id="goodhart-counter">1 / 6</span>
+            </div>
+        </div>
+
+        <div class="self-check" id="sc3">
+            <div class="sc-question">Self-check: Why does KL penalty (staying near the reference policy) help against overoptimization? Isn't it just slowing down training?</div>
+            <button class="reveal-btn" onclick="toggleReveal('sc3')">Reveal Answer</button>
+            <div class="sc-answer">The KL penalty constrains how far the policy can drift from the reference (SFT) policy. Overoptimization happens when the policy moves into out-of-distribution regions where the RM is inaccurate. By penalizing large divergence, KL keeps the policy in the region where the RM was trained and is calibrated. It doesn't just slow training -- it bounds the region of policy space the optimizer can explore, preventing it from finding and exploiting RM errors.</div>
+        </div>
+
+        <!-- ============================== SECTION 4 ============================== -->
+        <h2 id="s4">4. The Observability Chain: A Shaping Failure Nobody Designed</h2>
+
+        <p>This is a subtle failure mode that emerges from well-intentioned design choices stacking up:</p>
+
+        <div class="chain-stepper" id="obs-stepper">
+            <h4>The Observability Death Spiral</h4>
+            <div id="obs-steps">
+                <div class="chain-step" data-step="0"><strong>Step 1:</strong> You mask tool-response tokens from the policy loss (correct -- Search-R1 does this). Masked tokens aren't removed from context. They still consume the token budget.</div>
+                <div class="chain-step" data-step="1"><strong>Step 2:</strong> An agent calls a search tool. The tool returns a 4,000-token Wikipedia article. Masked from loss, but sitting in context.</div>
+                <div class="chain-step" data-step="2"><strong>Step 3:</strong> The agent calls search again. Another 3,000 tokens. Context is now 85% tool responses, 15% reasoning.</div>
+                <div class="chain-step" data-step="3"><strong>Step 4:</strong> The agent tries to reason about results, but hits the context cap mid-thought. Episode truncates.</div>
+                <div class="chain-step" data-step="4"><strong>Step 5:</strong> Truncated episode = no final answer = reward 0. This is a SPURIOUS zero -- the agent was on the right track but ran out of room.</div>
+                <div class="chain-step" data-step="5"><strong>Step 6:</strong> GRPO sees: "tool-using trajectories get reward 0, non-tool trajectories sometimes get reward 1." Advantage is negative for tool use.</div>
+                <div class="chain-step" data-step="6"><strong>Step 7:</strong> The policy learns TOOL AVOIDANCE. It answers from parametric memory instead. Hallucination risk spikes on fresh questions.</div>
+            </div>
+            <div class="chain-controls">
+                <button class="ghost" onclick="stepObs(-1)" style="font-size:0.85rem; padding:8px 16px; min-height:40px;">Prev</button>
+                <button onclick="stepObs(1)" style="font-size:0.85rem; padding:8px 16px; min-height:40px;">Next</button>
+                <span class="chain-counter" id="obs-counter">1 / 7</span>
+            </div>
+        </div>
+
+        <div class="card green">
+            <strong>Defenses:</strong>
+            <ul class="checklist">
+                <li>Truncate/summarize tool responses before injecting into context (not just masking)</li>
+                <li>Error messages: last line only, not full tracebacks</li>
+                <li>Structured tags (<code>&lt;tool_call&gt;</code> / <code>&lt;tool_response&gt;</code>) so masking is reliably parseable</li>
+                <li>Budget accounting: track context utilization; alert if tool responses exceed 60% of budget</li>
+                <li>Cap-hit episodes: reward 0 is spurious -- consider giving partial credit or excluding from advantage computation</li>
+            </ul>
+        </div>
+
+        <div class="self-check" id="sc4">
+            <div class="sc-question">Self-check: In Search-R1, retrieved tokens are masked from loss but remain in context. What would go wrong if you REMOVED them from context instead?</div>
+            <button class="reveal-btn" onclick="toggleReveal('sc4')">Reveal Answer</button>
+            <div class="sc-answer">The agent needs the retrieved information to reason about. If you remove it from context, the agent can't see the search results it requested -- it would be like asking a question and then deleting the answer before reading it. The masking is specifically about the LOSS (don't optimize the likelihood of environment-generated text) not about visibility. The agent must see the observations; it just shouldn't be trained to reproduce them.</div>
+        </div>
+
+        <!-- ============================== SECTION 5 ============================== -->
+        <h2 id="s5">5. Hybrid Verifier-Gated Schemes</h2>
+
+        <div class="card key">
+            <strong>The core scheme:</strong> <code>reward = verifier_gate(output) &times; quality_score(output)</code><br>
+            Gates are binary hard constraints (multiplicative: fail = 0 regardless of fluency). Judges shape quality <em>within</em> the gated region. Know this formula cold.
+        </div>
+
+        <h3>Why Multiplicative Beats Additive</h3>
+
+        <p>The toggle below shows what happens to a <strong>fluent-but-wrong</strong> rollout under each blending scheme. This rollout has high judge quality (0.85) but fails the verifier gate (0).</p>
+
+        <div class="toggle-widget" id="blend-toggle">
+            <div class="toggle-tabs">
+                <button class="toggle-tab active" onclick="setBlend('mult')">Multiplicative (gate &times; judge)</button>
+                <button class="toggle-tab" onclick="setBlend('add')">Additive (w&#8321;&#183;gate + w&#8322;&#183;judge)</button>
+            </div>
+            <div class="toggle-content" id="blend-content">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
+        <h3>Scenario Comparison</h3>
+        <p>Three rollouts, three reward outcomes. Watch how multiplicative zeroes the fluent-but-wrong one.</p>
+        <div id="blend-bars">
+            <!-- Filled by JS -->
+        </div>
+
+        <div class="self-check" id="sc5">
+            <div class="sc-question">Self-check: A teammate proposes <code>reward = 0.3 * gate + 0.7 * judge</code> "so the gate still matters." Why is this still broken for a fluent-but-wrong rollout?</div>
+            <button class="reveal-btn" onclick="toggleReveal('sc5')">Reveal Answer</button>
+            <div class="sc-answer">If gate=0 and judge=0.85: <code>reward = 0.3*0 + 0.7*0.85 = 0.595</code>. The rollout that FAILED the verifier still gets a reward of 0.595. In GRPO, this will have a positive advantage if other rollouts in the group scored lower. The policy learns: "being fluent and wrong is better than being clumsy and right." This is exactly the failure mode gating is designed to prevent. Multiplicative: <code>0 * 0.85 = 0</code>. Correct answer: zero, no matter how charming.</div>
+        </div>
+
+        <!-- ============================== SECTION 6 ============================== -->
+        <h2 id="s6">6. LLM-as-Judge Biases &amp; Mitigations</h2>
+
+        <p>When you can't verify, you judge. But judges have systematic biases the policy WILL exploit.</p>
+
+        <div class="tablewrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Bias</th>
+                        <th>What Happens</th>
+                        <th>Mitigation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Verbosity</strong></td>
+                        <td>Longer outputs score higher regardless of quality</td>
+                        <td>Score per-word quality; length penalty; Dr. GRPO normalization</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Position</strong></td>
+                        <td>In pairwise comparison, judge prefers first (or last) response</td>
+                        <td>Randomize order, average both orderings</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Sycophancy</strong></td>
+                        <td>Judge scores higher when output agrees with the prompt/user</td>
+                        <td>Factual verification gate; diverse judge panel; adversarial examples</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Style</strong></td>
+                        <td>Judge prefers outputs written in its own style (same model family)</td>
+                        <td>Use a different model family for the judge; held-out judge not used during training</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>Best Practices (Quick Reference)</h3>
+        <ul class="checklist">
+            <li><strong>Rubric-based scoring</strong> -- detailed rubric, not "rate 1-10." Forces the judge to evaluate specific dimensions</li>
+            <li><strong>Pairwise > absolute</strong> -- judges are more reliable comparing two outputs than assigning absolute scores</li>
+            <li><strong>Position randomization</strong> -- swap order of compared outputs, average scores</li>
+            <li><strong>Calibration sets</strong> -- run the judge on known-quality outputs; monitor judge-human agreement</li>
+            <li><strong>Model size</strong> -- use a judge at least as large as the policy; ideally from a different model family</li>
+            <li><strong>d-RLAIF</strong> -- skip the reward model, use judge scores directly as rewards; simpler but more expensive per rollout</li>
+        </ul>
+
+        <!-- ============================== SECTION 7 ============================== -->
+        <h2 id="s7">7. Advantage Normalization: Per-Question, ERPO, and Dr. GRPO</h2>
+
+        <p>GRPO computes advantages by comparing G rollouts on the same prompt. The normalization choice matters enormously.</p>
+
+        <h3>Standard GRPO: Per-Question Mean and Std</h3>
+
+        <div class="math-block">
+            <span class="line">A&#770;<sub>i</sub> = (r<sub>i</sub> - <span class="hl">mean</span>(r<sub>1..G</sub>)) / <span class="hl">std</span>(r<sub>1..G</sub>)</span>
+        </div>
+
+        <p><strong>Per-question mean (KEEP):</strong> "Better than your siblings on the same task." This is the whole point of GRPO -- relative comparison. A reward of 0.3 on a hard problem can have a positive advantage if all siblings got 0.1.</p>
+
+        <p><strong>Per-question std (DEFECT):</strong> Estimated from only G (typically 16) samples. When the group is near-uniform (all rewards similar), std approaches 0. Division by near-zero amplifies noise into huge advantages.</p>
+
+        <h3>Interactive: The Std Collapse Problem</h3>
+
+        <div class="norm-demo">
+            <p>Drag the slider to make the group more uniform. Watch std collapse and advantage explode.</p>
+            <div class="score-row">
+                <span class="score-label">Reward spread:</span>
+                <input type="range" id="norm-slider" min="0" max="100" value="70" style="flex:1">
+            </div>
+            <canvas class="norm-canvas" id="norm-canvas"></canvas>
+            <div class="norm-readouts" id="norm-readouts">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
+        <h3>ERPO: Environment-Level Pooling</h3>
+
+        <div class="math-block">
+            <span class="line">A&#770;<sub>i</sub> = (r<sub>i</sub> - <span class="hl">mean</span>(r<sub>same question</sub>)) / <span class="hl">std</span>(r<sub>all questions in environment</sub>)</span>
+        </div>
+
+        <p><strong>What changes:</strong> The denominator pools std across ALL questions in the same environment type, not just the G siblings. This is more robust because the std reflects the full distribution of rewards for that environment, smoothing out the per-question noise.</p>
+
+        <p><strong>Trade-off:</strong> Low-spread tails (questions where all rollouts perform similarly) get under-trained. The pooled std is large (from high-variance questions elsewhere), so their advantages are small.</p>
+
+        <h3>Dr. GRPO: Drop /std Entirely</h3>
+
+        <div class="math-block">
+            <span class="line">A&#770;<sub>i</sub> = r<sub>i</sub> - <span class="hl">mean</span>(r<sub>1..G</sub>)</span>
+        </div>
+
+        <p>The simplest fix: don't divide by std at all. Per-question mean still works (relative comparison preserved). The noise amplification problem disappears because there's no division. Trade-off: advantages on high-reward questions dominate over low-reward questions (no scale normalization). Dr. GRPO also adds explicit length normalization to compensate for verbosity bias.</p>
+
+        <div class="self-check" id="sc7">
+            <div class="sc-question">Self-check: In standard GRPO, a group of 16 rollouts on a math problem all get reward 0 (none solved it). What is the advantage for each rollout? Is any gradient produced?</div>
+            <button class="reveal-btn" onclick="toggleReveal('sc7')">Reveal Answer</button>
+            <div class="sc-answer">Mean = 0, Std = 0. The advantage is 0/0 -- undefined (or 0 by convention). No gradient is produced for this question. This is the "too hard" failure mode: if no rollout succeeds, GRPO gets zero signal. This is why curriculum matters -- start with easier problems where at least some rollouts succeed, creating the variance GRPO needs. Also why increasing G helps: more rollouts = higher chance at least one succeeds.</div>
+        </div>
+
+        <!-- ============================== SECTION 8 ============================== -->
+        <h2 id="s8">8. Two Fully Worked Examples</h2>
+
+        <h3>Example A: Customer Support Agent</h3>
+        <p>An agent handles customer support tickets. Tools: KB lookup, order placement/cancellation, transfer to human.</p>
+
+        <div class="env-spec">
+            <h4>Environment Specification</h4>
+            <div class="env-field"><strong>State:</strong> (conversation transcript, KB query results, order system state, elapsed time)</div>
+            <div class="env-field"><strong>Actions:</strong> speak(text), query_kb(question), place_order(details), cancel_order(id), transfer_to_human(reason), end_call()</div>
+            <div class="env-field"><strong>Observations:</strong> user's response, KB results, order confirmation/error messages</div>
+            <div class="env-field"><strong>Termination:</strong> agent calls end_call(), OR step limit reached (e.g., 20 turns), OR context token budget exceeded</div>
+            <div class="env-field"><strong>Reset:</strong> load a random support ticket from the training set + simulated user persona</div>
+            <div class="env-field"><strong>Isolation:</strong> each rollout gets its own order system snapshot (read-write copy). No cross-rollout order state.</div>
+        </div>
+
+        <div class="env-spec" style="border-left: 4px solid var(--green);">
+            <h4 style="color:var(--green)">Gated Reward Function</h4>
+            <pre><code>def reward(trajectory, ground_truth):
+    # Gate 1 (SAFETY): did NOT place/cancel an order
+    #   the user didn't request
+    if unauthorized_order_action(trajectory):
+        return 0.0
+
+    # Gate 2 (EFFICIENCY): did NOT transfer to human
+    #   for a question answerable from KB
+    if unnecessary_transfer(trajectory, kb):
+        return 0.0
+
+    # Gate 3 (LATENCY): response latency under threshold
+    if max_response_latency(trajectory) > 2.0:  # seconds
+        return 0.0
+
+    # --- Gates passed, now score quality ---
+
+    # Outcome: was the issue resolved? (binary, from labels)
+    task_completion = 1.0 if resolved(trajectory) else 0.0
+
+    # Quality: LLM judge on transcript
+    quality = llm_judge(trajectory,
+        rubric="helpful, concise, empathetic; 0-1")
+
+    return 0.7 * task_completion + 0.3 * quality</code></pre>
+            <p style="font-size:0.85rem; color:var(--muted); margin-top:8px;"><strong>Why no tool-call penalty:</strong> Per ToRL's finding, explicit penalties on bad tool calls teach "don't use tools" not "use tools right." The outcome reward already handles it -- a bad KB query wastes a turn but doesn't change the outcome score.</p>
+        </div>
+
+        <h3>Example B: Code Review Agent</h3>
+        <p>An agent reads PR diffs, writes review comments. Developers accept or reject each comment.</p>
+
+        <div class="env-spec">
+            <h4>Environment Specification</h4>
+            <div class="env-field"><strong>State:</strong> (diff text, file context, existing comments, developer responses so far)</div>
+            <div class="env-field"><strong>Actions:</strong> comment(file, line, text), approve(), request_changes()</div>
+            <div class="env-field"><strong>Observations:</strong> developer response per comment ("accepted," "rejected," "already addressed")</div>
+            <div class="env-field"><strong>Termination:</strong> agent calls approve() or request_changes(), OR step limit (e.g., 15 comments max)</div>
+            <div class="env-field"><strong>Reset:</strong> load a random PR from the historical training set</div>
+            <div class="env-field"><strong>Isolation:</strong> each rollout gets its own copy of the repo snapshot. Read-only diff, no cross-rollout state.</div>
+        </div>
+
+        <div class="env-spec" style="border-left: 4px solid var(--green);">
+            <h4 style="color:var(--green)">Gated Reward Function</h4>
+            <pre><code>def reward(trajectory, ground_truth_labels):
+    # Gate 1: comments must reference actual lines
+    #   in the diff (no hallucinated line numbers)
+    if any_hallucinated_lines(trajectory, diff):
+        return 0.0
+
+    # Gate 2: comments must be substantive
+    #   (not just "looks good" or "nice")
+    if all_trivial_comments(trajectory):
+        return 0.0
+
+    # --- Gates passed ---
+
+    # Outcome: fraction of comments accepted by developer
+    accept_rate = accepted_comments / total_comments
+
+    # Bonus: caught an actual bug (labeled in data)
+    bug_bonus = 0.1 * bugs_caught
+
+    return accept_rate + bug_bonus</code></pre>
+            <p style="font-size:0.85rem; color:var(--muted); margin-top:8px;"><strong>Design choice:</strong> No penalty for rejected comments. A penalty would make the agent conservative (only comment on obvious things). The acceptance rate already handles quality -- if a comment is rejected, it lowers the score. This avoids ToRL's "penalty teaches avoidance" failure.</p>
+        </div>
+
+        <div class="self-check" id="sc8">
+            <div class="sc-question">Self-check: In the customer support agent, why is Gate 2 (unnecessary transfer) a GATE (binary zero) rather than a penalty (-0.1)?</div>
+            <button class="reveal-btn" onclick="toggleReveal('sc8')">Reveal Answer</button>
+            <div class="sc-answer">An unnecessary transfer is a hard constraint violation, not a quality issue. If the agent transfers a "how do I reset my password" question to a human when the KB has the answer, this is categorically wrong regardless of how politely it does it. A penalty of -0.1 could be outweighed by high quality scores (the transfer was "helpful and empathetic"), teaching the policy that transferring is acceptable if done nicely. A gate ensures this never gets positive reward. Gates encode invariants; penalties encode preferences.</div>
+        </div>
+
+        <!-- ============================== SECTION 9 ============================== -->
+        <h2 id="s9">9. Reward Hacking: Failure Modes &amp; Defenses</h2>
+
+        <div class="tablewrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Failure Mode</th>
+                        <th>What the Policy Learns</th>
+                        <th>Primary Defense</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Length exploitation</strong></td>
+                        <td>Verbose outputs score higher on reward models</td>
+                        <td>Dr. GRPO normalization, length penalty, length-balanced RM training data</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Format gaming</strong></td>
+                        <td>Superficial format match without substance</td>
+                        <td>Verifiable reward functions, rubric-based LLM judges</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Sycophancy</strong></td>
+                        <td>Agrees with user/judge regardless of correctness</td>
+                        <td>Factual verification gate, diverse judge panel</td>
+                    </tr>
+                    <tr>
+                        <td><strong>RM exploitation</strong></td>
+                        <td>Adversarial inputs that score high on proxy RM, low on true quality</td>
+                        <td>KL penalty, RM ensembles, overoptimization monitoring (Gao et al.)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Distribution shift</strong></td>
+                        <td>RM trained on old policy outputs, fails on new policy's</td>
+                        <td>Online RM updates, iterative RLHF (retrain RM periodically)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Shortcut learning</strong></td>
+                        <td>Returns cached/trivial answers that satisfy reward</td>
+                        <td>Diverse evaluation set, adversarial test cases, task-specific checks</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Reward tampering</strong></td>
+                        <td>Agent modifies its own reward signal or environment state</td>
+                        <td>Sandboxed environments, read-only reward computation, integrity checks</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>Matching Quiz: Failure Mode to Defense</h3>
+
+        <div class="match-widget" id="match-widget">
+            <p style="font-size:0.9rem; color:var(--muted);">Match each failure mode to its best defense. Select from the dropdowns.</p>
+            <div class="match-item">
+                <span class="match-label">Length exploitation</span>
+                <select class="match-select" data-correct="len">
+                    <option value="">-- select defense --</option>
+                    <option value="kl">KL penalty + RM ensembles</option>
+                    <option value="len">Length normalization (Dr. GRPO)</option>
+                    <option value="gate">Verifier gate</option>
+                    <option value="sandbox">Sandbox + read-only reward</option>
+                    <option value="online">Online RM retraining</option>
+                    <option value="diverse">Diverse eval set + adversarial tests</option>
+                    <option value="factcheck">Factual verification gate</option>
+                </select>
+                <span class="match-feedback"></span>
+            </div>
+            <div class="match-item">
+                <span class="match-label">Sycophancy</span>
+                <select class="match-select" data-correct="factcheck">
+                    <option value="">-- select defense --</option>
+                    <option value="kl">KL penalty + RM ensembles</option>
+                    <option value="len">Length normalization (Dr. GRPO)</option>
+                    <option value="gate">Verifier gate</option>
+                    <option value="sandbox">Sandbox + read-only reward</option>
+                    <option value="online">Online RM retraining</option>
+                    <option value="diverse">Diverse eval set + adversarial tests</option>
+                    <option value="factcheck">Factual verification gate</option>
+                </select>
+                <span class="match-feedback"></span>
+            </div>
+            <div class="match-item">
+                <span class="match-label">RM exploitation</span>
+                <select class="match-select" data-correct="kl">
+                    <option value="">-- select defense --</option>
+                    <option value="kl">KL penalty + RM ensembles</option>
+                    <option value="len">Length normalization (Dr. GRPO)</option>
+                    <option value="gate">Verifier gate</option>
+                    <option value="sandbox">Sandbox + read-only reward</option>
+                    <option value="online">Online RM retraining</option>
+                    <option value="diverse">Diverse eval set + adversarial tests</option>
+                    <option value="factcheck">Factual verification gate</option>
+                </select>
+                <span class="match-feedback"></span>
+            </div>
+            <div class="match-item">
+                <span class="match-label">Reward tampering</span>
+                <select class="match-select" data-correct="sandbox">
+                    <option value="">-- select defense --</option>
+                    <option value="kl">KL penalty + RM ensembles</option>
+                    <option value="len">Length normalization (Dr. GRPO)</option>
+                    <option value="gate">Verifier gate</option>
+                    <option value="sandbox">Sandbox + read-only reward</option>
+                    <option value="online">Online RM retraining</option>
+                    <option value="diverse">Diverse eval set + adversarial tests</option>
+                    <option value="factcheck">Factual verification gate</option>
+                </select>
+                <span class="match-feedback"></span>
+            </div>
+            <div class="match-item">
+                <span class="match-label">Distribution shift</span>
+                <select class="match-select" data-correct="online">
+                    <option value="">-- select defense --</option>
+                    <option value="kl">KL penalty + RM ensembles</option>
+                    <option value="len">Length normalization (Dr. GRPO)</option>
+                    <option value="gate">Verifier gate</option>
+                    <option value="sandbox">Sandbox + read-only reward</option>
+                    <option value="online">Online RM retraining</option>
+                    <option value="diverse">Diverse eval set + adversarial tests</option>
+                    <option value="factcheck">Factual verification gate</option>
+                </select>
+                <span class="match-feedback"></span>
+            </div>
+            <div class="match-item">
+                <span class="match-label">Shortcut learning</span>
+                <select class="match-select" data-correct="diverse">
+                    <option value="">-- select defense --</option>
+                    <option value="kl">KL penalty + RM ensembles</option>
+                    <option value="len">Length normalization (Dr. GRPO)</option>
+                    <option value="gate">Verifier gate</option>
+                    <option value="sandbox">Sandbox + read-only reward</option>
+                    <option value="online">Online RM retraining</option>
+                    <option value="diverse">Diverse eval set + adversarial tests</option>
+                    <option value="factcheck">Factual verification gate</option>
+                </select>
+                <span class="match-feedback"></span>
+            </div>
+            <div style="margin-top:14px">
+                <button onclick="checkMatches()" style="font-size:0.88rem; padding:10px 20px;">Check Answers</button>
+                <button class="ghost" onclick="resetMatches()" style="font-size:0.85rem; padding:8px 16px; min-height:40px; margin-left:8px;">Reset</button>
+                <span id="match-score" style="margin-left:12px; font-weight:700;"></span>
+            </div>
+        </div>
+
+        <!-- ============================== DRILLS ============================== -->
+        <h2 id="drills">Design Drills</h2>
+        <p>Six design questions from the source material. Try to answer each one before revealing the model answer.</p>
+
+        <div class="drill-card">
+            <span class="drill-label">Drill 1 -- Environment Design</span>
+            <p style="font-weight:600;">You're building a Code-Interpreter Agent environment for RL. The agent outputs Python code, which is executed, and the environment returns stdout/stderr. Detail the architecture, addressing security, state-persistence, and timeout handling.</p>
+            <details>
+                <summary>Reveal Model Answer</summary>
+                <p><strong>Architecture:</strong> Deploy a scalable pool of ephemeral K8s pods or Ray actors running a secure container runtime (gVisor). Strip network access to prevent arbitrary code execution attacks.</p>
+                <p><strong>State-Persistence:</strong> Maintain a persistent Jupyter kernel or stateful Python REPL per trajectory so variables defined in turn t=1 are available in turn t=2.</p>
+                <p><strong>Timeouts:</strong> Enforce a strict execution timeout (10s) and memory limit per execution. If timeout occurs, return <code>TimeoutError: Execution exceeded 10s</code> as the observation. This is a structured, truncated error -- not a full traceback (observability principle).</p>
+                <p><strong>Security:</strong> No network, no filesystem access outside a temp sandbox, no subprocess spawning. The agent can crash its own container but can't escape it (isolation principle).</p>
+            </details>
+        </div>
+
+        <div class="drill-card">
+            <span class="drill-label">Drill 2 -- Diagnosis</span>
+            <p style="font-weight:600;">An agent trained with LLM-as-judge rewards starts producing verbose, flattering outputs that score 0.95 but are unhelpful. Diagnose the failure mode and propose three concrete fixes, ranked.</p>
+            <details>
+                <summary>Reveal Model Answer</summary>
+                <p><strong>Diagnosis:</strong> Reward hacking via judge gaming. The LLM judge has verbosity bias (longer = higher) and sycophancy bias (agreeable = higher). The policy exploits both simultaneously.</p>
+                <p><strong>Fix 1 (best):</strong> Add a factual verification gate. Before applying the judge score, check factual claims against a KB. If any claim is false, reward = 0. Prevents "fluent but wrong."</p>
+                <p><strong>Fix 2:</strong> Switch to pairwise comparison (BT model) instead of absolute scoring. Pairwise is more robust to absolute biases because the judge must compare, not just score.</p>
+                <p><strong>Fix 3:</strong> Add length normalization: <code>r = judge_score - 0.01 * num_tokens</code>, or use Dr. GRPO's per-token normalization. Directly penalizes verbosity exploitation.</p>
+                <p><strong>Ranking rationale:</strong> Fix 1 addresses the root cause (wrong outputs get rewarded); Fix 2 changes the scoring mechanism; Fix 3 treats a symptom (length) not the cause (sycophancy).</p>
+            </details>
+        </div>
+
+        <div class="drill-card">
+            <span class="drill-label">Drill 3 -- Retrieval Masking</span>
+            <p style="font-weight:600;">Explain how "Retrieved Token Masking" stabilizes RL training in Search-R1. What would break if you calculated gradients over the full trajectory including retrieved text?</p>
+            <details>
+                <summary>Reveal Model Answer</summary>
+                <p>In a search-integrated agent, the trajectory interleaves agent-generated text with raw text injected by the search engine inside <code>&lt;information&gt;</code> blocks. If the RL optimizer calculates policy gradients over the entire sequence, it erroneously optimizes the likelihood of environment-injected text, <strong>destroying the policy.</strong></p>
+                <p>Retrieved Token Masking zeros out the advantage and gradient for all tokens inside <code>&lt;information&gt;</code> blocks. The agent is only optimized on the tokens it generated (the query and subsequent reasoning).</p>
+                <p><strong>Without masking:</strong> The policy would try to increase the probability of generating Wikipedia article text. This would push the policy toward generating long, encyclopedic text instead of concise queries and focused reasoning. Training would diverge within a few hundred steps.</p>
+            </details>
+        </div>
+
+        <div class="drill-card">
+            <span class="drill-label">Drill 4 -- ARPO Entropy Branching</span>
+            <p style="font-weight:600;">How does ARPO address the exploration problem in multi-turn tool calling? What is the significance of "high entropy" post-tool-call?</p>
+            <details>
+                <summary>Reveal Model Answer</summary>
+                <p>In multi-turn RL, traditional global trajectory sampling is inefficient because a single bad tool call early on ruins the entire episode. ARPO identified that immediately after an agent receives tool feedback, its token distribution <strong>entropy spikes</strong> -- indicating high uncertainty about how to proceed.</p>
+                <p>ARPO uses an <strong>entropy pre-monitoring mechanism.</strong> When high entropy is detected post-tool-call, it adaptively branches the rollout, sampling multiple different reasoning paths from that exact state. This focuses the exploration budget precisely on critical decision nodes.</p>
+                <p><strong>Result:</strong> 50% reduction in required tool-call budget vs. standard sampling. The branching avoids wasting compute on early trajectory segments that are identical across rollouts.</p>
+            </details>
+        </div>
+
+        <div class="drill-card">
+            <span class="drill-label">Drill 5 -- Credit Assignment</span>
+            <p style="font-weight:600;">How do you structure credit assignment when an agent takes 15 steps to fail? Terminal reward is zero -- which of the 15 actions was the mistake?</p>
+            <details>
+                <summary>Reveal Model Answer</summary>
+                <p><strong>Option 1 -- Process Reward Models (PRM):</strong> Train a smaller LLM to evaluate intermediate steps, providing step-level dense rewards. Expensive to label (human or Monte Carlo rollouts from each step), but directly solves the credit assignment problem.</p>
+                <p><strong>Option 2 -- Agentic World Models:</strong> Train the agent with an auxiliary objective to predict the environment's observation (e.g., output of the code it just wrote). Forces the agent to learn causal action-state links, yielding dense supervision even if terminal reward is zero.</p>
+                <p><strong>Option 3 -- ARPO-style advantage attribution:</strong> Branch trajectories at critical points. The shared prefix tokens receive the <strong>MEAN</strong> of the advantages computed across all descendant branches (not zero, not 1 -- the mean is the natural aggregation because the prefix contributed equally to every branch). Divergent branches get their own distinct advantages. This directly isolates which divergent action led to failure.</p>
+            </details>
+        </div>
+
+        <div class="drill-card">
+            <span class="drill-label">Drill 6 -- Hallucinated Tool Calls</span>
+            <p style="font-weight:600;">Your production agent occasionally calls nonexistent API endpoints. Design a reward signal to fix this. Consider three approaches and recommend one.</p>
+            <details>
+                <summary>Reveal Model Answer</summary>
+                <p><strong>Option A (verifier gate):</strong> Before scoring, check if the tool call is valid (endpoint exists, parameters are correct types). If invalid, reward = 0.</p>
+                <p><strong>Option B (graduated penalty):</strong> Valid+successful: normal reward. Valid+failed: -0.1. Invalid endpoint: -0.5. Risk: model learns to avoid tool calls entirely.</p>
+                <p><strong>Option C (curriculum):</strong> Start with a small set of tools, add tools gradually. The model learns the API surface incrementally.</p>
+                <p><strong>Recommendation: Option A</strong> based on ToRL's finding that explicit penalties don't help and can hurt. Let the outcome reward handle the signal, use the gate to prevent catastrophic errors. Combine with Option C for faster learning.</p>
+            </details>
+        </div>
+
+        <!-- ============================== QUIZ ============================== -->
+        <h2 id="quiz">Final Quiz</h2>
+        <p>10 questions covering the full module. Instant feedback with explanations.</p>
+
+        <div class="quiz-container" id="quiz-container">
+            <div class="quiz-score">Score: <span id="quiz-score-num">0</span> / <span id="quiz-total">10</span></div>
+
+            <div class="quiz-q" data-correct="1">
+                <p>Q1. What is the SAFEST reward type (least gameable)?</p>
+                <button class="quiz-option" data-idx="0">Continuous outcome (F1, BLEU)</button>
+                <button class="quiz-option" data-idx="1">Binary outcome (exact match pass/fail)</button>
+                <button class="quiz-option" data-idx="2">LLM-as-judge with rubric</button>
+                <button class="quiz-option" data-idx="3">Reward shaping with intermediate bonuses</button>
+                <div class="quiz-explain right">Binary outcome is ungameable -- it checks a verifiable ground truth. No room for the policy to exploit scoring cracks.</div>
+                <div class="quiz-explain incorrect">Binary outcome (exact match) is the safest. It checks verifiable ground truth with no room for exploitation. Continuous metrics can be gamed (padding F1, hedging distances).</div>
+            </div>
+
+            <div class="quiz-q" data-correct="2">
+                <p>Q2. GRPO's group sampling (G rollouts per prompt) primarily solves which problem?</p>
+                <button class="quiz-option" data-idx="0">Makes continuous rewards safer</button>
+                <button class="quiz-option" data-idx="1">Reduces the need for a value function</button>
+                <button class="quiz-option" data-idx="2">Densifies sparse binary rewards through within-group variance</button>
+                <button class="quiz-option" data-idx="3">Prevents reward hacking on LLM judges</button>
+                <div class="quiz-explain right">With G=16 rollouts, even sparse binary rewards produce variance (some pass, some fail). GRPO compares siblings, creating signal from this variance. This is the densifier for binary rewards -- not reward softening.</div>
+                <div class="quiz-explain incorrect">GRPO densifies sparse binary rewards. With G=16 rollouts per prompt, some pass and some fail, creating within-group variance. The advantage comes from comparing siblings.</div>
+            </div>
+
+            <div class="quiz-q" data-correct="0">
+                <p>Q3. In <code>reward = gate &times; judge</code>, why is multiplication better than addition?</p>
+                <button class="quiz-option" data-idx="0">Multiplication zeroes fluent-but-wrong outputs; addition lets charm outvote correctness</button>
+                <button class="quiz-option" data-idx="1">Multiplication is computationally cheaper</button>
+                <button class="quiz-option" data-idx="2">Addition requires more hyperparameter tuning</button>
+                <button class="quiz-option" data-idx="3">Multiplication produces denser gradients</button>
+                <div class="quiz-explain right">If gate=0 (failed verification), multiplicative gives 0 regardless of judge score. Additive would give 0 + 0.85 = 0.85 for a fluent-but-wrong output, rewarding incorrect answers.</div>
+                <div class="quiz-explain incorrect">Multiplicative zeroes the reward when the gate fails: 0 * judge = 0. Additive would give 0 + 0.85*judge, rewarding fluent-but-wrong outputs. This is why charm can't outvote correctness in multiplicative schemes.</div>
+            </div>
+
+            <div class="quiz-q" data-correct="3">
+                <p>Q4. Why is reward error catastrophic in RL but tolerable in evaluation?</p>
+                <button class="quiz-option" data-idx="0">RL uses larger batches so errors compound</button>
+                <button class="quiz-option" data-idx="1">Evaluation uses better reward models</button>
+                <button class="quiz-option" data-idx="2">RL training takes longer so errors accumulate</button>
+                <button class="quiz-option" data-idx="3">Eval samples the reward surface; RL does gradient ascent on it, migrating mass into error regions</button>
+                <div class="quiz-explain right">Evaluation averages over random samples -- errors cancel out. RL systematically optimizes the reward surface, finding and exploiting error regions (Goodhart's Law / Gao et al. 2022).</div>
+                <div class="quiz-explain incorrect">Eval samples randomly (errors cancel). RL does gradient ascent on the reward surface, systematically moving probability mass into regions where the proxy reward is high but true quality is low (Goodhart's Law).</div>
+            </div>
+
+            <div class="quiz-q" data-correct="1">
+                <p>Q5. In Search-R1, what is "Retrieved Token Masking"?</p>
+                <button class="quiz-option" data-idx="0">Removing search results from the context window to save tokens</button>
+                <button class="quiz-option" data-idx="1">Zeroing gradient/advantage for environment-injected text while keeping it visible in context</button>
+                <button class="quiz-option" data-idx="2">Replacing search results with shorter summaries</button>
+                <button class="quiz-option" data-idx="3">Masking the search query so the model can't see what it searched for</button>
+                <div class="quiz-explain right">Retrieved tokens stay in context (the agent needs to see them) but are zeroed from the policy loss. Without this, the optimizer would try to increase the probability of generating Wikipedia text, destroying the policy.</div>
+                <div class="quiz-explain incorrect">Masking zeros gradient/advantage for retrieved text while keeping it in context. The agent sees it (must reason about it) but isn't trained to reproduce it. Removing it from context would blind the agent to its search results.</div>
+            </div>
+
+            <div class="quiz-q" data-correct="2">
+                <p>Q6. Tool-response tokens eat the context budget, causing episode truncation and spurious zero rewards. What does the policy learn?</p>
+                <button class="quiz-option" data-idx="0">To write shorter queries</button>
+                <button class="quiz-option" data-idx="1">To call tools more efficiently</button>
+                <button class="quiz-option" data-idx="2">Tool avoidance -- answering from parametric memory instead</button>
+                <button class="quiz-option" data-idx="3">To summarize tool responses itself</button>
+                <div class="quiz-explain right">Tool-using trajectories get truncated (reward=0), non-tool trajectories sometimes succeed (reward=1). GRPO gives negative advantage to tool use. The policy learns to avoid tools entirely, increasing hallucination risk.</div>
+                <div class="quiz-explain incorrect">The policy learns tool avoidance. Tool-heavy trajectories truncate (reward 0) while tool-free ones sometimes succeed (reward 1). GRPO assigns negative advantage to tool use. The defense is truncating/summarizing tool responses before they enter context.</div>
+            </div>
+
+            <div class="quiz-q" data-correct="0">
+                <p>Q7. In standard GRPO, per-question std normalization fails when...</p>
+                <button class="quiz-option" data-idx="0">The group is near-uniform (all rewards similar) -- std approaches 0, amplifying noise</button>
+                <button class="quiz-option" data-idx="1">The group has too much variance -- std is too large</button>
+                <button class="quiz-option" data-idx="2">The question is medium difficulty</button>
+                <button class="quiz-option" data-idx="3">G is larger than 32</button>
+                <div class="quiz-explain right">When all G rollouts get similar rewards, std approaches 0. Division by near-zero amplifies random noise into huge advantages. ERPO pools std across environments; Dr. GRPO drops the division entirely.</div>
+                <div class="quiz-explain incorrect">Near-uniform groups (all same reward) make std approach 0. Dividing by near-zero amplifies noise into huge advantages. ERPO pools std across environments (larger, more stable denominator). Dr. GRPO simply drops the /std.</div>
+            </div>
+
+            <div class="quiz-q" data-correct="2">
+                <p>Q8. ERPO (from AutoForge) differs from standard GRPO by:</p>
+                <button class="quiz-option" data-idx="0">Using a value function instead of group comparison</button>
+                <button class="quiz-option" data-idx="1">Dropping the denominator entirely</button>
+                <button class="quiz-option" data-idx="2">Pooling std across all questions in the same environment while keeping per-question mean</button>
+                <button class="quiz-option" data-idx="3">Using environment-level mean instead of per-question mean</button>
+                <div class="quiz-explain right">ERPO keeps per-question mean (relative comparison within the group) but pools std across all questions in the same environment type. This is more robust to outliers because the std reflects the full reward distribution.</div>
+                <div class="quiz-explain incorrect">ERPO: per-question mean (keep -- relative comparison) + environment-level std (pool across all questions in the environment). Dr. GRPO is the one that drops /std entirely. ERPO still normalizes but with a more stable denominator.</div>
+            </div>
+
+            <div class="quiz-q" data-correct="1">
+                <p>Q9. ARPO detects that entropy spikes immediately after tool calls. It responds by:</p>
+                <button class="quiz-option" data-idx="0">Reducing the learning rate at those positions</button>
+                <button class="quiz-option" data-idx="1">Branching the rollout -- sampling multiple reasoning paths from the high-entropy state</button>
+                <button class="quiz-option" data-idx="2">Masking the tool response tokens</button>
+                <button class="quiz-option" data-idx="3">Increasing the KL penalty temporarily</button>
+                <div class="quiz-explain right">ARPO adaptively branches at high-entropy states (post-tool-call), sampling multiple different continuations from the same point. This focuses exploration on critical decision nodes, cutting tool-call budget by 50%.</div>
+                <div class="quiz-explain incorrect">ARPO branches rollouts at high-entropy states, sampling multiple continuations from the same post-tool-call point. This focuses exploration exactly where it matters (the uncertain decision after receiving tool feedback), cutting tool-call budget by 50%.</div>
+            </div>
+
+            <div class="quiz-q" data-correct="3">
+                <p>Q10. A verifier for algebra problems uses string matching (<code>"x = 2 - y"</code>). The model outputs <code>"x = (4-2y)/2"</code> which is mathematically correct but fails the verifier. What is this?</p>
+                <button class="quiz-option" data-idx="0">Reward hacking by the model</button>
+                <button class="quiz-option" data-idx="1">Distribution shift in the reward model</button>
+                <button class="quiz-option" data-idx="2">A sandbox isolation failure</button>
+                <button class="quiz-option" data-idx="3">A verifier false negative -- the reward is lying. Use sympy equivalence checking instead of string match.</button>
+                <div class="quiz-explain right">The verifier falsely rejects a correct answer. This trains the policy to match canonical forms rather than solve problems. Fix: <code>sympy.simplify(a - b) == 0</code> with fallback to numeric evaluation at random points.</div>
+                <div class="quiz-explain incorrect">This is a verifier false negative. The reward says "wrong" for a correct answer, training the model to match formatting rather than solve math. Defense: use <code>sympy.simplify(a - b) == 0</code> for equivalence checking, never raw string matching for algebra.</div>
+            </div>
+
+            <div style="margin-top:16px">
+                <button onclick="resetQuiz()" class="ghost">Reset Quiz</button>
+            </div>
+        </div>
+
+        <footer>
+            Personal explainer -- unlisted -- <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+
+    <script>
+    (function () {
+        'use strict';
+
+        /* ============ SELF-CHECK REVEALS ============ */
+        window.toggleReveal = function (id) {
+            var el = document.querySelector('#' + id + ' .sc-answer');
+            if (!el) return;
+            el.classList.toggle('show');
+            var btn = document.querySelector('#' + id + ' .reveal-btn');
+            if (btn) btn.textContent = el.classList.contains('show') ? 'Hide Answer' : 'Reveal Answer';
+        };
+
+        /* ============ DECISION LADDER ============ */
+        var ladderTree = {
+            id: 'q1',
+            question: 'Can you verify the answer against a ground truth (exact match, test cases, goal state)?',
+            yes: {
+                id: 'q2',
+                question: 'Is the outcome binary (pass/fail) or continuous (a metric like F1)?',
+                options: [
+                    { label: 'Binary pass/fail', next: { result: 'Binary Outcome Reward', desc: 'The safest option. +1 correct, 0 wrong. Use GRPO group sampling (G=16+) to densify the sparse signal. No gaming surface.', examples: 'Math (exact answer), code (test pass), factual QA (exact match).' }},
+                    { label: 'Verifiable goal state (env reaches target)', next: { result: 'Verifiable State Reward', desc: 'Environment reaches a verifiable goal state. Ground truth, no hacking. Requires an environment with checkable state.', examples: 'Tool-use tasks (DB in correct state), games (win/lose), robotics (position reached).' }},
+                    { label: 'Continuous metric (F1, BLEU, partial match)', next: { result: 'Continuous Outcome Reward', desc: 'Denser signal than binary, but OPENS A GAMING SURFACE. F1 can be padded (include everything to inflate recall). Distance metrics invite hedging. Only use when binary is truly impossible.', examples: 'Retrieval (F1 against gold docs), summarization (ROUGE), partial credit tasks.' }}
+                ]
+            },
+            no: {
+                id: 'q3',
+                question: 'Is the task a long multi-step trajectory (10+ steps) where terminal-only credit assignment fails?',
+                yes: { result: 'Process Reward Model (PRM)', desc: 'Step-level rewards for long trajectories. Dense signal + credit assignment. Expensive: requires per-step labels (human or Monte Carlo from each intermediate state).', examples: '15-step debugging agent, multi-hop research agent, long reasoning chains.' },
+                no: {
+                    id: 'q4',
+                    question: 'Does the task have BOTH hard constraints (must be correct) AND soft quality dimensions (style, helpfulness)?',
+                    yes: { result: 'Hybrid Verifier-Gated (gate x judge)', desc: 'The production sweet spot. Binary gates (correctness, safety) multiply with a soft judge score. gate=0 zeroes everything. Charm cannot outvote correctness.', examples: 'Customer support agent (safety gate + quality judge), code review agent (valid-line gate + acceptance rate).' },
+                    no: { result: 'LLM-as-Judge (last resort)', desc: 'Flexible but JUDGE-GAMEABLE. The policy WILL exploit verbosity bias, position bias, sycophancy. Use rubrics, pairwise comparison, position randomization, held-out judge, calibration sets.', examples: 'Open-ended generation, creative writing, dialogue quality.' }
+                }
+            }
+        };
+
+        var ladderState = [];
+        var ladderBody = document.getElementById('ladder-body');
+        var ladderResult = document.getElementById('ladder-result');
+        var ladderTrail = document.getElementById('ladder-trail');
+
+        function renderLadderNode(node) {
+            if (!ladderBody) return;
+            if (node.result) {
+                ladderBody.innerHTML = '';
+                ladderResult.innerHTML = '<h4>' + node.result + '</h4><p>' + node.desc + '</p><p style="font-size:0.85rem;color:var(--muted)"><strong>Examples:</strong> ' + node.examples + '</p>';
+                ladderResult.classList.add('show');
+                renderTrail();
+                return;
+            }
+            ladderResult.classList.remove('show');
+            var html = '<div class="ladder-question">' + node.question + '</div><div class="ladder-options">';
+            if (node.yes && node.no && !node.options) {
+                html += '<button class="ladder-btn" onclick="ladderChoose(\'yes\')">Yes</button>';
+                html += '<button class="ladder-btn" onclick="ladderChoose(\'no\')">No</button>';
+            } else if (node.options) {
+                node.options.forEach(function (opt, i) {
+                    html += '<button class="ladder-btn" onclick="ladderChooseOpt(' + i + ')">' + opt.label + '</button>';
+                });
+            }
+            html += '</div>';
+            ladderBody.innerHTML = html;
+            renderTrail();
+        }
+
+        var currentLadderNode = ladderTree;
+
+        window.ladderChoose = function (choice) {
+            ladderState.push(choice === 'yes' ? 'Yes' : 'No');
+            currentLadderNode = currentLadderNode[choice];
+            renderLadderNode(currentLadderNode);
+        };
+
+        window.ladderChooseOpt = function (idx) {
+            var opt = currentLadderNode.options[idx];
+            ladderState.push(opt.label);
+            currentLadderNode = opt.next;
+            renderLadderNode(currentLadderNode);
+        };
+
+        window.resetLadder = function () {
+            ladderState = [];
+            currentLadderNode = ladderTree;
+            ladderResult.classList.remove('show');
+            renderLadderNode(currentLadderNode);
+        };
+
+        function renderTrail() {
+            if (!ladderTrail || ladderState.length === 0) {
+                if (ladderTrail) ladderTrail.innerHTML = '';
+                return;
+            }
+            ladderTrail.innerHTML = 'Your path: ' + ladderState.map(function (s) { return '<span>' + s + '</span>'; }).join(' &rarr; ');
+        }
+
+        renderLadderNode(ladderTree);
+
+        /* ============ GOODHART STEPPER ============ */
+        var goodhartStep = 0;
+        var goodhartSteps = document.querySelectorAll('#goodhart-steps .chain-step');
+        var goodhartCounter = document.getElementById('goodhart-counter');
+
+        function updateGoodhart() {
+            goodhartSteps.forEach(function (el, i) {
+                el.className = 'chain-step';
+                if (i === goodhartStep) el.classList.add('active');
+                else if (i < goodhartStep) el.classList.add('done');
+            });
+            if (goodhartCounter) goodhartCounter.textContent = (goodhartStep + 1) + ' / ' + goodhartSteps.length;
+        }
+
+        window.stepGoodhart = function (dir) {
+            goodhartStep = Math.max(0, Math.min(goodhartSteps.length - 1, goodhartStep + dir));
+            updateGoodhart();
+        };
+        updateGoodhart();
+
+        /* ============ OBSERVABILITY STEPPER ============ */
+        var obsStep = 0;
+        var obsSteps = document.querySelectorAll('#obs-steps .chain-step');
+        var obsCounter = document.getElementById('obs-counter');
+
+        function updateObs() {
+            obsSteps.forEach(function (el, i) {
+                el.className = 'chain-step';
+                if (i === obsStep) el.classList.add('active');
+                else if (i < obsStep) el.classList.add('done');
+            });
+            if (obsCounter) obsCounter.textContent = (obsStep + 1) + ' / ' + obsSteps.length;
+        }
+
+        window.stepObs = function (dir) {
+            obsStep = Math.max(0, Math.min(obsSteps.length - 1, obsStep + dir));
+            updateObs();
+        };
+        updateObs();
+
+        /* ============ BLEND TOGGLE (MULTIPLICATIVE vs ADDITIVE) ============ */
+        var currentBlend = 'mult';
+
+        function getCS() {
+            return getComputedStyle(document.documentElement);
+        }
+
+        var scenarios = [
+            { name: 'Correct & fluent', gate: 1, judge: 0.85 },
+            { name: 'Fluent but WRONG', gate: 0, judge: 0.85 },
+            { name: 'Correct but clumsy', gate: 1, judge: 0.35 }
+        ];
+
+        function computeReward(gate, judge, mode) {
+            if (mode === 'mult') return gate * judge;
+            return 0.5 * gate + 0.5 * judge;
+        }
+
+        function renderBlendContent() {
+            var content = document.getElementById('blend-content');
+            if (!content) return;
+            var s = scenarios[1]; // fluent-but-wrong
+            var reward = computeReward(s.gate, s.judge, currentBlend);
+            var isZero = reward === 0;
+
+            var html = '<p><strong>Scenario: Fluent-but-wrong rollout</strong></p>';
+            html += '<div class="score-row"><span class="score-label">Gate (verify):</span><div class="score-bar-track"><div class="score-bar-fill" style="width:' + (s.gate * 100) + '%; background:var(--red);"></div></div><span class="score-value" style="color:var(--red)">0</span></div>';
+            html += '<div class="score-row"><span class="score-label">Judge (quality):</span><div class="score-bar-track"><div class="score-bar-fill" style="width:' + (s.judge * 100) + '%; background:var(--accent);"></div></div><span class="score-value">' + s.judge.toFixed(2) + '</span></div>';
+
+            if (currentBlend === 'mult') {
+                html += '<div class="score-row"><span class="score-label"><strong>Reward:</strong></span><div class="score-bar-track"><div class="score-bar-fill" style="width:0%; background:var(--green);"></div></div><span class="score-value" style="color:var(--green)">0.00</span></div>';
+                html += '<p style="color:var(--green); font-weight:600; font-size:0.9rem;">Gate failed = reward is ZERO. Fluent-but-wrong gets nothing. Correct behavior.</p>';
+            } else {
+                html += '<div class="score-row"><span class="score-label"><strong>Reward:</strong></span><div class="score-bar-track"><div class="score-bar-fill" style="width:' + (reward * 100) + '%; background:var(--red);"></div></div><span class="score-value" style="color:var(--red)">' + reward.toFixed(2) + '</span></div>';
+                html += '<p style="color:var(--red); font-weight:600; font-size:0.9rem;">Gate failed but reward = ' + reward.toFixed(2) + '! The policy learns that being fluent-but-wrong is rewarded. BROKEN.</p>';
+            }
+            content.innerHTML = html;
+        }
+
+        function renderBlendBars() {
+            var container = document.getElementById('blend-bars');
+            if (!container) return;
+
+            var html = '';
+            scenarios.forEach(function (s) {
+                var reward = computeReward(s.gate, s.judge, currentBlend);
+                var barColor = s.gate === 0 ? (currentBlend === 'mult' ? 'var(--green)' : 'var(--red)') : 'var(--accent)';
+                var pct = Math.max(2, reward * 100);
+                html += '<div class="score-row">';
+                html += '<span class="score-label" style="font-size:0.82rem;">' + s.name + '</span>';
+                html += '<div class="score-bar-track"><div class="score-bar-fill" style="width:' + pct + '%; background:' + barColor + ';"></div></div>';
+                html += '<span class="score-value">' + reward.toFixed(2) + '</span>';
+                html += '</div>';
+            });
+            container.innerHTML = html;
+        }
+
+        window.setBlend = function (mode) {
+            currentBlend = mode;
+            var tabs = document.querySelectorAll('#blend-toggle .toggle-tab');
+            tabs.forEach(function (t) { t.classList.remove('active'); });
+            if (mode === 'mult') tabs[0].classList.add('active');
+            else tabs[1].classList.add('active');
+            renderBlendContent();
+            renderBlendBars();
+        };
+
+        renderBlendContent();
+        renderBlendBars();
+
+        /* ============ MATCHING QUIZ ============ */
+        window.checkMatches = function () {
+            var selects = document.querySelectorAll('#match-widget .match-select');
+            var correct = 0;
+            selects.forEach(function (sel) {
+                var fb = sel.parentElement.querySelector('.match-feedback');
+                if (!fb) return;
+                if (sel.value === '') {
+                    fb.textContent = '?';
+                    fb.style.color = 'var(--muted)';
+                } else if (sel.value === sel.getAttribute('data-correct')) {
+                    fb.textContent = '✓';
+                    fb.style.color = 'var(--green)';
+                    correct++;
+                } else {
+                    fb.textContent = '✗';
+                    fb.style.color = 'var(--red)';
+                }
+            });
+            var scoreEl = document.getElementById('match-score');
+            if (scoreEl) scoreEl.textContent = correct + '/' + selects.length;
+        };
+
+        window.resetMatches = function () {
+            var selects = document.querySelectorAll('#match-widget .match-select');
+            selects.forEach(function (sel) {
+                sel.value = '';
+                var fb = sel.parentElement.querySelector('.match-feedback');
+                if (fb) fb.textContent = '';
+            });
+            var scoreEl = document.getElementById('match-score');
+            if (scoreEl) scoreEl.textContent = '';
+        };
+
+        /* ============ ADVANTAGE NORMALIZATION DEMO ============ */
+        var normSlider = document.getElementById('norm-slider');
+        var normCanvas = document.getElementById('norm-canvas');
+        var normReadouts = document.getElementById('norm-readouts');
+
+        function drawNormDemo() {
+            if (!normCanvas || !normSlider) return;
+            var ctx = normCanvas.getContext('2d');
+            var dpr = window.devicePixelRatio || 1;
+            var w = normCanvas.clientWidth;
+            var h = normCanvas.clientHeight;
+            normCanvas.width = w * dpr;
+            normCanvas.height = h * dpr;
+            ctx.scale(dpr, dpr);
+
+            var cs = getCS();
+            var fg = cs.getPropertyValue('--fg').trim();
+            var accent = cs.getPropertyValue('--accent').trim();
+            var red = cs.getPropertyValue('--red').trim();
+            var muted = cs.getPropertyValue('--muted').trim();
+            var line = cs.getPropertyValue('--line').trim();
+            var green = cs.getPropertyValue('--green').trim();
+            var bg = cs.getPropertyValue('--bg').trim();
+
+            var spread = normSlider.value / 100; // 0 = all same, 1 = max spread
+            var G = 16;
+            // Generate rewards: one slightly different, rest clustered
+            var baseR = 0.5;
+            var rewards = [];
+            for (var i = 0; i < G; i++) {
+                var noise = (Math.sin(i * 7.3 + 1.1) * 0.5) * spread;
+                rewards.push(Math.max(0, Math.min(1, baseR + noise)));
+            }
+            // Sort for display
+            rewards.sort(function (a, b) { return a - b; });
+
+            var mean = rewards.reduce(function (a, b) { return a + b; }, 0) / G;
+            var variance = rewards.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / G;
+            var std = Math.sqrt(variance);
+
+            // Compute advantages
+            var advantages = rewards.map(function (r) {
+                if (std < 0.001) return (r - mean) / 0.001; // near-zero std = explosion
+                return (r - mean) / std;
+            });
+
+            var maxAdv = Math.max.apply(null, advantages.map(function (a) { return Math.abs(a); }));
+            if (maxAdv < 1) maxAdv = 1;
+
+            // Clear
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, w, h);
+
+            // Draw two sections: top half = rewards, bottom half = advantages
+            var midY = h * 0.45;
+            var barW = Math.min(30, (w - 60) / G - 2);
+            var startX = (w - (barW + 2) * G) / 2;
+
+            // Labels
+            ctx.fillStyle = muted;
+            ctx.font = '12px -apple-system, sans-serif';
+            ctx.fillText('Rewards (r)', 8, 14);
+            ctx.fillText('Advantages (A)', 8, midY + 18);
+
+            // Reward bars
+            var maxBarH = midY - 28;
+            for (var j = 0; j < G; j++) {
+                var x = startX + j * (barW + 2);
+                var barH = rewards[j] * maxBarH;
+                ctx.fillStyle = accent;
+                ctx.fillRect(x, midY - 8 - barH, barW, barH);
+            }
+            // Mean line
+            var meanBarH = mean * maxBarH;
+            ctx.strokeStyle = green;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(startX - 4, midY - 8 - meanBarH);
+            ctx.lineTo(startX + G * (barW + 2), midY - 8 - meanBarH);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Advantage bars
+            var advBarMaxH = h - midY - 36;
+            var advMidY = midY + 24 + advBarMaxH / 2;
+            // Horizontal zero line
+            ctx.strokeStyle = line;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(startX - 4, advMidY);
+            ctx.lineTo(startX + G * (barW + 2), advMidY);
+            ctx.stroke();
+
+            for (var k = 0; k < G; k++) {
+                var ax = startX + k * (barW + 2);
+                var normAdv = advantages[k] / maxAdv;
+                var aBarH = Math.abs(normAdv) * (advBarMaxH / 2);
+                var isExplosion = std < 0.05 && Math.abs(advantages[k]) > 5;
+                ctx.fillStyle = isExplosion ? red : (advantages[k] >= 0 ? green : red);
+                if (advantages[k] >= 0) {
+                    ctx.fillRect(ax, advMidY - aBarH, barW, aBarH);
+                } else {
+                    ctx.fillRect(ax, advMidY, barW, aBarH);
+                }
+            }
+
+            // Readouts
+            if (normReadouts) {
+                var stdDisplay = std.toFixed(4);
+                var maxAdvDisplay = Math.max.apply(null, advantages.map(function (a) { return Math.abs(a); })).toFixed(1);
+                var stdColor = std < 0.05 ? 'var(--red)' : 'var(--fg)';
+                var advColor = Math.abs(parseFloat(maxAdvDisplay)) > 5 ? 'var(--red)' : 'var(--fg)';
+                normReadouts.innerHTML =
+                    '<div class="norm-cell"><span class="label">Mean</span><span class="value">' + mean.toFixed(3) + '</span></div>' +
+                    '<div class="norm-cell"><span class="label">Std</span><span class="value" style="color:' + stdColor + '">' + stdDisplay + '</span></div>' +
+                    '<div class="norm-cell"><span class="label">Max |A|</span><span class="value" style="color:' + advColor + '">' + maxAdvDisplay + '</span></div>' +
+                    '<div class="norm-cell"><span class="label">Spread</span><span class="value">' + (spread * 100).toFixed(0) + '%</span></div>';
+            }
+        }
+
+        if (normSlider) {
+            normSlider.addEventListener('input', drawNormDemo);
+            drawNormDemo();
+        }
+
+        // Redraw on color scheme change
+        if (window.matchMedia) {
+            var mq = window.matchMedia('(prefers-color-scheme: dark)');
+            if (mq.addEventListener) {
+                mq.addEventListener('change', function () {
+                    drawNormDemo();
+                });
+            }
+        }
+
+        /* ============ QUIZ ============ */
+        var quizScore = 0;
+        var quizAnswered = 0;
+        var quizTotal = document.querySelectorAll('.quiz-q').length;
+        var quizTotalEl = document.getElementById('quiz-total');
+        if (quizTotalEl) quizTotalEl.textContent = quizTotal;
+
+        document.querySelectorAll('.quiz-q').forEach(function (q) {
+            var correctIdx = parseInt(q.getAttribute('data-correct'), 10);
+            var options = q.querySelectorAll('.quiz-option');
+            var explains = q.querySelectorAll('.quiz-explain');
+
+            options.forEach(function (opt, idx) {
+                opt.addEventListener('click', function () {
+                    if (opt.disabled) return;
+                    options.forEach(function (o) { o.disabled = true; });
+
+                    if (idx === correctIdx) {
+                        opt.classList.add('correct');
+                        quizScore++;
+                        if (explains[0]) { explains[0].classList.add('show'); }
+                    } else {
+                        opt.classList.add('wrong');
+                        options[correctIdx].classList.add('correct');
+                        if (explains[1]) { explains[1].classList.add('show'); }
+                    }
+                    quizAnswered++;
+                    var scoreEl = document.getElementById('quiz-score-num');
+                    if (scoreEl) scoreEl.textContent = quizScore;
+                });
+            });
+        });
+
+        window.resetQuiz = function () {
+            quizScore = 0;
+            quizAnswered = 0;
+            var scoreEl = document.getElementById('quiz-score-num');
+            if (scoreEl) scoreEl.textContent = '0';
+            document.querySelectorAll('.quiz-q').forEach(function (q) {
+                q.querySelectorAll('.quiz-option').forEach(function (opt) {
+                    opt.disabled = false;
+                    opt.classList.remove('correct', 'wrong');
+                });
+                q.querySelectorAll('.quiz-explain').forEach(function (ex) {
+                    ex.classList.remove('show');
+                });
+            });
+        };
+
+        /* ============ RESIZE HANDLER ============ */
+        var resizeTimer;
+        window.addEventListener('resize', function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function () {
+                drawNormDemo();
+            }, 150);
+        });
+
+    })();
+    </script>
+</body>
+</html>

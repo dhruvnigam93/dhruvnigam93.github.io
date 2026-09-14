@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "RL Environment & Reward Design for Agentic LLM Training"
+  slug: rl-environment-reward-design
+  date: 2026-09-14
+  description: "The Module 10 capstone -- six sandbox principles with violation cards, a reward-type decision ladder, multiplicative-vs-additive gating toggle (the Sep 13 correction), Goodhart's Law and observability-death-spiral steppers, ERPO/Dr. GRPO normalization canvas with std-collapse demo, the full reward-hacking table as a matching quiz, six design drill cards (code-interpreter, judge-gaming diagnosis, retrieved-token masking, ARPO branching, credit assignment, hallucinated tool calls), and a 10-question final quiz."
+
 - title: "PyTorch DL Interview Cram"
   slug: pytorch-dl-interview-cram
   date: 2026-09-08
