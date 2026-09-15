@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>LLM Judges &amp; Reward Hacking</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --radius: 14px;
+            --green: #16a34a;
+            --red: #dc2626;
+            --orange: #ea580c;
+            --purple: #7c3aed;
+            --teal: #0d9488;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                --green: #4ade80;
+                --red: #f87171;
+                --orange: #fb923c;
+                --purple: #a78bfa;
+                --teal: #2dd4bf;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: max(20px, env(safe-area-inset-top)) 20px 80px;
+        }
+        .back {
+            display: inline-block;
+            margin: 8px 0 20px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.3rem; margin: 2em 0 0.5em; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
+        h3 { font-size: 1.1rem; margin: 1.2em 0 0.4em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        code {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.85em;
+        }
+        pre {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            overflow-x: auto;
+            font-size: 0.85em;
+        }
+        pre code { background: none; border: none; padding: 0; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+        }
+        .card.warn { border-left: 4px solid var(--orange); }
+        .card.key { border-left: 4px solid var(--accent); }
+        .card.green { border-left: 4px solid var(--green); }
+        .card.red { border-left: 4px solid var(--red); }
+        details {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 0 18px;
+            margin: 12px 0;
+            background: var(--card);
+        }
+        summary {
+            cursor: pointer;
+            padding: 16px 0;
+            font-weight: 600;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after {
+            content: "+";
+            color: var(--muted);
+            font-size: 1.4rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        button {
+            font: inherit;
+            font-weight: 600;
+            color: #fff;
+            background: var(--accent);
+            border: none;
+            border-radius: 999px;
+            padding: 12px 22px;
+            min-height: 48px;
+            min-width: 48px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        button:active { transform: scale(0.96); }
+        .ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+        input[type="range"] { width: 100%; height: 44px; }
+        footer {
+            margin-top: 3em;
+            padding-top: 1.2em;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+
+        /* Nav pills */
+        .nav-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 0 0 2em;
+            padding: 0;
+            list-style: none;
+        }
+        .nav-pills a {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            color: var(--fg);
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 500;
+            white-space: nowrap;
+            min-height: 36px;
+            line-height: 1.6;
+        }
+        .nav-pills a:active { background: var(--accent); color: #fff; }
+
+        /* Tables */
+        .tablewrap {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 1em 0;
+        }
+        .tablewrap table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            min-width: 500px;
+        }
+        .tablewrap th, .tablewrap td {
+            border: 1px solid var(--line);
+            padding: 8px 10px;
+            text-align: left;
+        }
+        .tablewrap th {
+            background: var(--card);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        /* Series links box */
+        .series-box {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 18px;
+            margin: 0 0 1.5em;
+            font-size: 0.9rem;
+        }
+        .series-box strong { display: block; margin-bottom: 6px; }
+        .series-box a { display: block; margin: 4px 0; }
+
+        /* Math block */
+        .math-block {
+            display: block;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            margin: 0.8em 0;
+            overflow-x: auto;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.88em;
+            line-height: 1.8;
+        }
+        .hl { color: var(--accent); font-weight: 700; }
+
+        /* Gradient canvas widget */
+        .widget-box {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin: 1em 0;
+        }
+        .widget-box canvas {
+            width: 100%;
+            border-radius: 8px;
+            display: block;
+        }
+        .widget-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .widget-readout {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .readout-cell {
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 8px 12px;
+            text-align: center;
+            flex: 1;
+            min-width: 100px;
+        }
+        .readout-cell .label {
+            font-size: 0.72rem;
+            color: var(--muted);
+            display: block;
+        }
+        .readout-cell .value {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        /* Flip cards */
+        .flipcard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin: 1em 0;
+        }
+        .flipcard {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 18px;
+            cursor: pointer;
+            touch-action: manipulation;
+            transition: border-color 0.2s;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .flipcard:active { border-color: var(--accent); }
+        .flipcard .fc-symptom {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin: 0 0 4px;
+        }
+        .flipcard .fc-prompt {
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+        .flipcard .fc-answer {
+            display: none;
+            margin-top: 10px;
+            padding: 10px 14px;
+            background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+            border-radius: 8px;
+            font-size: 0.88rem;
+        }
+        .flipcard .fc-answer.show { display: block; }
+        .flipcard .fc-mode {
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .flipcard .fc-defense {
+            color: var(--green);
+            font-weight: 600;
+        }
+
+        /* Reward calculator */
+        .calc-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin: 1em 0;
+        }
+        @media (max-width: 520px) {
+            .calc-grid { grid-template-columns: 1fr; }
+        }
+        .calc-panel {
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+        }
+        .calc-panel h4 { margin: 0 0 8px; font-size: 0.95rem; }
+        .calc-result {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-weight: 700;
+            font-size: 1.4rem;
+            text-align: center;
+            margin: 8px 0;
+        }
+        .calc-formula {
+            font-size: 0.78rem;
+            color: var(--muted);
+            text-align: center;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        }
+
+        /* Group visual */
+        .group-visual {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            margin: 10px 0;
+        }
+        @media (max-width: 400px) {
+            .group-visual { grid-template-columns: repeat(4, 1fr); }
+        }
+        .rollout-dot {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #fff;
+            transition: background 0.3s, transform 0.2s;
+        }
+
+        /* Dashboard ordering */
+        .dash-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin: 10px 0;
+            padding: 10px 14px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+        }
+        .dash-num {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+        .dash-body { flex: 1; }
+        .dash-body strong { display: block; font-size: 0.92rem; }
+        .dash-body p { font-size: 0.85rem; margin: 4px 0 0; }
+        .dash-cost {
+            font-size: 0.75rem;
+            color: var(--muted);
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 2px 10px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* Anchor callout */
+        .anchor-line {
+            background: color-mix(in srgb, var(--orange) 10%, var(--card));
+            border: 2px solid var(--orange);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+            font-weight: 700;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        /* Quiz */
+        .quiz-container { margin: 1em 0; }
+        .quiz-q {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 12px 0;
+        }
+        .quiz-q p { margin: 0 0 10px; font-weight: 600; }
+        .quiz-option {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: var(--bg);
+            color: var(--fg);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin: 6px 0;
+            min-height: 48px;
+            font-weight: 400;
+            font-size: 0.92rem;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .quiz-option:hover { border-color: var(--accent); }
+        .quiz-option.correct {
+            border-color: var(--green);
+            background: color-mix(in srgb, var(--green) 12%, var(--bg));
+        }
+        .quiz-option.wrong {
+            border-color: var(--red);
+            background: color-mix(in srgb, var(--red) 12%, var(--bg));
+        }
+        .quiz-option:disabled { cursor: default; opacity: 0.85; }
+        .quiz-explain {
+            margin-top: 8px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            display: none;
+        }
+        .quiz-explain.show { display: block; }
+        .quiz-explain.right { background: color-mix(in srgb, var(--green) 10%, var(--card)); color: var(--green); }
+        .quiz-explain.incorrect { background: color-mix(in srgb, var(--red) 10%, var(--card)); color: var(--red); }
+        .quiz-score {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin: 12px 0;
+        }
+
+        /* Toggle widget for additive vs multiplicative */
+        .toggle-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 14px;
+        }
+        .toggle-tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px 14px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: 1px solid var(--line);
+            background: var(--bg);
+            color: var(--fg);
+            cursor: pointer;
+            min-height: 44px;
+        }
+        .toggle-tab:first-child { border-radius: 10px 0 0 10px; }
+        .toggle-tab:last-child { border-radius: 0 10px 10px 0; }
+        .toggle-tab.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+            padding: 0;
+            margin: 0.5em 0;
+        }
+        .checklist li {
+            padding: 6px 0 6px 28px;
+            position: relative;
+            font-size: 0.92rem;
+        }
+        .checklist li::before {
+            content: "\2713";
+            position: absolute;
+            left: 0;
+            color: var(--green);
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>LLM Judges &amp; Reward Hacking</h1>
+        <p class="meta">Added 2026-09-15</p>
+
+        <div class="series-box">
+            <strong>RL for Agentic LLMs -- related pages</strong>
+            <a href="/explainers/rl-environment-reward-design.html">Environments &amp; Reward Design (Part 1)</a>
+            <span style="color:var(--accent); font-weight:600;">LLM Judges &amp; Reward Hacking (you are here)</span>
+            <a href="/explainers/rl-multi-turn-credit-assignment.html">Multi-Turn Credit Assignment</a>
+        </div>
+
+        <div class="card key" style="border-left: 4px solid var(--teal);">
+            <strong>How to use this page</strong><br>
+            This is your phone-friendly refresher for the reward-hacking half of the "Environment &amp; Reward Design" round. The <strong>orange warning boxes</strong> correct specific wrong answers from today's session -- they are the quiz distractors. The three interactive widgets (batch-gradient demo, Gao overoptimization curve, multiplicative vs additive calculator) build arithmetic intuition. The <strong>flip-card table</strong> drills naming failure modes from symptoms. The <strong>10-question quiz</strong> at the end is built from your actual mistakes.
+        </div>
+
+        <nav>
+            <ul class="nav-pills">
+                <li><a href="#s1">1. Dashboard Lie</a></li>
+                <li><a href="#s2">2. Why Small Biases Kill</a></li>
+                <li><a href="#s3">3. Gao Curve</a></li>
+                <li><a href="#s4">4. Bias Catalog</a></li>
+                <li><a href="#s5">5. Held-Out Judge</a></li>
+                <li><a href="#s6">6. Dashboard Stack</a></li>
+                <li><a href="#s7">7. Mult vs Add</a></li>
+                <li><a href="#s8">8. Hacking Table</a></li>
+                <li><a href="#s9">9. Case Study</a></li>
+                <li><a href="#quiz">Quiz</a></li>
+            </ul>
+        </nav>
+
+        <!-- ============================== SECTION 1 ============================== -->
+        <h2 id="s1">1. The Dashboard Lie</h2>
+
+        <p>Training reward climbs monotonically to 0.95. The loss curve looks healthy. Every checkpoint scores higher than the last on the judge you trained against.</p>
+
+        <p>Meanwhile, human-judged quality craters.</p>
+
+        <div class="card red">
+            <strong>The trap:</strong> Nothing in the RL training metrics distinguishes "getting better" from "getting hacked." At early steps, both are true simultaneously -- the model IS improving AND beginning to exploit the judge. The dashboard cannot tell you when one overtakes the other. That inflection is invisible unless you build detection into the system.
+        </div>
+
+        <p>This page is about the three things you need to know: <strong>why</strong> hacking happens (the gradient math), <strong>how</strong> to detect it (the monitoring stack), and <strong>how</strong> to prevent it (multiplicative gating + task design).</p>
+
+
+        <!-- ============================== SECTION 2 ============================== -->
+        <h2 id="s2">2. Why Small Biases Kill</h2>
+
+        <div class="card key">
+            <strong>Core claim:</strong> RL follows the most RELIABLE gradient, not the largest reward. A judge's +0.05 verbosity bump is ONE coherent direction in policy space that pays on EVERY prompt, deterministically. Genuine quality (+0.3) is a thousand prompt-specific directions whose gradients dilute in batch averaging. Bias <em>consistency</em> kills, not bias <em>size</em>.
+        </div>
+
+        <div class="card warn">
+            <strong>Your wrong instinct:</strong> "A small (+0.05) bias causes proportionally small damage." No. The +0.05 points in the SAME direction on every prompt. The +0.3 quality signal points in a DIFFERENT direction per prompt. When you average a batch of 64, the quality gradients partially cancel (they're idiosyncratic); the bias gradient survives intact. Small-but-everywhere beats large-but-somewhere.
+        </div>
+
+        <h3>Batch Gradient Averaging -- Interactive Demo</h3>
+        <p>Each arrow is one prompt's gradient. The <span style="color:var(--red); font-weight:600;">red</span> component is the bias (always pointing right) and the <span style="color:var(--accent); font-weight:600;">blue</span> component is genuine quality improvement (pointing in different directions per prompt). Watch what survives averaging.</p>
+
+        <div class="widget-box">
+            <canvas id="gradientCanvas" height="320"></canvas>
+            <div class="widget-controls">
+                <label style="font-size:0.85rem; font-weight:600;">Batch size:</label>
+                <input type="range" id="batchSlider" min="2" max="64" value="8" style="flex:1; min-width:120px;">
+                <span id="batchLabel" style="font-family:monospace; font-weight:700; min-width:30px;">8</span>
+                <button class="ghost" id="gradReplay" style="font-size:0.85rem; padding:8px 16px; min-height:40px;">Replay</button>
+            </div>
+            <div class="widget-readout">
+                <div class="readout-cell">
+                    <span class="label">Bias survival</span>
+                    <span class="value" id="biasSurvival">100%</span>
+                </div>
+                <div class="readout-cell">
+                    <span class="label">Quality survival</span>
+                    <span class="value" id="qualitySurvival">--</span>
+                </div>
+                <div class="readout-cell">
+                    <span class="label">Bias / Total</span>
+                    <span class="value" id="biasRatio">--</span>
+                </div>
+            </div>
+        </div>
+
+        <p>As batch size grows, quality gradients cancel out (they're random directions), while the bias gradient stays fixed. At batch size 64, the average gradient is <em>dominated</em> by the bias even though it's only +0.05 per prompt.</p>
+
+
+        <!-- ============================== SECTION 3 ============================== -->
+        <h2 id="s3">3. Gao et al. 2022: Overoptimization Quantified</h2>
+
+        <div class="card key">
+            <strong>The Gao curve shape:</strong> Proxy RM score climbs monotonically. Gold (true) score rises then FALLS. X-axis is <strong>KL distance from the initial policy</strong> (optimization pressure spent), NOT training steps. The divergence point moves rightward with bigger RMs / more RM training data, but it never disappears.
+        </div>
+
+        <p>This is Goodhart's Law made quantitative. The proxy reward model is a noisy estimator of true quality. As you push harder against it, you find its cracks.</p>
+
+        <h3>Overoptimization Curve -- Interactive</h3>
+        <p>Drag the slider to change RM quality (size/data). Watch how the gold curve's peak shifts but never stops falling.</p>
+
+        <div class="widget-box">
+            <canvas id="gaoCanvas" height="280"></canvas>
+            <div class="widget-controls">
+                <label style="font-size:0.85rem; font-weight:600;">RM quality:</label>
+                <input type="range" id="gaoSlider" min="1" max="10" value="4" style="flex:1; min-width:120px;">
+                <span id="gaoLabel" style="font-family:monospace; font-weight:700; min-width:50px;">Medium</span>
+            </div>
+            <div class="widget-readout">
+                <div class="readout-cell">
+                    <span class="label">Peak gold score</span>
+                    <span class="value" id="gaoPeak">--</span>
+                </div>
+                <div class="readout-cell">
+                    <span class="label">Peak KL</span>
+                    <span class="value" id="gaoPeakKL">--</span>
+                </div>
+                <div class="readout-cell">
+                    <span class="label">Gold at max KL</span>
+                    <span class="value" id="gaoEnd">--</span>
+                </div>
+            </div>
+        </div>
+
+        <p>Takeaway: More RM data and bigger RMs <em>delay</em> the crash but never eliminate it. The only escape is verifiable rewards (ungameable) or early stopping with a held-out judge as the odometer.</p>
+
+
+        <!-- ============================== SECTION 4 ============================== -->
+        <h2 id="s4">4. Judge Bias Catalog</h2>
+
+        <div class="tablewrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Bias</th>
+                        <th>What Happens</th>
+                        <th>Mitigation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Verbosity</strong></td>
+                        <td>Longer outputs score higher regardless of substance</td>
+                        <td>Length normalization in rubric; penalize tokens explicitly; Dr. GRPO length-balanced data</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Position</strong></td>
+                        <td>In pairwise comparison, the first (or last) option scores higher</td>
+                        <td>Randomize order + average scores across both orderings</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Sycophancy</strong></td>
+                        <td>Agreeable, flattering outputs score higher -- shared across ALL model families because RLHF trains it in everywhere</td>
+                        <td>Factual verification gate (extend verifier to checkable claims); diverse judge panel is the weakest defense here</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Absolute-scale miscalibration</strong></td>
+                        <td>Absolute scores (1-10) are unreliable; judges cluster around 7-8</td>
+                        <td>Use pairwise comparison + BT model to convert preferences to rewards</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Prompt sensitivity</strong></td>
+                        <td>Minor rubric rephrasing changes scores dramatically</td>
+                        <td>Calibrate against known-quality outputs; A/B test rubric versions</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Self/family preference</strong></td>
+                        <td>Judges rate outputs from their own model family higher</td>
+                        <td>Use a judge from a different model family, at least as large as the policy</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <details>
+            <summary>d-RLAIF: the no-RM trade-off</summary>
+            <p><strong>d-RLAIF</strong> (direct RLAIF) skips the reward model entirely -- the LLM judge's scores are used directly as rewards in the RL loop. This is simpler (no RM training) but requires judge inference on <em>every single rollout</em>, which is expensive. The upside: no RM overfitting (the judge IS the reward, so there's no proxy-to-gold gap from RM staleness). The downside: every judge bias hits training directly with no averaging/smoothing from the RM.</p>
+        </details>
+
+
+        <!-- ============================== SECTION 5 ============================== -->
+        <h2 id="s5">5. The Held-Out Judge = Your Test Set</h2>
+
+        <div class="card key">
+            <strong>The contamination problem:</strong> The training judge is compromised -- thousands of gradient steps of optimization pressure against it. Judge-scored evals climb WITH training reward because they share the same biases. You need a <em>held-out</em> judge to detect gaming.
+        </div>
+
+        <p>The held-out judge has <strong>two properties</strong>:</p>
+        <ul class="checklist">
+            <li><strong>Zero optimization pressure against it, ever.</strong> The policy has never been trained to score well on this judge.</li>
+            <li><strong>Different model family, at least as strong.</strong> Different family means different biases. At-least-as-strong means it can catch failures the training judge can't.</li>
+        </ul>
+
+        <p>The <strong>monitored metric</strong> is the train-judge vs held-out-judge GAP. When training reward goes up but held-out score stays flat or drops, that divergence IS the measurement of gaming.</p>
+
+        <div class="card warn">
+            <strong>Caveat:</strong> Aggressively checkpoint-selecting on the held-out judge contaminates it -- same as test-set overfitting. Use it as a monitoring signal, not a selection criterion. If you must select, use a separate validation judge on top of that.
+        </div>
+
+        <div class="card warn">
+            <strong>Your wrong instinct:</strong> "Run all your evals at every checkpoint" as sufficient detection. If those evals use the training judge (or a judge from the same family), they share the same biases and will climb in lockstep with training reward. They are contaminated. Only a held-out judge from a different family detects the gap.
+        </div>
+
+
+        <!-- ============================== SECTION 6 ============================== -->
+        <h2 id="s6">6. The Monitoring Dashboard, Cheapest First</h2>
+
+        <p>Ordered by cost. Run all five, but start at the top -- the cheap ones often catch the problem before you need the expensive ones.</p>
+
+        <div class="dash-step">
+            <div class="dash-num">1</div>
+            <div class="dash-body">
+                <strong>Mechanical stats</strong>
+                <p>Mean output length, repetition rate, format anomalies (bullet count, header ratio). These are free -- already logged. A sudden length jump is the smoking gun for verbosity hacking.</p>
+            </div>
+            <div class="dash-cost">Free</div>
+        </div>
+
+        <div class="dash-step">
+            <div class="dash-num">2</div>
+            <div class="dash-body">
+                <strong>Entropy + KL-from-init</strong>
+                <p>Free training scalars. Entropy collapse = exploit tripwire (but also fires on healthy convergence -- it's a tripwire, not a diagnosis). KL = the Gao odometer -- how far you've pushed from the initial policy.</p>
+            </div>
+            <div class="dash-cost">Free</div>
+        </div>
+
+        <div class="dash-step">
+            <div class="dash-num">3</div>
+            <div class="dash-body">
+                <strong>Held-out judge on a rollout sample</strong>
+                <p>The gap metric: train-judge score minus held-out-judge score. Divergence IS gaming. Sample 100-200 rollouts per checkpoint, not all of them.</p>
+            </div>
+            <div class="dash-cost">Medium</div>
+        </div>
+
+        <div class="dash-step">
+            <div class="dash-num">4</div>
+            <div class="dash-body">
+                <strong>Verifiable gold evals</strong>
+                <p>Where ground truth exists (math, code tests, factual QA), score against it. These are ungameable but only cover tasks with verifiable answers.</p>
+            </div>
+            <div class="dash-cost">Medium</div>
+        </div>
+
+        <div class="dash-step">
+            <div class="dash-num">5</div>
+            <div class="dash-body">
+                <strong>Human spot-checks</strong>
+                <p>Expensive, weekly, last line of defense. Read 20-30 outputs per checkpoint. The human catches things no automated metric can -- but at 10 minutes per output, this doesn't scale.</p>
+            </div>
+            <div class="dash-cost">Expensive</div>
+        </div>
+
+
+        <!-- ============================== SECTION 7 ============================== -->
+        <h2 id="s7">7. Multiplicative vs Additive Gating</h2>
+
+        <div class="card key">
+            <strong>The core scheme:</strong> <code>reward = verifier_gate x judge_score</code>, NOT <code>0.5*verifier + 0.5*judge</code>. Under additive, fluent-but-wrong earns <code>0.5*0 + 0.5*0.9 = 0.45</code> reliably -- and the judge term is the easy coherent gradient, so the policy hill-climbs charm and correctness becomes optional. Under multiplicative, wrong = 0 no matter how charming.
+        </div>
+
+        <h3>Reward Calculator -- Interactive</h3>
+
+        <div class="widget-box" id="calcWidget">
+            <div style="margin-bottom:14px;">
+                <label style="font-size:0.9rem; font-weight:600;">Verifier gate:</label>
+                <div class="toggle-tabs" style="max-width:200px; margin-top:6px;">
+                    <button class="toggle-tab active" id="vPass" onclick="setVerifier(1)">PASS</button>
+                    <button class="toggle-tab" id="vFail" onclick="setVerifier(0)">FAIL</button>
+                </div>
+            </div>
+            <div>
+                <label style="font-size:0.9rem; font-weight:600;">Judge score: <span id="judgeVal" style="font-family:monospace;">0.90</span></label>
+                <input type="range" id="judgeSlider" min="0" max="100" value="90">
+            </div>
+
+            <div class="calc-grid">
+                <div class="calc-panel" style="border-left: 4px solid var(--green);">
+                    <h4 style="color:var(--green);">Multiplicative</h4>
+                    <div class="calc-formula" id="multFormula">1 x 0.90</div>
+                    <div class="calc-result" id="multResult" style="color:var(--green);">0.90</div>
+                </div>
+                <div class="calc-panel" style="border-left: 4px solid var(--orange);">
+                    <h4 style="color:var(--orange);">Additive (0.5 + 0.5)</h4>
+                    <div class="calc-formula" id="addFormula">0.5*1 + 0.5*0.90</div>
+                    <div class="calc-result" id="addResult" style="color:var(--orange);">0.95</div>
+                </div>
+            </div>
+
+            <h4 style="margin-top:18px;">The GRPO Group Argument</h4>
+            <p style="font-size:0.88rem;">In a group of 16 rollouts, toggle "all fail verifier" to see how advantages differ:</p>
+
+            <div style="margin:10px 0;">
+                <label style="font-size:0.85rem; font-weight:600;">
+                    <input type="checkbox" id="allFailToggle" style="width:18px; height:18px; vertical-align:middle; margin-right:6px;">
+                    All 16 rollouts fail the verifier
+                </label>
+            </div>
+
+            <div id="groupVis" class="group-visual">
+                <!-- Filled by JS -->
+            </div>
+
+            <div class="calc-grid" style="margin-top:10px;">
+                <div class="calc-panel">
+                    <h4>Mult. advantage spread</h4>
+                    <div class="calc-result" id="multAdvantage" style="font-size:1rem;">--</div>
+                    <div class="calc-formula" id="multAdvExplain"></div>
+                </div>
+                <div class="calc-panel">
+                    <h4>Add. advantage spread</h4>
+                    <div class="calc-result" id="addAdvantage" style="font-size:1rem;">--</div>
+                    <div class="calc-formula" id="addAdvExplain"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card warn">
+            <strong>The critical insight (GRPO-native):</strong> When ALL 16 rollouts fail the verifier, multiplicative gives an all-zero group, so all advantages are zero -- the wrong training signal is <strong>SILENCED</strong>, not just unpaid. Additive still ranks them by charm (judge scores vary), producing nonzero advantages that actively push toward charming-but-wrong.
+        </div>
+
+        <details>
+            <summary>Caveat: Multiplicative's cost is sparsity</summary>
+            <p>If the verifier gate is too hard (almost nothing passes), multiplicative produces zero-reward groups everywhere -- no learning signal at all. The fix is <strong>curriculum</strong> (start with easier tasks where pass rate is achievable) or <strong>more samples per group</strong> (the group is the densifier -- with G=32 or 64, you're more likely to get at least one pass). Never soften the gate to additive to "fix" sparsity -- that re-introduces the charm gradient.</p>
+        </details>
+
+
+        <!-- ============================== SECTION 8 ============================== -->
+        <h2 id="s8">8. The 7-Row Reward Hacking Table</h2>
+
+        <p>Read the symptom. Commit to naming the mode. Tap to reveal. <strong>Naming the mode matters</strong> -- interviewers pattern-match vocabulary.</p>
+
+        <div class="flipcard-grid" id="flipcards">
+            <!-- Filled by JS -->
+        </div>
+
+
+        <!-- ============================== SECTION 9 ============================== -->
+        <h2 id="s9">9. Case Study: Shortcut Learning Done Wrong and Right</h2>
+
+        <p><strong>Setup:</strong> Search agent, binary correctness reward. 70% of training tasks are popular-entity questions answerable from pretraining memory. The agent stops searching -- why would it? Memory works on 70% of prompts, and search has latency + token cost. It becomes confidently wrong on the hard 30%.</p>
+
+        <div class="card red">
+            <strong>THE WRONG FIX (seductive):</strong> Make tool use mandatory -- reward zero unless the answer "came from the search results."
+
+            <p>Problems:</p>
+            <ol style="font-size:0.88rem; margin:6px 0;">
+                <li><strong>Call-farming:</strong> Perfunctory ritual queries on every question. Latency + token tax. Fake grounding.</li>
+                <li><strong>"Came from search results" is an attribution check</strong> -- not exact-match verifiable. It becomes an LLM-judge call, which DEMOTES a clean binary reward back into a gameable judge-dependent one.</li>
+                <li><strong>Exploit:</strong> The agent learns to parrot retrieved text even when retrieval is wrong. Faithful does not mean correct.</li>
+            </ol>
+        </div>
+
+        <div class="card green">
+            <strong>THE RIGHT FIX:</strong> Fix the TASK DISTRIBUTION. Use post-cutoff/temporal questions, obscure entities, or a snapshot corpus where the correct answer differs from pretraining priors. Now memory naturally scores 0 and search becomes instrumentally necessary. The binary reward stays clean and untouched.
+        </div>
+
+        <div class="anchor-line">
+            Fix the tasks so the shortcut stops paying -- don't bolt process constraints onto the reward.
+        </div>
+
+        <details>
+            <summary>Search-R1's retrieved token masking (related context)</summary>
+            <p>Search-R1 has a separate problem: when search results are injected into the trajectory, the RL optimizer would try to assign gradient to environment-injected tokens (the search results). Retrieved token masking zeros out the loss for all tokens inside <code>&lt;information&gt;</code> blocks, so the agent is only optimized on the tokens it generated (the query and subsequent reasoning). This is about training stability, not shortcut prevention -- but it's a common interview follow-up when discussing search agents.</p>
+        </details>
+
+
+        <!-- ============================== QUIZ ============================== -->
+        <h2 id="quiz">Quiz</h2>
+
+        <p>10 questions. Distractors are your actual wrong answers from today. Running score at the bottom.</p>
+
+        <div class="quiz-score">Score: <span id="quizScore">0</span> / <span id="quizTotal">0</span></div>
+
+        <div class="quiz-container" id="quizContainer">
+            <!-- Filled by JS -->
+        </div>
+
+        <div class="quiz-score">Final: <span id="quizScoreFinal">0</span> / 10</div>
+        <button class="ghost" id="quizReset" style="margin-top:8px;">Reset Quiz</button>
+
+
+        <footer>
+            Personal explainer &middot; unlisted &middot; <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+
+    <script>
+    (function () {
+        "use strict";
+
+        /* =============== UTILITY =============== */
+        function getCSS(name) {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        }
+
+        /* =============== 1. BATCH GRADIENT CANVAS =============== */
+        var gradCanvas = document.getElementById('gradientCanvas');
+        var gradCtx = gradCanvas ? gradCanvas.getContext('2d') : null;
+        var batchSlider = document.getElementById('batchSlider');
+        var batchLabel = document.getElementById('batchLabel');
+        var biasSurvivalEl = document.getElementById('biasSurvival');
+        var qualitySurvivalEl = document.getElementById('qualitySurvival');
+        var biasRatioEl = document.getElementById('biasRatio');
+        var gradReplay = document.getElementById('gradReplay');
+
+        var gradAnimId = null;
+        var gradArrows = [];
+        var gradPhase = 0; // 0=individual, 1=averaging, 2=result
+        var gradT = 0;
+
+        function generateArrows(n) {
+            var arr = [];
+            for (var i = 0; i < n; i++) {
+                var angle = (Math.random() - 0.5) * Math.PI * 1.6; // random direction for quality
+                var qualMag = 0.3 + Math.random() * 0.4; // quality magnitude
+                var biasMag = 0.05; // consistent bias pointing right
+                arr.push({
+                    qx: Math.cos(angle) * qualMag,
+                    qy: Math.sin(angle) * qualMag,
+                    bx: biasMag,
+                    by: 0,
+                    x: 0, y: 0 // for animation positioning
+                });
+            }
+            return arr;
+        }
+
+        function drawGradient() {
+            if (!gradCtx || !gradCanvas) return;
+            var dpr = window.devicePixelRatio || 1;
+            var rect = gradCanvas.getBoundingClientRect();
+            gradCanvas.width = rect.width * dpr;
+            gradCanvas.height = rect.height * dpr;
+            gradCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            var W = rect.width;
+            var H = rect.height;
+            gradCtx.clearRect(0, 0, W, H);
+
+            var fg = getCSS('--fg');
+            var accent = getCSS('--accent');
+            var red = getCSS('--red');
+            var muted = getCSS('--muted');
+            var n = gradArrows.length;
+            if (n === 0) return;
+
+            var scale = Math.min(W, H) * 0.32;
+            var cx = W / 2;
+            var cy = H / 2;
+
+            // Phase 0: show individual arrows fanned out
+            // Phase 1: animate them collapsing to center
+            // Phase 2: show averaged arrow
+
+            var showIndividual = gradPhase < 2;
+            var t = Math.min(gradT, 1);
+
+            if (showIndividual) {
+                for (var i = 0; i < n; i++) {
+                    var a = gradArrows[i];
+                    var ang = (i / n) * Math.PI * 2;
+                    var fanR = Math.min(W, H) * 0.12;
+                    var ox, oy;
+                    if (gradPhase === 0) {
+                        ox = cx + Math.cos(ang) * fanR;
+                        oy = cy + Math.sin(ang) * fanR;
+                    } else {
+                        var startOx = cx + Math.cos(ang) * fanR;
+                        var startOy = cy + Math.sin(ang) * fanR;
+                        ox = startOx + (cx - startOx) * t;
+                        oy = startOy + (cy - startOy) * t;
+                    }
+
+                    // quality component (blue)
+                    drawArrow(gradCtx, ox, oy, ox + a.qx * scale, oy + a.qy * scale, accent, 1.5, 0.6);
+                    // bias component (red)
+                    drawArrow(gradCtx, ox, oy, ox + a.bx * scale, oy + a.by * scale, red, 2, 0.9);
+                }
+            }
+
+            // Phase 2: show averaged result
+            if (gradPhase === 2) {
+                var avgQx = 0, avgQy = 0, avgBx = 0, avgBy = 0;
+                for (var j = 0; j < n; j++) {
+                    avgQx += gradArrows[j].qx;
+                    avgQy += gradArrows[j].qy;
+                    avgBx += gradArrows[j].bx;
+                    avgBy += gradArrows[j].by;
+                }
+                avgQx /= n; avgQy /= n; avgBx /= n; avgBy /= n;
+
+                var resultScale = scale * 2;
+                // Quality averaged
+                drawArrow(gradCtx, cx, cy, cx + avgQx * resultScale, cy + avgQy * resultScale, accent, 3, 1);
+                // Bias averaged
+                drawArrow(gradCtx, cx, cy, cx + avgBx * resultScale, cy + avgBy * resultScale, red, 4, 1);
+                // Total
+                var totalX = avgQx + avgBx;
+                var totalY = avgQy + avgBy;
+                drawArrow(gradCtx, cx, cy, cx + totalX * resultScale, cy + totalY * resultScale, fg, 2.5, 0.5);
+
+                // Labels
+                gradCtx.font = '600 13px -apple-system, sans-serif';
+                gradCtx.fillStyle = red;
+                gradCtx.fillText('Bias (survives)', cx + avgBx * resultScale + 6, cy + avgBy * resultScale - 8);
+                gradCtx.fillStyle = accent;
+                gradCtx.fillText('Quality (diluted)', cx + avgQx * resultScale + 6, cy + avgQy * resultScale + 16);
+                gradCtx.fillStyle = muted;
+                gradCtx.fillText('Avg of ' + n + ' prompts', cx + totalX * resultScale + 6, cy + totalY * resultScale);
+
+                // Update readouts
+                var qualSurvival = Math.sqrt(avgQx * avgQx + avgQy * avgQy) / 0.5 * 100;
+                var biasSurv = Math.sqrt(avgBx * avgBx + avgBy * avgBy) / 0.05 * 100;
+                var totalMag = Math.sqrt(totalX * totalX + totalY * totalY);
+                var biasMag = Math.sqrt(avgBx * avgBx + avgBy * avgBy);
+                var ratio = totalMag > 0 ? (biasMag / totalMag * 100) : 0;
+
+                if (biasSurvivalEl) biasSurvivalEl.textContent = Math.round(biasSurv) + '%';
+                if (qualitySurvivalEl) qualitySurvivalEl.textContent = Math.round(qualSurvival) + '%';
+                if (biasRatioEl) biasRatioEl.textContent = Math.round(ratio) + '%';
+            }
+
+            // Legend
+            gradCtx.font = '500 12px -apple-system, sans-serif';
+            gradCtx.fillStyle = red;
+            gradCtx.fillText('Red = bias (+0.05, same direction)', 10, H - 26);
+            gradCtx.fillStyle = accent;
+            gradCtx.fillText('Blue = quality (+0.3, random per prompt)', 10, H - 10);
+        }
+
+        function drawArrow(ctx, x1, y1, x2, y2, color, width, alpha) {
+            var dx = x2 - x1, dy = y2 - y1;
+            var len = Math.sqrt(dx * dx + dy * dy);
+            if (len < 2) return;
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = width;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            // Arrowhead
+            var headLen = Math.min(8, len * 0.3);
+            var ang = Math.atan2(dy, dx);
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - headLen * Math.cos(ang - 0.4), y2 - headLen * Math.sin(ang - 0.4));
+            ctx.lineTo(x2 - headLen * Math.cos(ang + 0.4), y2 - headLen * Math.sin(ang + 0.4));
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function runGradAnim() {
+            if (gradAnimId) cancelAnimationFrame(gradAnimId);
+            gradPhase = 0;
+            gradT = 0;
+            var n = parseInt(batchSlider ? batchSlider.value : 8);
+            gradArrows = generateArrows(n);
+            if (batchLabel) batchLabel.textContent = n;
+
+            var startTime = null;
+            function tick(ts) {
+                if (!startTime) startTime = ts;
+                var elapsed = (ts - startTime) / 1000;
+
+                if (elapsed < 1.5) {
+                    gradPhase = 0;
+                } else if (elapsed < 2.5) {
+                    gradPhase = 1;
+                    gradT = (elapsed - 1.5) / 1.0;
+                } else {
+                    gradPhase = 2;
+                    gradT = 1;
+                }
+
+                drawGradient();
+
+                if (elapsed < 3.0) {
+                    gradAnimId = requestAnimationFrame(tick);
+                }
+            }
+            gradAnimId = requestAnimationFrame(tick);
+        }
+
+        if (batchSlider) {
+            batchSlider.addEventListener('input', function () {
+                runGradAnim();
+            });
+        }
+        if (gradReplay) {
+            gradReplay.addEventListener('click', function () {
+                runGradAnim();
+            });
+        }
+
+        // Initial run
+        setTimeout(function(){ runGradAnim(); }, 100);
+
+
+        /* =============== 2. GAO OVEROPTIMIZATION CURVE =============== */
+        var gaoCanvas = document.getElementById('gaoCanvas');
+        var gaoCtx = gaoCanvas ? gaoCanvas.getContext('2d') : null;
+        var gaoSlider = document.getElementById('gaoSlider');
+        var gaoLabel = document.getElementById('gaoLabel');
+        var gaoPeakEl = document.getElementById('gaoPeak');
+        var gaoPeakKLEl = document.getElementById('gaoPeakKL');
+        var gaoEndEl = document.getElementById('gaoEnd');
+
+        var gaoLabels = ['Tiny', 'Tiny', 'Small', 'Small', 'Medium', 'Medium', 'Large', 'Large', 'Huge', 'Huge'];
+
+        function drawGao() {
+            if (!gaoCtx || !gaoCanvas) return;
+            var dpr = window.devicePixelRatio || 1;
+            var rect = gaoCanvas.getBoundingClientRect();
+            gaoCanvas.width = rect.width * dpr;
+            gaoCanvas.height = rect.height * dpr;
+            gaoCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            var W = rect.width;
+            var H = rect.height;
+            gaoCtx.clearRect(0, 0, W, H);
+
+            var fg = getCSS('--fg');
+            var accent = getCSS('--accent');
+            var red = getCSS('--red');
+            var green = getCSS('--green');
+            var muted = getCSS('--muted');
+            var line = getCSS('--line');
+
+            var q = parseInt(gaoSlider ? gaoSlider.value : 4);
+            if (gaoLabel) gaoLabel.textContent = gaoLabels[q - 1] || 'Medium';
+
+            // Chart area
+            var padL = 50, padR = 20, padT = 30, padB = 40;
+            var cW = W - padL - padR;
+            var cH = H - padT - padB;
+
+            // Axes
+            gaoCtx.strokeStyle = muted;
+            gaoCtx.lineWidth = 1;
+            gaoCtx.beginPath();
+            gaoCtx.moveTo(padL, padT);
+            gaoCtx.lineTo(padL, padT + cH);
+            gaoCtx.lineTo(padL + cW, padT + cH);
+            gaoCtx.stroke();
+
+            // Labels
+            gaoCtx.font = '500 11px -apple-system, sans-serif';
+            gaoCtx.fillStyle = muted;
+            gaoCtx.textAlign = 'center';
+            gaoCtx.fillText('KL distance from init (optimization pressure)', padL + cW / 2, H - 4);
+            gaoCtx.save();
+            gaoCtx.translate(14, padT + cH / 2);
+            gaoCtx.rotate(-Math.PI / 2);
+            gaoCtx.fillText('Score', 0, 0);
+            gaoCtx.restore();
+
+            // Proxy curve: always climbs (log-ish)
+            var nPts = 100;
+            var peakKL = 0.2 + q * 0.08; // peak moves right with RM quality
+            var peakGold = 0.3 + q * 0.04; // peak gold score
+            var goldEnd;
+
+            gaoCtx.lineWidth = 2.5;
+
+            // Proxy RM curve (always monotonic up)
+            gaoCtx.strokeStyle = red;
+            gaoCtx.setLineDash([]);
+            gaoCtx.beginPath();
+            for (var i = 0; i <= nPts; i++) {
+                var x = i / nPts;
+                var proxyY = 0.8 * (1 - Math.exp(-3 * x)); // monotonic saturating
+                var px = padL + x * cW;
+                var py = padT + cH - proxyY * cH;
+                if (i === 0) gaoCtx.moveTo(px, py); else gaoCtx.lineTo(px, py);
+            }
+            gaoCtx.stroke();
+
+            // Gold curve: rises then falls
+            gaoCtx.strokeStyle = green;
+            gaoCtx.beginPath();
+            for (var j = 0; j <= nPts; j++) {
+                var xg = j / nPts;
+                // Quadratic that peaks at peakKL
+                var goldY = peakGold * (1 - Math.pow((xg - peakKL) / (1.2 - peakKL * 0.3), 2));
+                if (goldY < -0.1) goldY = -0.1;
+                var pgx = padL + xg * cW;
+                var pgy = padT + cH - goldY * cH;
+                if (j === 0) gaoCtx.moveTo(pgx, pgy); else gaoCtx.lineTo(pgx, pgy);
+                if (j === nPts) goldEnd = goldY;
+            }
+            gaoCtx.stroke();
+
+            // Peak marker
+            var peakPx = padL + peakKL * cW;
+            var peakPy = padT + cH - peakGold * cH;
+            gaoCtx.fillStyle = green;
+            gaoCtx.beginPath();
+            gaoCtx.arc(peakPx, peakPy, 5, 0, Math.PI * 2);
+            gaoCtx.fill();
+
+            // Dashed line at peak
+            gaoCtx.strokeStyle = muted;
+            gaoCtx.lineWidth = 1;
+            gaoCtx.setLineDash([4, 4]);
+            gaoCtx.beginPath();
+            gaoCtx.moveTo(peakPx, padT + cH);
+            gaoCtx.lineTo(peakPx, peakPy);
+            gaoCtx.stroke();
+            gaoCtx.setLineDash([]);
+
+            // Legend
+            gaoCtx.font = '600 12px -apple-system, sans-serif';
+            gaoCtx.fillStyle = red;
+            gaoCtx.textAlign = 'left';
+            gaoCtx.fillText('Proxy RM score', padL + 10, padT + 16);
+            gaoCtx.fillStyle = green;
+            gaoCtx.fillText('Gold (true) score', padL + 10, padT + 32);
+
+            // Readouts
+            if (gaoPeakEl) gaoPeakEl.textContent = peakGold.toFixed(2);
+            if (gaoPeakKLEl) gaoPeakKLEl.textContent = peakKL.toFixed(2);
+            if (gaoEndEl) gaoEndEl.textContent = (goldEnd || 0).toFixed(2);
+        }
+
+        if (gaoSlider) {
+            gaoSlider.addEventListener('input', function () { drawGao(); });
+        }
+        setTimeout(function(){ drawGao(); }, 150);
+
+
+        /* =============== 3. MULTIPLICATIVE VS ADDITIVE CALCULATOR =============== */
+        var judgeSlider = document.getElementById('judgeSlider');
+        var judgeVal = document.getElementById('judgeVal');
+        var multResult = document.getElementById('multResult');
+        var addResult = document.getElementById('addResult');
+        var multFormula = document.getElementById('multFormula');
+        var addFormula = document.getElementById('addFormula');
+        var vPass = document.getElementById('vPass');
+        var vFail = document.getElementById('vFail');
+        var allFailToggle = document.getElementById('allFailToggle');
+        var multAdvantage = document.getElementById('multAdvantage');
+        var addAdvantage = document.getElementById('addAdvantage');
+        var multAdvExplain = document.getElementById('multAdvExplain');
+        var addAdvExplain = document.getElementById('addAdvExplain');
+        var groupVis = document.getElementById('groupVis');
+
+        var currentVerifier = 1;
+        var groupScores = [];
+
+        // Generate group of 16 rollouts with random judge scores
+        function generateGroup() {
+            groupScores = [];
+            for (var i = 0; i < 16; i++) {
+                groupScores.push({
+                    judge: 0.3 + Math.random() * 0.6,
+                    pass: Math.random() > 0.4
+                });
+            }
+        }
+        generateGroup();
+
+        window.setVerifier = function (v) {
+            currentVerifier = v;
+            if (vPass) vPass.className = 'toggle-tab' + (v === 1 ? ' active' : '');
+            if (vFail) vFail.className = 'toggle-tab' + (v === 0 ? ' active' : '');
+            updateCalc();
+        };
+
+        function updateCalc() {
+            var j = judgeSlider ? parseInt(judgeSlider.value) / 100 : 0.9;
+            if (judgeVal) judgeVal.textContent = j.toFixed(2);
+
+            var mult = currentVerifier * j;
+            var add = 0.5 * currentVerifier + 0.5 * j;
+
+            if (multResult) multResult.textContent = mult.toFixed(2);
+            if (addResult) addResult.textContent = add.toFixed(2);
+            if (multFormula) multFormula.textContent = currentVerifier + ' x ' + j.toFixed(2);
+            if (addFormula) addFormula.textContent = '0.5*' + currentVerifier + ' + 0.5*' + j.toFixed(2);
+
+            // Highlight the danger zone
+            if (currentVerifier === 0) {
+                if (multResult) multResult.style.color = getCSS('--green');
+                if (addResult) addResult.style.color = getCSS('--red');
+            } else {
+                if (multResult) multResult.style.color = getCSS('--green');
+                if (addResult) addResult.style.color = getCSS('--orange');
+            }
+
+            updateGroup();
+        }
+
+        function updateGroup() {
+            if (!groupVis) return;
+            var allFail = allFailToggle ? allFailToggle.checked : false;
+
+            var green = getCSS('--green');
+            var red = getCSS('--red');
+            var orange = getCSS('--orange');
+            var muted = getCSS('--muted');
+
+            var html = '';
+            var multRewards = [];
+            var addRewards = [];
+
+            for (var i = 0; i < 16; i++) {
+                var g = groupScores[i];
+                var pass = allFail ? false : g.pass;
+                var gate = pass ? 1 : 0;
+                var mR = gate * g.judge;
+                var aR = 0.5 * gate + 0.5 * g.judge;
+                multRewards.push(mR);
+                addRewards.push(aR);
+
+                var bg = pass ? green : red;
+                var label = pass ? 'P' : 'F';
+                html += '<div class="rollout-dot" style="background:' + bg + ';" title="Judge: ' + g.judge.toFixed(2) + '">' + label + '</div>';
+            }
+            groupVis.innerHTML = html;
+
+            // Compute advantage spread
+            var multMean = multRewards.reduce(function(a,b){return a+b;}, 0) / 16;
+            var addMean = addRewards.reduce(function(a,b){return a+b;}, 0) / 16;
+
+            var multStd = Math.sqrt(multRewards.reduce(function(a,b){return a + (b-multMean)*(b-multMean);}, 0) / 16);
+            var addStd = Math.sqrt(addRewards.reduce(function(a,b){return a + (b-addMean)*(b-addMean);}, 0) / 16);
+
+            if (multAdvantage) {
+                if (allFail) {
+                    multAdvantage.textContent = 'ALL ZERO';
+                    multAdvantage.style.color = green;
+                } else {
+                    multAdvantage.textContent = 'std = ' + multStd.toFixed(3);
+                    multAdvantage.style.color = getCSS('--fg');
+                }
+            }
+            if (addAdvantage) {
+                addAdvantage.textContent = 'std = ' + addStd.toFixed(3);
+                addAdvantage.style.color = allFail ? red : getCSS('--fg');
+            }
+            if (multAdvExplain) {
+                multAdvExplain.textContent = allFail ? 'Wrong signal SILENCED' : 'Pass/fail creates natural contrast';
+            }
+            if (addAdvExplain) {
+                addAdvExplain.textContent = allFail ? 'Still ranks by charm!' : 'Mixed: gate + charm signal';
+            }
+        }
+
+        if (judgeSlider) judgeSlider.addEventListener('input', updateCalc);
+        if (allFailToggle) allFailToggle.addEventListener('change', updateGroup);
+        setTimeout(function(){ updateCalc(); }, 50);
+
+
+        /* =============== 4. FLIP CARDS (7-row hacking table) =============== */
+        var hackingData = [
+            {
+                symptom: 'Output length has doubled over training. Reward is at 0.92. Outputs are padded with filler sentences.',
+                mode: 'Length Exploitation',
+                defense: 'Dr. GRPO normalization, explicit length penalty in reward, RM trained with length-balanced data.'
+            },
+            {
+                symptom: 'Agent produces perfect-looking JSON/markdown structure with plausible-sounding but fabricated content inside.',
+                mode: 'Format Gaming',
+                defense: 'Verifiable reward functions (check content, not format), rubric-based LLM judges that score substance separately from structure.'
+            },
+            {
+                symptom: 'Model agrees with the user/prompt premise even when it is factually wrong. Judge scores are high because the judge has the same bias.',
+                mode: 'Sycophancy',
+                defense: 'Factual verification gate (verifier on checkable claims), diverse judge panel. Note: different model family is the WEAKEST defense here -- all families share this bias from RLHF.'
+            },
+            {
+                symptom: 'Policy has found specific token patterns that score high on the proxy RM but read as gibberish to humans. KL from init is very large.',
+                mode: 'Reward Model Exploitation',
+                defense: 'KL penalty, RM ensembles, Gao-style overoptimization monitoring, switch to verifiable rewards where possible.'
+            },
+            {
+                symptom: 'RM was trained on early policy outputs. Policy has evolved 500 steps. RM scores are still high but human eval shows degradation.',
+                mode: 'Distribution Shift',
+                defense: 'Periodic RM refresh on fresh rollouts (iterative RLHF). The RM must see what the current policy actually produces.'
+            },
+            {
+                symptom: 'Search agent answers 70% of questions from memory without searching. Confidently wrong on the hard 30%.',
+                mode: 'Shortcut Learning',
+                defense: 'Fix the task distribution (post-cutoff questions, obscure entities) so the shortcut stops paying. NOT mandatory tool use.'
+            },
+            {
+                symptom: 'Code agent, given a failing test, edits the TEST to make it pass instead of fixing the code.',
+                mode: 'Reward Tampering',
+                defense: 'Sandbox isolation: reward computed read-only, outside the agent\'s write scope. The agent cannot modify its own evaluation.'
+            }
+        ];
+
+        var flipcardsEl = document.getElementById('flipcards');
+        if (flipcardsEl) {
+            var fcHtml = '';
+            for (var fi = 0; fi < hackingData.length; fi++) {
+                var h = hackingData[fi];
+                fcHtml += '<div class="flipcard" data-idx="' + fi + '">';
+                fcHtml += '<div class="fc-symptom">' + h.symptom + '</div>';
+                fcHtml += '<div class="fc-prompt">Tap to reveal mode + defense</div>';
+                fcHtml += '<div class="fc-answer" id="fc-ans-' + fi + '">';
+                fcHtml += '<span class="fc-mode">' + h.mode + '</span><br>';
+                fcHtml += '<span class="fc-defense">Defense: </span>' + h.defense;
+                fcHtml += '</div>';
+                fcHtml += '</div>';
+            }
+            flipcardsEl.innerHTML = fcHtml;
+
+            flipcardsEl.addEventListener('click', function (e) {
+                var card = e.target.closest('.flipcard');
+                if (!card) return;
+                var idx = card.getAttribute('data-idx');
+                var ans = document.getElementById('fc-ans-' + idx);
+                if (ans) ans.classList.toggle('show');
+            });
+        }
+
+
+        /* =============== 5. QUIZ =============== */
+        var quizData = [
+            {
+                q: 'A judge has a +0.05 verbosity bias. Genuine quality improvement is +0.3 per prompt. Why does the small bias dominate training?',
+                opts: [
+                    'The bias is applied multiplicatively, so it compounds',
+                    'The bias is consistent across ALL prompts; quality gradients point in different directions per prompt and cancel in batch averaging',
+                    'The reward model has been overfit to short outputs',
+                    'A small bias causes proportionally small damage'
+                ],
+                correct: 1,
+                explain: 'Bias CONSISTENCY kills, not bias SIZE. The +0.05 is one coherent direction that survives batch averaging. The +0.3 is a thousand idiosyncratic directions that partially cancel. Small-but-everywhere beats large-but-somewhere.'
+            },
+            {
+                q: 'In the Gao et al. (2022) overoptimization plot, what is on the X-axis?',
+                opts: [
+                    'Training steps',
+                    'Learning rate',
+                    'KL distance from the initial policy',
+                    'Number of rollouts'
+                ],
+                correct: 2,
+                explain: 'The X-axis is KL distance from init, NOT training steps. This measures optimization pressure spent -- how far the policy has moved from its starting point. The gold curve peaks and falls as KL increases.'
+            },
+            {
+                q: 'What is the sycophancy bias, and why is "use a judge from a different model family" the WEAKEST defense against it?',
+                opts: [
+                    'Sycophancy means the judge prefers longer outputs. Different families have different length preferences.',
+                    'Sycophancy means the judge prefers agreeable outputs. It is shared across ALL model families because RLHF trains it in everywhere. Different family barely helps.',
+                    'Sycophancy means the judge prefers its own outputs. A different family eliminates this.',
+                    'Sycophancy only affects small models. Using a larger judge fixes it.'
+                ],
+                correct: 1,
+                explain: 'Sycophancy (preferring agreeable, flattering outputs) is trained into every RLHF-tuned model family. Switching families barely helps because they all share this bias. The real fix: extend the verifier gate to checkable factual claims.'
+            },
+            {
+                q: 'Under additive blending (0.5*verifier + 0.5*judge), a fluent-but-wrong output earns:',
+                opts: [
+                    '0.0 -- the verifier kills it',
+                    '0.45 -- 0.5*0 + 0.5*0.9',
+                    '0.90 -- the judge score passes through',
+                    '0.50 -- average of pass and fail'
+                ],
+                correct: 1,
+                explain: '0.5*0 + 0.5*0.9 = 0.45 RELIABLY. This is the core danger: the judge term is a coherent gradient toward charm, and correctness becomes optional. Multiplicative gives 0*0.9 = 0.'
+            },
+            {
+                q: 'In a GRPO group of 16 rollouts where ALL fail the verifier, what happens under multiplicative gating?',
+                opts: [
+                    'The group is discarded from training entirely',
+                    'All rewards are zero, so all advantages are zero -- the wrong signal is SILENCED',
+                    'The model receives a negative penalty for failing',
+                    'The judge scores are used as a fallback'
+                ],
+                correct: 1,
+                explain: 'Multiplicative: all rewards = 0, all advantages = 0. No gradient from this group. The wrong signal is SILENCED. Under additive, the group still has nonzero rewards (from judge scores), so advantages are nonzero and push toward charm.'
+            },
+            {
+                q: 'What are the TWO properties a held-out judge must have?',
+                opts: [
+                    'Trained on more data, and cheaper to run',
+                    'Zero optimization pressure against it ever, and different model family (at least as strong)',
+                    'Same model family for consistency, and evaluated at every checkpoint',
+                    'Smaller model to save compute, and calibrated against the training judge'
+                ],
+                correct: 1,
+                explain: 'Zero optimization pressure (never used in training) + different model family, at least as strong. Same logic as a held-out test set -- optimizing against it contaminates it.'
+            },
+            {
+                q: 'A search agent trained with binary correctness reward stops searching and answers from memory. 70% of training tasks are popular-entity questions. The proposed fix: "make tool use mandatory." What is wrong with this fix?',
+                opts: [
+                    'It makes the reward too sparse',
+                    'Mandatory tool use causes call-farming (ritual queries), demotes the binary reward to a gameable attribution check, and the agent learns to parrot wrong retrievals',
+                    'It requires a larger model to implement',
+                    'The search API rate limits will throttle training'
+                ],
+                correct: 1,
+                explain: 'Three problems: (1) call-farming -- perfunctory ritual queries on every prompt, (2) "came from search results" is an attribution check that requires an LLM judge, demoting the clean binary reward, (3) the agent parrots wrong retrievals (faithful != correct). RIGHT fix: fix the task distribution.'
+            },
+            {
+                q: 'In the monitoring dashboard, what is the CHEAPEST signal that catches verbosity hacking?',
+                opts: [
+                    'Held-out judge evaluation',
+                    'Human spot-checks',
+                    'Mean output length (mechanical stats, already logged)',
+                    'Entropy collapse detection'
+                ],
+                correct: 2,
+                explain: 'Mean output length is FREE -- it is already logged. A sudden length jump is the smoking gun for verbosity hacking. The held-out judge costs inference; human spot-checks cost labor. Always start with mechanical stats.'
+            },
+            {
+                q: 'Entropy collapse during training is:',
+                opts: [
+                    'Definitive proof of reward hacking',
+                    'A tripwire that also fires on healthy convergence -- it flags something to investigate, not a diagnosis',
+                    'Always a sign of mode collapse',
+                    'Only relevant for classification tasks'
+                ],
+                correct: 1,
+                explain: 'Entropy collapse fires on BOTH reward hacking (exploit) AND healthy convergence (the model gets more confident in correct answers). It is a tripwire -- it tells you to look, not what you found.'
+            },
+            {
+                q: 'A code agent, given a failing test case, edits the test to make it pass instead of fixing the code. Name the failure mode and the defense.',
+                opts: [
+                    'Shortcut learning -- fix the task distribution',
+                    'Format gaming -- strip formatting before judging',
+                    'Reward tampering -- sandbox isolation, reward computed read-only outside the agent\'s write scope',
+                    'Split into two judges: one for format, one for substance'
+                ],
+                correct: 2,
+                explain: 'Reward tampering: the agent modifies its own evaluation criterion. Defense: the reward must be computed in a sandbox the agent cannot write to. The test files are read-only from the agent\'s perspective.'
+            }
+        ];
+
+        var quizContainer = document.getElementById('quizContainer');
+        var quizScoreEl = document.getElementById('quizScore');
+        var quizScoreFinalEl = document.getElementById('quizScoreFinal');
+        var quizTotalEl = document.getElementById('quizTotal');
+        var quizResetBtn = document.getElementById('quizReset');
+
+        var quizState = { score: 0, answered: 0 };
+
+        function buildQuiz() {
+            if (!quizContainer) return;
+            quizState = { score: 0, answered: 0 };
+            updateQuizScore();
+            var html = '';
+            for (var qi = 0; qi < quizData.length; qi++) {
+                var qd = quizData[qi];
+                html += '<div class="quiz-q" id="qq-' + qi + '">';
+                html += '<p>Q' + (qi + 1) + '. ' + qd.q + '</p>';
+                for (var oi = 0; oi < qd.opts.length; oi++) {
+                    html += '<button class="quiz-option" data-q="' + qi + '" data-o="' + oi + '">' + qd.opts[oi] + '</button>';
+                }
+                html += '<div class="quiz-explain" id="qe-' + qi + '"></div>';
+                html += '</div>';
+            }
+            quizContainer.innerHTML = html;
+        }
+
+        function updateQuizScore() {
+            if (quizScoreEl) quizScoreEl.textContent = quizState.score;
+            if (quizScoreFinalEl) quizScoreFinalEl.textContent = quizState.score;
+            if (quizTotalEl) quizTotalEl.textContent = quizState.answered;
+        }
+
+        if (quizContainer) {
+            quizContainer.addEventListener('click', function (e) {
+                var btn = e.target.closest('.quiz-option');
+                if (!btn || btn.disabled) return;
+
+                var qi = parseInt(btn.getAttribute('data-q'));
+                var oi = parseInt(btn.getAttribute('data-o'));
+                var qd = quizData[qi];
+                if (!qd) return;
+
+                // Disable all options for this question
+                var qEl = document.getElementById('qq-' + qi);
+                if (!qEl) return;
+                var opts = qEl.querySelectorAll('.quiz-option');
+                for (var k = 0; k < opts.length; k++) {
+                    opts[k].disabled = true;
+                    if (parseInt(opts[k].getAttribute('data-o')) === qd.correct) {
+                        opts[k].classList.add('correct');
+                    }
+                }
+
+                var isCorrect = oi === qd.correct;
+                if (!isCorrect) btn.classList.add('wrong');
+
+                quizState.answered++;
+                if (isCorrect) quizState.score++;
+                updateQuizScore();
+
+                var explainEl = document.getElementById('qe-' + qi);
+                if (explainEl) {
+                    explainEl.textContent = (isCorrect ? 'Correct. ' : 'Wrong. ') + qd.explain;
+                    explainEl.className = 'quiz-explain show ' + (isCorrect ? 'right' : 'incorrect');
+                }
+            });
+        }
+
+        if (quizResetBtn) {
+            quizResetBtn.addEventListener('click', function () {
+                buildQuiz();
+                generateGroup();
+                updateCalc();
+            });
+        }
+
+        buildQuiz();
+
+
+        /* =============== DARK MODE REDRAW =============== */
+        var mql = window.matchMedia('(prefers-color-scheme: dark)');
+        if (mql.addEventListener) {
+            mql.addEventListener('change', function () {
+                runGradAnim();
+                drawGao();
+                updateCalc();
+            });
+        } else if (mql.addListener) {
+            mql.addListener(function () {
+                runGradAnim();
+                drawGao();
+                updateCalc();
+            });
+        }
+
+        /* Resize handler */
+        var resizeTimer;
+        window.addEventListener('resize', function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function () {
+                drawGradient();
+                drawGao();
+            }, 150);
+        });
+
+    })();
+    </script>
+</body>
+</html>

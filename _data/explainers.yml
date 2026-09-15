@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "LLM Judges & Reward Hacking"
+  slug: rl-judges-reward-hacking
+  date: 2026-09-15
+  description: "Why RL follows the most reliable gradient (not the largest reward) and hill-climbs judge biases; Gao et al. overoptimization; the judge bias catalog + mitigations; held-out judge as your test set; multiplicative vs additive verifier-gating with a GRPO 16-rollout group visual; the 7-row reward-hacking table as flip-cards; the shortcut-learning case study (why mandatory-tool-use rewards backfire); 10-question quiz built from tonight's actual wrong answers."
+
 - title: "Multi-turn credit assignment"
   slug: rl-multi-turn-credit-assignment
   date: 2026-09-15
