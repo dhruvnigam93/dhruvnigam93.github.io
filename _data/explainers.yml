@@ -7,6 +7,11 @@
 #     date: YYYY-MM-DD            # date added
 #     description: "one-line summary (optional)"
 
+- title: "Multi-turn credit assignment"
+  slug: rl-multi-turn-credit-assignment
+  date: 2026-09-15
+  description: "V/delta blame localization, four credit schemes, advantage normalization — with a 16-question quiz weighted to the misses."
+
 - title: "RL Environment & Reward Design for Agentic LLM Training"
   slug: rl-environment-reward-design
   date: 2026-09-14

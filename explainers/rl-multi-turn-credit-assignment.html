@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>Multi-turn Credit Assignment</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1a1a1a;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --accent: #2563eb;
+            --card: #f7f7f8;
+            --radius: 14px;
+            --green: #16a34a;
+            --red: #dc2626;
+            --orange: #ea580c;
+            --purple: #7c3aed;
+            --teal: #0d9488;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --fg: #e8e8ea;
+                --muted: #9aa0aa;
+                --line: #262a31;
+                --accent: #6ea8fe;
+                --card: #171a20;
+                --green: #4ade80;
+                --red: #f87171;
+                --orange: #fb923c;
+                --purple: #a78bfa;
+                --teal: #2dd4bf;
+            }
+        }
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .wrap {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: max(20px, env(safe-area-inset-top)) 20px 80px;
+        }
+        .back {
+            display: inline-block;
+            margin: 8px 0 20px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .back:active { opacity: 0.6; }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+        h2 { font-size: 1.3rem; margin: 2em 0 0.5em; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
+        h3 { font-size: 1.1rem; margin: 1.2em 0 0.4em; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.5em; }
+        p { margin: 0.7em 0; }
+        a { color: var(--accent); }
+        code {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 1px 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.85em;
+        }
+        pre {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            overflow-x: auto;
+            font-size: 0.85em;
+        }
+        pre code { background: none; border: none; padding: 0; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 1em 0;
+        }
+        .card.warn { border-left: 4px solid var(--orange); }
+        .card.key { border-left: 4px solid var(--accent); }
+        .card.green { border-left: 4px solid var(--green); }
+        .card.red { border-left: 4px solid var(--red); }
+        details {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 0 18px;
+            margin: 12px 0;
+            background: var(--card);
+        }
+        summary {
+            cursor: pointer;
+            padding: 16px 0;
+            font-weight: 600;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after {
+            content: "+";
+            color: var(--muted);
+            font-size: 1.4rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        details[open] summary::after { content: "\2212"; }
+        details[open] summary { border-bottom: 1px solid var(--line); }
+        details > *:not(summary) { margin-bottom: 16px; }
+        button {
+            font: inherit;
+            font-weight: 600;
+            color: #fff;
+            background: var(--accent);
+            border: none;
+            border-radius: 999px;
+            padding: 12px 22px;
+            min-height: 48px;
+            min-width: 48px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        button:active { transform: scale(0.96); }
+        .ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+        input[type="range"] { width: 100%; height: 44px; }
+        footer {
+            margin-top: 3em;
+            padding-top: 1.2em;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+        /* Nav pills */
+        .nav-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 0 0 2em;
+            padding: 0;
+            list-style: none;
+        }
+        .nav-pills a {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            color: var(--fg);
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 500;
+            white-space: nowrap;
+            min-height: 36px;
+            line-height: 1.6;
+        }
+        .nav-pills a:active { background: var(--accent); color: #fff; }
+        /* Tables */
+        .tablewrap {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 1em 0;
+        }
+        .tablewrap table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            min-width: 500px;
+        }
+        .tablewrap th, .tablewrap td {
+            border: 1px solid var(--line);
+            padding: 8px 10px;
+            text-align: left;
+        }
+        .tablewrap th {
+            background: var(--card);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        /* Trajectory strip widget */
+        .traj-strip {
+            display: flex;
+            gap: 3px;
+            align-items: flex-end;
+            height: 140px;
+            padding: 0 4px;
+            margin: 12px 0 6px;
+        }
+        .traj-bar-wrap {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            justify-content: flex-end;
+        }
+        .traj-bar {
+            width: 100%;
+            min-width: 14px;
+            border-radius: 4px 4px 0 0;
+            transition: height 0.5s, background 0.5s;
+        }
+        .traj-label {
+            font-size: 0.65rem;
+            color: var(--muted);
+            margin-top: 4px;
+            text-align: center;
+        }
+        .traj-step-desc {
+            font-size: 0.72rem;
+            color: var(--muted);
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        /* Toggle buttons for widgets */
+        .toggle-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 14px;
+        }
+        .toggle-tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px 14px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: 1px solid var(--line);
+            background: var(--bg);
+            color: var(--fg);
+            cursor: pointer;
+            min-height: 44px;
+        }
+        .toggle-tab:first-child { border-radius: 10px 0 0 10px; }
+        .toggle-tab:last-child { border-radius: 0 10px 10px 0; }
+        .toggle-tab.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+        /* V-curve widget */
+        .vcurve-canvas {
+            width: 100%;
+            height: 260px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: var(--card);
+            display: block;
+            cursor: crosshair;
+            touch-action: none;
+        }
+        /* Branch tree widget */
+        .branch-widget { text-align: center; }
+        .branch-inputs {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 12px 0;
+        }
+        .branch-input-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .branch-input-group label {
+            font-size: 0.78rem;
+            color: var(--muted);
+            font-weight: 500;
+        }
+        .branch-input-group input[type="number"] {
+            width: 64px;
+            padding: 8px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--bg);
+            color: var(--fg);
+            font-size: 1rem;
+            text-align: center;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        }
+        .branch-result {
+            font-size: 1.3rem;
+            font-weight: 700;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 10px;
+            background: var(--card);
+            border: 1px solid var(--line);
+        }
+        /* Normalization widget */
+        .norm-readout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 12px 0;
+        }
+        .norm-box {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+        }
+        .norm-box .label { font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; }
+        .norm-box .value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        }
+        /* Quiz */
+        .quiz-wrap { margin: 1em 0; }
+        .quiz-q {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin: 12px 0;
+        }
+        .quiz-q h4 { margin: 0 0 10px; font-size: 0.95rem; }
+        .quiz-opts { display: flex; flex-direction: column; gap: 8px; }
+        .quiz-opt {
+            text-align: left;
+            background: var(--bg);
+            color: var(--fg);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-weight: 400;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .quiz-opt:hover { border-color: var(--accent); }
+        .quiz-opt.correct {
+            background: color-mix(in srgb, var(--green) 12%, var(--bg));
+            border-color: var(--green);
+            color: var(--green);
+            font-weight: 600;
+        }
+        .quiz-opt.wrong {
+            background: color-mix(in srgb, var(--red) 12%, var(--bg));
+            border-color: var(--red);
+            color: var(--red);
+        }
+        .quiz-opt:disabled { cursor: default; opacity: 0.85; }
+        .quiz-expl {
+            margin-top: 10px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: none;
+        }
+        .quiz-expl.show { display: block; }
+        .quiz-expl.right {
+            background: color-mix(in srgb, var(--green) 10%, var(--card));
+            border: 1px solid var(--green);
+            color: var(--green);
+        }
+        .quiz-expl.wrongexp {
+            background: color-mix(in srgb, var(--red) 10%, var(--card));
+            border: 1px solid var(--red);
+            color: var(--red);
+        }
+        .quiz-score {
+            font-size: 1.1rem;
+            font-weight: 700;
+            padding: 14px;
+            text-align: center;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <a class="back" href="/explainers/">&larr; all explainers</a>
+
+        <h1>Multi-turn Credit Assignment</h1>
+        <p class="meta">Added 2026-09-15</p>
+
+        <nav class="nav-pills">
+            <a href="#s1">Two problems</a>
+            <a href="#s2">Wrong-sign</a>
+            <a href="#s3">Critic &delta;</a>
+            <a href="#s4">Four schemes</a>
+            <a href="#s5">Normalization</a>
+            <a href="#s6">Cross-policy</a>
+            <a href="#s7">Reference</a>
+            <a href="#quiz">Quiz</a>
+        </nav>
+
+        <p><strong>Running example throughout:</strong> a 15-step debugging agent (read code &rarr; run tests &rarr; edit &rarr; re-run tests). One terminal reward: final test suite passes. Good diagnosis in steps 1&ndash;6, fatal edit at step 9.</p>
+
+        <!-- ============ SECTION 1 ============ -->
+        <h2 id="s1">1. The Two Structural Problems</h2>
+
+        <div class="card key">
+            <p><strong>GRPO single-turn is a token-level loss with episode-level attribution</strong> &mdash; one scalar broadcast to every token.</p>
+        </div>
+
+        <h3>Problem A: Sparsity</h3>
+        <p>Long horizon &rarr; early policy never succeeds &rarr; all G rollouts in a group fail &rarr; advantages are all zero &rarr; <strong>no gradient at all</strong>. Not weak signal; literally zero. Training stalls before it begins.</p>
+
+        <h3>Problem B: Credit Attribution</h3>
+        <p>Even when signal exists, one terminal scalar is shared uniformly across 15 steps. A trajectory with 14 perfect steps and 1 fatal edit is indistinguishable from one that was wrong everywhere. But it gets worse than "indistinguishable" &mdash; the uniform broadcast is <em>actively harmful</em>. That's section 2.</p>
+
+        <details>
+            <summary>Why these compound at long horizons</summary>
+            <p>Short horizons (3&ndash;5 steps) are forgiving: the policy stumbles into successes often enough that groups have variance, and broadcasting one scalar over 5 tokens causes only mild misattribution. At 15 steps, success probability drops exponentially with horizon length, and the broadcast error grows linearly. Both problems bite simultaneously.</p>
+        </details>
+
+        <!-- ============ SECTION 2 ============ -->
+        <h2 id="s2">2. Uniform Broadcast = Wrong-Sign Signal</h2>
+
+        <div class="card red">
+            <p><strong>Your initial answer ("just no signal") was wrong.</strong> It is not neutral-but-sparse. A failed trajectory's uniform negative advantage does active gradient descent on the flawless diagnosis steps 1&ndash;6. Good sub-behavior is <em>punished</em> because it co-occurred with step 9's mistake.</p>
+        </div>
+
+        <p>Consider: the debugging agent reads code carefully (steps 1&ndash;6, all correct), then makes a fatal edit at step 9. The episode fails. Under GRPO, the entire trajectory gets a uniform negative advantage. Every token &mdash; including those encoding the perfect diagnosis &mdash; gets pushed down. The policy learns: "don't do that diagnosis." But the diagnosis was <em>right</em>.</p>
+
+        <h3>Toggle: Uniform vs. Localized Credit</h3>
+        <div class="card">
+            <div class="toggle-tabs" id="broadcastTabs">
+                <button class="toggle-tab active" data-mode="uniform" onclick="return false;">Uniform Broadcast</button>
+                <button class="toggle-tab" data-mode="localized" onclick="return false;">Localized Credit</button>
+            </div>
+            <div id="broadcastLabel" style="text-align:center;font-size:0.85rem;color:var(--muted);margin-bottom:6px;">
+                Failed episode: advantage = &minus;1.0 broadcast to all steps
+            </div>
+            <div class="traj-strip" id="broadcastStrip"></div>
+            <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--muted);padding:0 4px;">
+                <span>Step 1</span><span>Step 15</span>
+            </div>
+        </div>
+
+        <div class="card warn">
+            <p><strong>Key insight:</strong> steps 1&ndash;6 get <em>negative</em> advantage under uniform broadcast in a failed episode. Under localized credit (a critic), those same steps get <em>positive</em> advantage because V was rising &mdash; they were good moves. The sign literally flips.</p>
+        </div>
+
+        <!-- ============ SECTION 3 ============ -->
+        <h2 id="s3">3. How a Critic Localizes Blame</h2>
+
+        <div class="card red">
+            <p><strong>Your weakest conceptual item.</strong> You said "the critic is an intelligent model that figures it out" &mdash; a black-box appeal that fails in interviews. The mechanism is <em>one equation</em>.</p>
+        </div>
+
+        <div class="card key">
+            <p style="font-size:1.1rem;text-align:center;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">
+                &delta;<sub>t</sub> = r<sub>t</sub> + &gamma;V(s<sub>t+1</sub>) &minus; V(s<sub>t</sub>)
+            </p>
+            <p style="font-size:0.88rem;color:var(--muted);text-align:center;">TD error: how much better was the next state than expected?</p>
+        </div>
+
+        <h3>Concrete numbers for the debugging agent</h3>
+        <p>V climbs 0.2 &rarr; 0.7 across steps 1&ndash;6 (each &delta;<sub>t</sub> &gt; 0 &rarr; <strong>positive advantage on good steps inside a FAILED trajectory</strong>). V craters 0.7 &rarr; 0.05 at step 9 (&delta;<sub>9</sub> &asymp; &minus;0.65 &mdash; the most negative TD error; blame concentrates exactly where value drops). &delta; &asymp; 0 for steps 10&ndash;15 (mistake already priced in &mdash; neither blamed nor credited).</p>
+
+        <h3>Interactive V-Curve (drag the fatal edit position)</h3>
+        <div class="card">
+            <p style="font-size:0.85rem;color:var(--muted);">Drag the slider to move the fatal edit step. The V-curve and &delta; bars update live. The most-negative &delta; bar highlights in red.</p>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <label for="fatalSlider" style="font-size:0.88rem;font-weight:600;white-space:nowrap;">Fatal edit at step:</label>
+                <input type="range" id="fatalSlider" min="2" max="14" value="9" style="flex:1;">
+                <span id="fatalStepLabel" style="font-family:ui-monospace,monospace;font-weight:700;font-size:1.1rem;">9</span>
+            </div>
+            <canvas id="vcurveCanvas" class="vcurve-canvas" width="680" height="260"></canvas>
+            <div style="text-align:center;margin-top:6px;font-size:0.82rem;color:var(--muted);">
+                Blue line = V(s<sub>t</sub>) &nbsp;|&nbsp; Bars = &delta;<sub>t</sub> (green = positive, red = negative)
+            </div>
+        </div>
+
+        <h3>GAE: dialing between critic and outcome</h3>
+        <p>GAE(&lambda;) blends TD errors at different horizons. &lambda; dials between trusting local &delta;'s (&lambda;&rarr;0, trusts the critic) and outcome broadcast (&lambda;&rarr;1, trusts the environment).</p>
+
+        <div class="card green">
+            <p><strong>Anchor phrase:</strong> "Bootstrap = bias, sample = variance; trust the one that isn't broken."</p>
+            <p style="font-size:0.88rem;">Garbage critic? Raise &lambda; toward 1 (trust the environment). Good critic? Lower &lambda; toward 0 (trust the bootstrap, get lower variance).</p>
+        </div>
+
+        <!-- ============ SECTION 4 ============ -->
+        <h2 id="s4">4. Four Credit-Assignment Schemes</h2>
+
+        <details>
+            <summary>Scheme 1: Outcome-only + GRPO (baseline)</summary>
+            <p><strong>Signal:</strong> terminal reward (pass/fail), group-normalized across G rollouts, same advantage broadcast to every agent token.</p>
+            <p><strong>Fixes:</strong> nothing about attribution &mdash; this IS the baseline. Ungameable. Zero design cost. Verifiable.</p>
+            <p><strong>Failure:</strong> both structural problems at full strength. All-fail groups &rarr; zero advantage &rarr; no gradient. When signal exists, it is uniform: good steps in failed trajectories get punished.</p>
+            <p><strong>Pick it when:</strong> short horizons, or the policy already succeeds often enough that groups have variance. First thing to try; insufficient at 15 steps early in training.</p>
+        </details>
+
+        <details>
+            <summary>Scheme 2: Step-delta process reward</summary>
+            <p><strong>Signal:</strong> reward<sub>t</sub> = &Delta;(tests passing) after each edit. Free from the environment; no judge, no critic.</p>
+            <p><strong>Fixes:</strong> density. Every edit gets local, verifiable feedback.</p>
+            <p><strong>TWO distinct failure modes (you merged them today &mdash; keep them separate):</strong></p>
+            <div class="card warn">
+                <p><strong>(a) Myopic shaping / valley punishment:</strong> Removing a hacky patch that masks the root cause drops pass count 7/14 &rarr; 4/14. The single most important edit gets <em>negative</em> reward. The agent never learns to explore paths that get worse before better.</p>
+            </div>
+            <div class="card warn">
+                <p><strong>(b) Metric gaming:</strong> Patch-per-test-case stacking instead of root-cause fix. The agent learns to game the proxy metric rather than solve the problem.</p>
+            </div>
+            <div class="card green">
+                <p><strong>Nuance for your pocket:</strong> deltas <em>telescope</em> (sum = final &minus; initial passes), so the <strong>return</strong> is path-independent &mdash; it's the per-step <strong>advantage</strong> that punishes the valley.</p>
+            </div>
+        </details>
+
+        <details>
+            <summary>Scheme 3: Hindsight necessity / Shapley over edits</summary>
+            <p><strong>Signal:</strong> post-hoc, on <em>successful</em> trajectories only. Ablate subsets of edits, re-run the test suite. Characteristic function = test-suite run.</p>
+            <p><strong>Full Shapley:</strong> 2<sup>k</sup> runs. <strong>Leave-one-out:</strong> linear, but its blind spot is <strong>redundant edits</strong> (either alone suffices &rarr; removing one changes nothing &rarr; BOTH marked unnecessary). Jointly-necessary pairs are handled fine &mdash; don't confuse these.</p>
+            <p><strong>Edits may not commute</strong> (edit 4 touches lines edit 2 created) &mdash; arbitrary subsets aren't always valid patches.</p>
+            <p><strong>Critical limitation:</strong> post-hoc on successes only. Refines credit within successful trajectories. Does <em>nothing</em> for cold start.</p>
+        </details>
+
+        <details open>
+            <summary>Scheme 4: ARPO-style branched rollouts</summary>
+            <p><strong>Signal:</strong> branch each rollout at selected steps into multiple continuations &rarr; execution tree. Leaves carry terminal rewards. Each shared prefix gets the <strong>mean</strong> of its descendants' advantages; branches keep their own.</p>
+
+            <div class="card red">
+                <p><strong>YOUR RECURRING ARITHMETIC BUG:</strong> branches {+1, &minus;1, 0} &rarr; prefix gets <strong>0</strong> (the mean), NOT 1/3 (you said 1/3 today). And &asymp;0 is the <em>correct, meaningful</em> answer: the prefix didn't decide the outcome.</p>
+            </div>
+
+            <p><strong>Deep framing:</strong> the descendant-mean is a <strong>Monte Carlo estimate of V(s)</strong> at the branch point &mdash; ARPO rebuilds the critic empirically, paying rollout compute instead of training a value model.</p>
+
+            <p><strong>Where to branch:</strong> at high-entropy points (entropy spikes right after tool feedback &mdash; that's where the agent is uncertain about what to do next).</p>
+
+            <h3>Branch Tree Calculator</h3>
+            <div class="card branch-widget">
+                <p style="font-size:0.85rem;color:var(--muted);">Edit branch rewards below. The prefix's computed mean updates live.</p>
+                <div class="branch-inputs" id="branchInputs">
+                    <div class="branch-input-group">
+                        <label>Branch A</label>
+                        <input type="number" id="brA" value="1" step="0.5" min="-5" max="5">
+                    </div>
+                    <div class="branch-input-group">
+                        <label>Branch B</label>
+                        <input type="number" id="brB" value="-1" step="0.5" min="-5" max="5">
+                    </div>
+                    <div class="branch-input-group">
+                        <label>Branch C</label>
+                        <input type="number" id="brC" value="0" step="0.5" min="-5" max="5">
+                    </div>
+                </div>
+                <button class="ghost" id="branchPreset" style="margin-bottom:10px;font-size:0.85rem;">Reset to {+1, &minus;1, 0}</button>
+                <div class="branch-result">
+                    Prefix advantage = <span id="branchMean">0.00</span>
+                </div>
+                <p style="font-size:0.82rem;color:var(--muted);" id="branchExpl">Mean of {+1, &minus;1, 0} = 0. The prefix didn't decide the outcome.</p>
+            </div>
+        </details>
+
+        <!-- ============ SECTION 5 ============ -->
+        <h2 id="s5">5. Advantage Normalization: Where Do the Statistics Come From?</h2>
+
+        <div class="card red">
+            <p><strong>YOUR WORST ITEM &mdash; failed two days running.</strong> Pay maximum attention here. The three choices differ in <em>what population the mean and std are estimated from</em>, and the defects are <strong>not interchangeable</strong>.</p>
+        </div>
+
+        <h3>Choice A: Per-question group (standard GRPO, G=16)</h3>
+        <p>Advantage<sub>i</sub> = (R<sub>i</sub> &minus; mean) / std, computed from 16 rollouts of the same prompt.</p>
+        <div class="card warn">
+            <p><strong>Defect = NOISY DENOMINATOR.</strong> std estimated from only 16 samples. Near-uniform group &rarr; std &rarr; 0 &rarr; tiny noise divides by almost-nothing &rarr; colossal advantages.</p>
+            <p>Concrete: easy task, 15/16 correct. The lone failure's advantage = (0 &minus; 0.9375) / (tiny std) = <strong>enormous negative</strong>. That is amplified noise, not meaningful signal.</p>
+            <p><strong>Direction you keep getting backwards:</strong> the blow-up is at <em>near-zero variance</em>, not high variance.</p>
+        </div>
+        <p><strong>Second effect:</strong> fully-degenerate groups (all 16 same result) contribute <strong>zero gradient</strong> &rarr; participation-rate imbalance across tasks. Hard tasks (where the policy rarely succeeds) drop out of the gradient diet. That is <em>absence</em>, not domination.</p>
+
+        <h3>Choice B: Global pool</h3>
+        <div class="card warn">
+            <p><strong>Defect = MIXED CURRENCIES.</strong> One shared std preserves relative family scales. The wide-scale family (0&ndash;10 judge scores) dominates; binary code rewards (0 or 1) get crushed.</p>
+            <p><strong>THIS</strong> is where "high-variance tasks dominate the gradient" is a correct statement. You keep aiming it at per-question, where it's <em>impossible</em> &mdash; dividing each group by its own std <em>erases</em> scale per group.</p>
+        </div>
+
+        <h3>Choice C: Per-task/environment pool (ERPO / AgentRL)</h3>
+        <p>Pool all rollouts of the same <em>task type</em> (e.g., all code tasks, all QA tasks). Stable denominator (hundreds of samples), single currency within a family.</p>
+        <p><strong>Cost:</strong> low-spread tails within a family (very easy / very hard questions) under-train. Related: Dr. GRPO drops /std entirely.</p>
+
+        <div class="card green">
+            <p><strong>Print this verbatim:</strong> "The mean answers 'better than my siblings?'; the std is the exchange rate &mdash; estimate it from a population you can trust (task pool), not 16 samples (per-question), and never across mixed currencies (global)."</p>
+        </div>
+
+        <h3>Normalization Blowup Widget</h3>
+        <div class="card">
+            <p style="font-size:0.85rem;color:var(--muted);">16 rollouts of an easy task. Slide to set how many pass. Watch group std and the lone failure's normalized advantage.</p>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <label for="normSlider" style="font-size:0.88rem;font-weight:600;white-space:nowrap;">Rollouts that pass:</label>
+                <input type="range" id="normSlider" min="1" max="16" value="15" style="flex:1;">
+                <span id="normPassLabel" style="font-family:ui-monospace,monospace;font-weight:700;font-size:1.1rem;">15</span>
+            </div>
+            <div class="norm-readout">
+                <div class="norm-box">
+                    <div class="label">Group std</div>
+                    <div class="value" id="normStd">0.25</div>
+                </div>
+                <div class="norm-box">
+                    <div class="label">Lone failure's |advantage|</div>
+                    <div class="value" id="normAdv" style="color:var(--red);">3.75</div>
+                </div>
+            </div>
+            <div id="normWarning" style="text-align:center;font-size:0.85rem;color:var(--red);font-weight:600;margin-top:6px;"></div>
+        </div>
+
+        <!-- ============ SECTION 6 ============ -->
+        <h2 id="s6">6. Cross-Policy Sampling (AgentRL)</h2>
+
+        <p><strong>Disease:</strong> all G rollouts converge to near-identical trajectories &rarr; within-group variance &asymp; 0 &rarr; learning stalls.</p>
+
+        <p><strong>Fix:</strong> during rollout <em>generation</em>, inject turns from older checkpoints into the trajectory.</p>
+
+        <div class="card key">
+            <p><strong>Why it beats raising temperature:</strong></p>
+            <p>Temperature adds noise at the <strong>token level</strong>. Random tokens rarely compose into a coherent alternative strategy &mdash; they break syntax/reasoning. A checkpoint is a complete coherent policy, so its turns are samples of <strong>valid strategies</strong> &mdash; diversity at the strategy level.</p>
+            <p style="font-size:0.88rem;color:var(--muted);">&epsilon;-greedy analogue with plausible behavior instead of random actions.</p>
+        </div>
+
+        <div class="card green">
+            <p><strong>Pairing to remember:</strong></p>
+            <ul style="margin:4px 0;">
+                <li><strong>Task-level normalization</strong> fixes cross-task gradient imbalance</li>
+                <li><strong>Cross-policy sampling</strong> fixes within-task exploration collapse</li>
+            </ul>
+            <p style="font-size:0.85rem;">Same paper (AgentRL), two diseases.</p>
+        </div>
+
+        <!-- ============ SECTION 7 ============ -->
+        <h2 id="s7">7. Quick Reference Card</h2>
+
+        <div class="tablewrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Scheme</th>
+                        <th>Signal Source</th>
+                        <th>Fixes</th>
+                        <th>Failure Mode</th>
+                        <th>Pick When</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Outcome + GRPO</strong></td>
+                        <td>Terminal reward, group-normalized</td>
+                        <td>Baseline (ungameable)</td>
+                        <td>Sparsity + wrong-sign broadcast</td>
+                        <td>Short horizons, frequent success</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Step-delta</strong></td>
+                        <td>&Delta;(tests passing) per edit</td>
+                        <td>Density</td>
+                        <td>(a) Valley punishment (b) Metric gaming</td>
+                        <td>Cheap verifier exists, valley rare</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Hindsight / Shapley</strong></td>
+                        <td>Post-hoc ablation on successes</td>
+                        <td>Causal attribution</td>
+                        <td>Cold start; LOO misses redundant edits</td>
+                        <td>Offline curation / distillation</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ARPO branched</strong></td>
+                        <td>Descendant-mean terminal rewards</td>
+                        <td>Per-step credit, no design risk</td>
+                        <td>Compute: branches multiply</td>
+                        <td>Process rewards hard, compute available</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card green">
+            <p><strong>One-line summary:</strong> Uniform broadcast is wrong-sign credit on good steps; densify with verifiable step-deltas if the valley problem is tolerable, branched-rollout empirical values if compute allows, hindsight/Shapley relabeling offline &mdash; and the critic's &delta; is the thing all of these approximate.</p>
+        </div>
+
+        <!-- ============ QUIZ ============ -->
+        <h2 id="quiz">Quiz: Test Yourself</h2>
+        <p style="font-size:0.88rem;color:var(--muted);">16 questions weighted to your confirmed misses. Distractors are your actual wrong answers.</p>
+
+        <div class="quiz-score" id="quizScore">Score: 0 / 0</div>
+        <div id="quizContainer"></div>
+        <div style="text-align:center;margin-top:16px;">
+            <button id="quizReset">Reset Quiz</button>
+        </div>
+
+        <footer>
+            Personal explainer &middot; unlisted &middot; <a href="/explainers/">back to index</a>
+        </footer>
+    </main>
+    <!-- Widget 1: Broadcast toggle strip (Section 2) -->
+    <script>
+    (function () {
+        var tabs = document.querySelectorAll('#broadcastTabs .toggle-tab');
+        var strip = document.getElementById('broadcastStrip');
+        var label = document.getElementById('broadcastLabel');
+        if (!tabs.length || !strip || !label) return;
+
+        var steps = [
+            'Read code','Scan logs','Run tests','Trace bug','Check deps','Form hypothesis',
+            'Plan fix','Stage edit','FATAL EDIT','Re-run','Patch A','Patch B',
+            'Re-run 2','Cleanup','Final run'
+        ];
+        var uniformAdv = [];
+        var localAdv = [];
+        for (var i = 0; i < 15; i++) {
+            uniformAdv.push(-1.0);
+            if (i < 6) localAdv.push(0.5 + i * 0.08);
+            else if (i < 8) localAdv.push(0.1);
+            else if (i === 8) localAdv.push(-2.5);
+            else if (i < 12) localAdv.push(-0.3);
+            else localAdv.push(-0.05);
+        }
+
+        var mode = 'uniform';
+
+        function render() {
+            var adv = mode === 'uniform' ? uniformAdv : localAdv;
+            var maxAbs = 0;
+            for (var i = 0; i < adv.length; i++) {
+                if (Math.abs(adv[i]) > maxAbs) maxAbs = Math.abs(adv[i]);
+            }
+            if (maxAbs === 0) maxAbs = 1;
+            strip.innerHTML = '';
+            var cs = getComputedStyle(document.documentElement);
+            var green = cs.getPropertyValue('--green').trim() || '#16a34a';
+            var red = cs.getPropertyValue('--red').trim() || '#dc2626';
+            var muted = cs.getPropertyValue('--muted').trim() || '#6b7280';
+            for (var i = 0; i < 15; i++) {
+                var wrap = document.createElement('div');
+                wrap.className = 'traj-bar-wrap';
+                var bar = document.createElement('div');
+                bar.className = 'traj-bar';
+                var pct = Math.abs(adv[i]) / maxAbs * 60;
+                bar.style.height = Math.max(pct, 4) + '%';
+                bar.style.background = adv[i] >= 0 ? green : red;
+                if (i === 8) bar.style.opacity = '1'; else bar.style.opacity = '0.8';
+                wrap.appendChild(bar);
+                var lbl = document.createElement('div');
+                lbl.className = 'traj-label';
+                lbl.textContent = (i + 1);
+                wrap.appendChild(lbl);
+                strip.appendChild(wrap);
+            }
+
+            if (mode === 'uniform') {
+                label.innerHTML = 'Failed episode: advantage = &minus;1.0 broadcast to <strong>all</strong> steps';
+            } else {
+                label.innerHTML = 'Critic credit: steps 1&ndash;6 get <strong style="color:' + green + '">positive</strong> advantage; step 9 gets <strong style="color:' + red + '">most negative</strong>';
+            }
+        }
+
+        for (var t = 0; t < tabs.length; t++) {
+            (function (tab) {
+                tab.addEventListener('click', function () {
+                    for (var j = 0; j < tabs.length; j++) tabs[j].classList.remove('active');
+                    tab.classList.add('active');
+                    mode = tab.getAttribute('data-mode');
+                    render();
+                });
+            })(tabs[t]);
+        }
+        render();
+    })();
+    </script>
+
+    <!-- Widget 2: V-curve canvas with draggable fatal step (Section 3) -->
+    <script>
+    (function () {
+        var canvas = document.getElementById('vcurveCanvas');
+        var slider = document.getElementById('fatalSlider');
+        var stepLabel = document.getElementById('fatalStepLabel');
+        if (!canvas || !slider || !stepLabel) return;
+
+        var ctx = canvas.getContext('2d');
+        var dpr = window.devicePixelRatio || 1;
+
+        function resizeCanvas() {
+            var rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function getColors() {
+            var cs = getComputedStyle(document.documentElement);
+            return {
+                fg: cs.getPropertyValue('--fg').trim() || '#1a1a1a',
+                muted: cs.getPropertyValue('--muted').trim() || '#6b7280',
+                accent: cs.getPropertyValue('--accent').trim() || '#2563eb',
+                green: cs.getPropertyValue('--green').trim() || '#16a34a',
+                red: cs.getPropertyValue('--red').trim() || '#dc2626',
+                line: cs.getPropertyValue('--line').trim() || '#e5e7eb',
+                card: cs.getPropertyValue('--card').trim() || '#f7f7f8'
+            };
+        }
+
+        function computeV(fatalStep) {
+            var v = [];
+            for (var i = 0; i < 16; i++) {
+                if (i <= fatalStep - 1) {
+                    v.push(0.2 + (0.5 * i / (fatalStep - 1)));
+                } else if (i === fatalStep) {
+                    v.push(0.05);
+                } else {
+                    v.push(0.05 + 0.02 * (i - fatalStep) / (15 - fatalStep));
+                }
+            }
+            return v;
+        }
+
+        function computeDeltas(v) {
+            var d = [];
+            var gamma = 0.99;
+            for (var i = 0; i < 15; i++) {
+                var r = (i === 14) ? 0 : 0;
+                d.push(r + gamma * v[i + 1] - v[i]);
+            }
+            return d;
+        }
+
+        function draw() {
+            var fatal = parseInt(slider.value);
+            stepLabel.textContent = fatal;
+            var w = canvas.getBoundingClientRect().width;
+            var h = canvas.getBoundingClientRect().height;
+            var c = getColors();
+
+            ctx.clearRect(0, 0, w, h);
+
+            var v = computeV(fatal);
+            var deltas = computeDeltas(v);
+
+            var padL = 40, padR = 16, padT = 20, padB = 36;
+            var plotW = w - padL - padR;
+            var plotH = h - padT - padB;
+
+            // delta bars in bottom half
+            var barH = plotH * 0.4;
+            var barTop = padT + plotH * 0.6;
+            var barZero = barTop + barH * 0.5;
+            var maxAbsD = 0;
+            for (var i = 0; i < deltas.length; i++) {
+                if (Math.abs(deltas[i]) > maxAbsD) maxAbsD = Math.abs(deltas[i]);
+            }
+            if (maxAbsD < 0.01) maxAbsD = 0.01;
+
+            // find most negative
+            var minIdx = 0;
+            for (var i = 1; i < deltas.length; i++) {
+                if (deltas[i] < deltas[minIdx]) minIdx = i;
+            }
+
+            var barW = plotW / 15 * 0.6;
+            for (var i = 0; i < 15; i++) {
+                var cx = padL + (i + 0.5) * plotW / 15;
+                var dh = (deltas[i] / maxAbsD) * (barH * 0.45);
+                var bx = cx - barW / 2;
+                if (deltas[i] >= 0) {
+                    ctx.fillStyle = c.green;
+                    if (i === minIdx && deltas[minIdx] < 0) ctx.fillStyle = c.green;
+                    ctx.fillRect(bx, barZero - dh, barW, dh);
+                } else {
+                    ctx.fillStyle = (i === minIdx) ? c.red : c.red;
+                    ctx.globalAlpha = (i === minIdx) ? 1.0 : 0.5;
+                    ctx.fillRect(bx, barZero, barW, -dh);
+                    ctx.globalAlpha = 1.0;
+                }
+            }
+
+            // zero line for bars
+            ctx.strokeStyle = c.muted;
+            ctx.lineWidth = 0.5;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(padL, barZero);
+            ctx.lineTo(padL + plotW, barZero);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // V-curve in top portion
+            var vTop = padT;
+            var vH = plotH * 0.5;
+            ctx.strokeStyle = c.accent;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            for (var i = 0; i < 16; i++) {
+                var x = padL + (i) * plotW / 15;
+                var y = vTop + vH - (v[i] * vH);
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // V dots
+            for (var i = 0; i < 16; i++) {
+                var x = padL + (i) * plotW / 15;
+                var y = vTop + vH - (v[i] * vH);
+                ctx.fillStyle = (i === fatal) ? c.red : c.accent;
+                ctx.beginPath();
+                ctx.arc(x, y, (i === fatal) ? 5 : 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // fatal marker label
+            var fx = padL + fatal * plotW / 15;
+            var fy = vTop + vH - (v[fatal] * vH);
+            ctx.fillStyle = c.red;
+            ctx.font = '600 11px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('FATAL', fx, fy - 10);
+
+            // x labels
+            ctx.fillStyle = c.muted;
+            ctx.font = '11px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            for (var i = 0; i < 15; i++) {
+                var cx = padL + (i + 0.5) * plotW / 15;
+                ctx.fillText((i + 1), cx, h - 8);
+            }
+
+            // y labels
+            ctx.textAlign = 'right';
+            ctx.font = '10px ui-monospace, monospace';
+            ctx.fillText('V=1', padL - 5, vTop + 4);
+            ctx.fillText('V=0', padL - 5, vTop + vH + 4);
+
+            // delta label for most negative
+            var mcx = padL + (minIdx + 0.5) * plotW / 15;
+            ctx.fillStyle = c.red;
+            ctx.font = '700 10px ui-monospace, monospace';
+            ctx.textAlign = 'center';
+            var dVal = deltas[minIdx].toFixed(2);
+            ctx.fillText('δ=' + dVal, mcx, barZero + Math.abs(deltas[minIdx] / maxAbsD * barH * 0.45) + 12);
+        }
+
+        resizeCanvas();
+        draw();
+
+        slider.addEventListener('input', function () { draw(); });
+        window.addEventListener('resize', function () { resizeCanvas(); draw(); });
+
+        try {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { draw(); });
+        } catch (e) {}
+    })();
+    </script>
+
+    <!-- Widget 3: Branch tree calculator (Section 4) -->
+    <script>
+    (function () {
+        var brA = document.getElementById('brA');
+        var brB = document.getElementById('brB');
+        var brC = document.getElementById('brC');
+        var meanEl = document.getElementById('branchMean');
+        var explEl = document.getElementById('branchExpl');
+        var presetBtn = document.getElementById('branchPreset');
+        if (!brA || !brB || !brC || !meanEl || !explEl) return;
+
+        function update() {
+            var a = parseFloat(brA.value) || 0;
+            var b = parseFloat(brB.value) || 0;
+            var c = parseFloat(brC.value) || 0;
+            var mean = (a + b + c) / 3;
+            meanEl.textContent = mean.toFixed(2);
+            var cs = getComputedStyle(document.documentElement);
+            var green = cs.getPropertyValue('--green').trim() || '#16a34a';
+            var red = cs.getPropertyValue('--red').trim() || '#dc2626';
+            var fg = cs.getPropertyValue('--fg').trim() || '#1a1a1a';
+            if (mean > 0.01) meanEl.style.color = green;
+            else if (mean < -0.01) meanEl.style.color = red;
+            else meanEl.style.color = fg;
+
+            var setStr = '{' + a + ', ' + b + ', ' + c + '}';
+            if (Math.abs(mean) < 0.01) {
+                explEl.textContent = 'Mean of ' + setStr + ' = ' + mean.toFixed(2) + '. The prefix didn\'t decide the outcome.';
+            } else if (mean > 0) {
+                explEl.textContent = 'Mean of ' + setStr + ' = ' + mean.toFixed(2) + '. Prefix leans positive — it set up a good position.';
+            } else {
+                explEl.textContent = 'Mean of ' + setStr + ' = ' + mean.toFixed(2) + '. Prefix leans negative — it led to mostly bad outcomes.';
+            }
+        }
+
+        brA.addEventListener('input', update);
+        brB.addEventListener('input', update);
+        brC.addEventListener('input', update);
+        if (presetBtn) {
+            presetBtn.addEventListener('click', function () {
+                brA.value = 1; brB.value = -1; brC.value = 0;
+                update();
+            });
+        }
+        update();
+    })();
+    </script>
+
+    <!-- Widget 4: Normalization blowup widget (Section 5) -->
+    <script>
+    (function () {
+        var slider = document.getElementById('normSlider');
+        var passLabel = document.getElementById('normPassLabel');
+        var stdEl = document.getElementById('normStd');
+        var advEl = document.getElementById('normAdv');
+        var warnEl = document.getElementById('normWarning');
+        if (!slider || !passLabel || !stdEl || !advEl) return;
+
+        function update() {
+            var nPass = parseInt(slider.value);
+            passLabel.textContent = nPass;
+            var G = 16;
+            var nFail = G - nPass;
+
+            if (nFail === 0 || nPass === 0) {
+                // degenerate: all same
+                stdEl.textContent = '0.00';
+                advEl.textContent = nFail === 0 ? 'N/A' : 'N/A';
+                if (warnEl) warnEl.textContent = 'Degenerate group: all rollouts same result → zero gradient. This task drops out entirely.';
+                return;
+            }
+
+            var mean = nPass / G;
+            // rewards: nPass items = 1, nFail items = 0
+            var variance = (nPass * Math.pow(1 - mean, 2) + nFail * Math.pow(0 - mean, 2)) / G;
+            var std = Math.sqrt(variance);
+            var failAdv = Math.abs((0 - mean) / std);
+
+            stdEl.textContent = std.toFixed(4);
+            advEl.textContent = failAdv.toFixed(1);
+
+            if (warnEl) {
+                if (failAdv > 10) {
+                    warnEl.textContent = 'EXTREME blowup: the lone failure gets a colossal advantage from near-zero std. Amplified noise, not signal.';
+                } else if (failAdv > 3) {
+                    warnEl.textContent = 'Noisy denominator effect visible: failure advantage is disproportionately large.';
+                } else {
+                    warnEl.textContent = '';
+                }
+            }
+        }
+
+        slider.addEventListener('input', update);
+        update();
+    })();
+    </script>
+
+    <!-- Quiz: 16 questions -->
+    <script>
+    (function () {
+        var container = document.getElementById('quizContainer');
+        var scoreEl = document.getElementById('quizScore');
+        var resetBtn = document.getElementById('quizReset');
+        if (!container || !scoreEl) return;
+
+        var questions = [
+            {
+                q: "Under per-question group normalization (G=16), which tasks dominate the gradient?",
+                opts: [
+                    "High-variance tasks dominate updates",
+                    "Low-variance tasks (easy ones) produce amplified noise on outliers",
+                    "None dominate via scale — dividing by own std erases scale; the real defect is participation-rate imbalance (degenerate groups contribute nothing)",
+                    "All tasks contribute equally"
+                ],
+                correct: 2,
+                expl: "Per-question normalization divides each group by its own std, which erases scale differences. The actual problem is degenerate groups (all same result) contribute zero gradient — absence, not domination."
+            },
+            {
+                q: "Easy task, 15 out of 16 rollouts pass, per-question normalization. What happens to the lone failure's advantage?",
+                opts: [
+                    "It gets a small, reasonable negative advantage",
+                    "It gets an enormous negative advantage — divide by near-zero std amplifies noise",
+                    "It gets zero advantage since most rollouts succeeded",
+                    "It gets a moderate advantage proportional to the group mean"
+                ],
+                correct: 1,
+                expl: "Near-uniform group → std → 0 → (0 - 0.9375) / (tiny number) = colossal advantage. Amplified noise, not meaningful signal. The blowup is at near-zero variance."
+            },
+            {
+                q: "Where is 'wide-reward-scale families dominate updates' a TRUE defect?",
+                opts: [
+                    "Per-question group normalization",
+                    "Global pooling (one shared std across all tasks)",
+                    "Per-task/environment pool normalization",
+                    "It is true in all normalization schemes"
+                ],
+                correct: 1,
+                expl: "Global pooling uses one shared std that preserves relative family scales. The wide-scale family (0-10 judge scores) dominates; binary rewards get crushed. Per-question divides by own std, erasing scale per group."
+            },
+            {
+                q: "What is ERPO/task-pooling's cost?",
+                opts: [
+                    "It requires training a separate value function per task",
+                    "Low-spread tails within a family (very easy / very hard questions) under-train",
+                    "It mixes reward currencies across task types",
+                    "It produces zero gradient for degenerate groups"
+                ],
+                correct: 1,
+                expl: "Per-task pooling gives a stable denominator within a single currency, but questions at the extremes (always pass or always fail) have advantages near zero within their family — they under-train."
+            },
+            {
+                q: "What is Dr. GRPO's response to the noisy-denominator defect?",
+                opts: [
+                    "Increase group size G to 64",
+                    "Use global normalization instead",
+                    "Drop the /std entirely — normalize by mean only",
+                    "Add a learned temperature parameter"
+                ],
+                correct: 2,
+                expl: "Dr. GRPO's answer: if the denominator is noisy and causes blowups, just drop it. Advantage = R - mean, no division by std."
+            },
+            {
+                q: "In the FAILED 15-step trajectory, what sign is δ_t on the good diagnosis steps 1-6?",
+                opts: [
+                    "Negative — the episode failed, so all steps get negative signal",
+                    "Positive — V is rising, so each step looks better than the last",
+                    "Zero — the critic hasn't learned anything about early steps",
+                    "Alternating positive and negative"
+                ],
+                correct: 1,
+                expl: "V climbs 0.2 → 0.7 across steps 1-6. δ_t = r_t + γV(s_{t+1}) - V(s_t) > 0 when V is rising. Good steps get positive advantage even inside a failed trajectory. This is the critic's power."
+            },
+            {
+                q: "Where does blame concentrate in the debugging trajectory, and why?",
+                opts: [
+                    "Spread evenly across steps 9-15 because all are after the mistake",
+                    "Step 9 — the single most negative δ, where V craters from 0.7 to 0.05",
+                    "Steps 1-6 because the diagnosis was too slow",
+                    "Step 15 because it's closest to the terminal failure"
+                ],
+                correct: 1,
+                expl: "δ₉ ≈ -0.65, the most negative TD error. Blame concentrates exactly where value drops. Steps 10-15 have δ ≈ 0 because the mistake is already priced into V."
+            },
+            {
+                q: "Your critic is garbage — which direction do you move GAE λ?",
+                opts: [
+                    "Lower λ toward 0 to trust the critic's TD errors more",
+                    "Raise λ toward 1 to trust the environment's outcome (Monte Carlo return)",
+                    "Set λ = 0.5 as a compromise",
+                    "λ doesn't matter if the critic is bad"
+                ],
+                correct: 1,
+                expl: "Bootstrap = bias, sample = variance. Garbage critic means broken bootstrap — raise λ toward 1 to trust the environment/sample return instead."
+            },
+            {
+                q: "Branches {+1, −1, 0}: what does the shared prefix get?",
+                opts: [
+                    "1/3 (sum divided by 3... wait, that's 0, not 1/3)",
+                    "0 — the mean of {+1, −1, 0}, and ≈0 is meaningful: the prefix didn't decide the outcome",
+                    "+1 because at least one branch succeeded",
+                    "−1 because the majority of branches didn't fully succeed"
+                ],
+                correct: 1,
+                expl: "Mean of {+1, -1, 0} = 0/3 = 0. The prefix gets ≈0 advantage, which is the correct answer: this prefix didn't decide the outcome — the branches after it did."
+            },
+            {
+                q: "What is the descendant-mean at a branch point, conceptually?",
+                opts: [
+                    "An unbiased estimate of the policy gradient at that step",
+                    "A Monte Carlo estimate of V(s) — an empirical critic bought with compute",
+                    "The expected reward under the current policy",
+                    "A weighted average favoring successful branches"
+                ],
+                correct: 1,
+                expl: "ARPO rebuilds the critic empirically: the descendant-mean IS a Monte Carlo estimate of V(s) at the branch point, paying rollout compute instead of training a value model."
+            },
+            {
+                q: "Test-delta rewards: which genuinely good edit gets punished?",
+                opts: [
+                    "Adding a new test case that reveals more failures",
+                    "Removing a hacky patch that masks the root cause — pass count temporarily drops (e.g., 7/14 → 4/14)",
+                    "Refactoring code without changing functionality",
+                    "The final edit that makes all tests pass"
+                ],
+                correct: 1,
+                expl: "Myopic shaping punishes through-the-valley edits. Removing the hacky patch is THE most important edit, but it drops the pass count. Δ(tests) is negative → negative reward on the exactly-right edit."
+            },
+            {
+                q: "Test-deltas telescope, so what's actually distorted — return or per-step advantage?",
+                opts: [
+                    "The return — it doesn't reflect the true terminal outcome",
+                    "The per-step advantage — the return is path-independent (at γ=1) since deltas telescope, but the per-step advantage still punishes the valley",
+                    "Both are equally distorted",
+                    "Neither — telescoping fixes all problems"
+                ],
+                correct: 1,
+                expl: "Sum of deltas = final - initial passes, so the RETURN is path-independent. It's the per-step ADVANTAGE that punishes the valley — each individual Δ can be negative even on a good edit."
+            },
+            {
+                q: "Leave-one-out credit attribution's blind spot?",
+                opts: [
+                    "Jointly-necessary edit pairs — removing either breaks tests",
+                    "Redundant edits — either alone suffices, so removing one changes nothing and BOTH get marked unnecessary",
+                    "Edits that are order-dependent",
+                    "Edits that change test infrastructure"
+                ],
+                correct: 1,
+                expl: "If two redundant edits each independently suffice, removing either alone changes nothing — both get marked unnecessary. Jointly-necessary pairs (removing either breaks tests) are handled fine by LOO."
+            },
+            {
+                q: "What can hindsight credit (Shapley ablation) NOT fix?",
+                opts: [
+                    "Misattribution on redundant edits",
+                    "Cold start — it needs successful trajectories to ablate, so it can't help when the policy never succeeds",
+                    "Edits that don't commute",
+                    "High computational cost"
+                ],
+                correct: 1,
+                expl: "Hindsight/Shapley works post-hoc on SUCCESSFUL trajectories only. It refines credit within successes but does nothing for the cold-start problem — if all G rollouts fail, there's nothing to ablate."
+            },
+            {
+                q: "Why do checkpoint turns beat high temperature for exploration?",
+                opts: [
+                    "Checkpoints are cheaper to sample from",
+                    "Strategy-level diversity — a checkpoint is a coherent policy producing valid strategies, while temperature adds token-level noise that breaks syntax/reasoning",
+                    "Temperature can't be applied to tool-use tokens",
+                    "Checkpoints always produce better trajectories"
+                ],
+                correct: 1,
+                expl: "Temperature adds noise at the token level — random tokens rarely compose into coherent alternative strategies. A checkpoint is a complete policy, so its turns are samples of VALID strategies. ε-greedy with plausible behavior."
+            },
+            {
+                q: "All G rollouts of a hard task fail (reward = 0 for all). What gradient does GRPO produce for that group?",
+                opts: [
+                    "Uniform negative gradient on all tokens — pushes down the entire trajectory",
+                    "Strong positive gradient on the least-bad rollout",
+                    "None — advantages are all zero (mean=0, every R_i=0, so R_i - mean = 0 for all i)",
+                    "Negative gradient proportional to trajectory length"
+                ],
+                correct: 2,
+                expl: "All rewards identical → mean = 0, every R_i - mean = 0 → advantages all zero → zero gradient. Not uniform negative — literally no learning signal. This is the sparsity problem."
+            }
+        ];
+
+        var answered = 0, correct = 0;
+
+        function renderQuiz() {
+            container.innerHTML = '';
+            answered = 0;
+            correct = 0;
+            updateScore();
+
+            for (var qi = 0; qi < questions.length; qi++) {
+                var qd = questions[qi];
+                var qDiv = document.createElement('div');
+                qDiv.className = 'quiz-q';
+                qDiv.setAttribute('data-qi', qi);
+
+                var h = document.createElement('h4');
+                h.textContent = 'Q' + (qi + 1) + '. ' + qd.q;
+                qDiv.appendChild(h);
+
+                var optsDiv = document.createElement('div');
+                optsDiv.className = 'quiz-opts';
+
+                for (var oi = 0; oi < qd.opts.length; oi++) {
+                    var btn = document.createElement('button');
+                    btn.className = 'quiz-opt';
+                    btn.textContent = qd.opts[oi];
+                    btn.setAttribute('data-qi', qi);
+                    btn.setAttribute('data-oi', oi);
+                    btn.addEventListener('click', handleAnswer);
+                    optsDiv.appendChild(btn);
+                }
+                qDiv.appendChild(optsDiv);
+
+                var explDiv = document.createElement('div');
+                explDiv.className = 'quiz-expl';
+                explDiv.setAttribute('data-expl', qi);
+                explDiv.textContent = qd.expl;
+                qDiv.appendChild(explDiv);
+
+                container.appendChild(qDiv);
+            }
+        }
+
+        function handleAnswer(e) {
+            var btn = e.currentTarget;
+            var qi = parseInt(btn.getAttribute('data-qi'));
+            var oi = parseInt(btn.getAttribute('data-oi'));
+            var qd = questions[qi];
+            var qDiv = container.querySelector('[data-qi="' + qi + '"].quiz-q');
+            if (!qDiv) return;
+            var btns = qDiv.querySelectorAll('.quiz-opt');
+            // check if already answered
+            for (var i = 0; i < btns.length; i++) {
+                if (btns[i].disabled) return;
+            }
+
+            answered++;
+            var isCorrect = (oi === qd.correct);
+            if (isCorrect) correct++;
+
+            for (var i = 0; i < btns.length; i++) {
+                btns[i].disabled = true;
+                if (i === qd.correct) btns[i].classList.add('correct');
+                if (i === oi && !isCorrect) btns[i].classList.add('wrong');
+            }
+
+            var expl = qDiv.querySelector('[data-expl="' + qi + '"]');
+            if (expl) {
+                expl.classList.add('show');
+                expl.classList.add(isCorrect ? 'right' : 'wrongexp');
+            }
+            updateScore();
+        }
+
+        function updateScore() {
+            scoreEl.textContent = 'Score: ' + correct + ' / ' + answered + (answered === questions.length ? (correct === questions.length ? ' — Perfect!' : ' — Review your misses above') : '');
+        }
+
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function () { renderQuiz(); });
+        }
+        renderQuiz();
+    })();
+    </script>
+
+</body>
+</html>
